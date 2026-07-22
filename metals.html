@@ -1,0 +1,845 @@
+<title>Signal Desk — Metals · Gold & Silver</title>
+<style>
+  :root {
+    --ground: #F4EFE4;
+    --ground-2: #EDE7D8;
+    --ink: #161512;
+    --ink-2: #3A362E;
+    --ink-3: #6B655A;
+    --rule: #D9D2BF;
+    --panel: #FBF8F0;
+    --accent: #B8863A;
+    --accent-soft: #E9D3A3;
+    --signal: #3B8C5A;
+    --caution: #B57F1F;
+    --risk: #B84438;
+    --grid: rgba(22, 21, 18, 0.06);
+    --gold: #C89B3C;
+    --silver: #9BA1A6;
+
+    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: ui-sans-serif, -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0E1116;
+      --ground-2: #141821;
+      --ink: #E7E2D6;
+      --ink-2: #B5AF9F;
+      --ink-3: #7C7767;
+      --rule: #262B36;
+      --panel: #161B24;
+      --accent: #D6A24B;
+      --accent-soft: #4A3820;
+      --signal: #5FBF83;
+      --caution: #D4A040;
+      --risk: #D96355;
+      --grid: rgba(231, 226, 214, 0.06);
+      --gold: #E0B45C;
+      --silver: #C4CBD1;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#F4EFE4;--ground-2:#EDE7D8;--ink:#161512;--ink-2:#3A362E;--ink-3:#6B655A;--rule:#D9D2BF;--panel:#FBF8F0;--accent:#B8863A;--accent-soft:#E9D3A3;--signal:#3B8C5A;--caution:#B57F1F;--risk:#B84438;--grid:rgba(22,21,18,0.06);--gold:#C89B3C;--silver:#9BA1A6;
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E1116;--ground-2:#141821;--ink:#E7E2D6;--ink-2:#B5AF9F;--ink-3:#7C7767;--rule:#262B36;--panel:#161B24;--accent:#D6A24B;--accent-soft:#4A3820;--signal:#5FBF83;--caution:#D4A040;--risk:#D96355;--grid:rgba(231,226,214,0.06);--gold:#E0B45C;--silver:#C4CBD1;
+  }
+
+  html { color-scheme: light dark; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+
+  .shell { max-width: 1280px; margin: 0 auto; padding: 32px 28px 80px; }
+
+  .masthead {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--ink);
+  }
+  .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+  .brand { font-family: var(--serif); font-size: 40px; line-height: 1; letter-spacing: -0.015em; font-weight: 500; text-wrap: balance; margin: 0; }
+  .brand em { font-style: italic; color: var(--accent); font-weight: 400; }
+  .meta { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-2); line-height: 1.7; }
+  .meta .date { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .meta a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+  .meta a:hover { border-bottom-style: solid; }
+  .theme-toggle {
+    background: transparent; border: 1px solid var(--rule); color: var(--ink-2);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 6px 10px; margin-top: 8px; cursor: pointer;
+  }
+  .theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
+
+  @media (max-width: 900px) {
+    .brand { font-size: 30px; }
+  }
+
+  /* Cross-asset strip */
+  .drivers {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  @media (max-width: 900px) { .drivers { grid-template-columns: repeat(2, 1fr); } }
+  .drv-cell {
+    padding: 14px 16px;
+    border-right: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .drv-cell:last-child { border-right: none; }
+  @media (max-width: 900px) { .drv-cell:nth-child(2n) { border-right: none; } }
+  .drv-cell .label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+  .drv-cell .value { font-size: 15px; color: var(--ink); }
+  .drv-cell .delta { font-size: 11px; margin-top: 2px; }
+  .up { color: var(--signal); }
+  .down { color: var(--risk); }
+  .flat { color: var(--ink-3); }
+
+  /* Section head */
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 36px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .section-head h2 {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .section-head .aside {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* Two big metal panels */
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .panels { grid-template-columns: 1fr; } }
+  .metal-panel {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 24px 26px;
+    position: relative;
+  }
+  .metal-panel.gold::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gold); }
+  .metal-panel.silver::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--silver); }
+
+  .mp-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+  }
+  .mp-ticker {
+    font-family: var(--mono);
+    font-size: 20px;
+    letter-spacing: 0.02em;
+    font-weight: 500;
+  }
+  .mp-name {
+    font-family: var(--serif);
+    font-size: 12px;
+    color: var(--ink-3);
+    font-style: italic;
+    margin-top: 2px;
+  }
+  .mp-price {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 28px;
+    color: var(--ink);
+    line-height: 1;
+    text-align: right;
+  }
+  .mp-change {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  .mp h3 {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 20px 0 10px;
+    font-weight: 500;
+  }
+  .mp h3:first-of-type { margin-top: 0; }
+
+  /* Range block — the day/week projection */
+  .range {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--rule);
+    background: var(--ground-2);
+  }
+  .range-cell {
+    padding: 12px 14px;
+    border-right: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .range-cell:last-child { border-right: none; }
+  .range-cell .l {
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .range-cell .hi { color: var(--signal); font-size: 15px; }
+  .range-cell .lo { color: var(--risk); font-size: 15px; }
+  .range-cell .band { font-size: 11px; color: var(--ink-2); margin-top: 4px; }
+  .range-visual {
+    height: 6px;
+    background: var(--ground-2);
+    margin: 10px 0;
+    position: relative;
+    border: 1px solid var(--rule);
+  }
+  .range-fill {
+    position: absolute; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--risk), var(--ink-3), var(--signal));
+    opacity: 0.5;
+  }
+  .range-marker {
+    position: absolute;
+    top: -3px; bottom: -3px;
+    width: 2px;
+    background: var(--ink);
+  }
+  .range-marker::before {
+    content: '';
+    position: absolute;
+    top: -4px; left: -3px;
+    width: 8px; height: 8px;
+    background: var(--ink);
+    border-radius: 50%;
+  }
+
+  /* Indicator grid */
+  .ind-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    gap: 10px;
+    row-gap: 6px;
+    align-items: baseline;
+  }
+  .ind-grid .k {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .ind-grid .v {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: var(--ink);
+    text-align: right;
+  }
+  .bar-track { height: 6px; background: var(--ground-2); position: relative; overflow: hidden; }
+  .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+
+  /* Setup chip */
+  .setup-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border: 1px solid;
+    line-height: 1.5;
+  }
+  .setup-BREAKOUT { color: var(--signal); border-color: var(--signal); }
+  .setup-PULLBACK { color: var(--accent); border-color: var(--accent); }
+  .setup-EARLY    { color: var(--ink-2); border-color: var(--ink-3); }
+  .setup-EXTENDED { color: var(--caution); border-color: var(--caution); }
+  .setup-BROKEN   { color: var(--risk); border-color: var(--risk); }
+  .setup-AVOID    { color: var(--risk); border-color: var(--risk); }
+
+  .thesis {
+    background: var(--ground-2);
+    border-left: 3px solid var(--accent);
+    padding: 12px 14px;
+    font-family: var(--serif);
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  .plan {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 1px solid var(--rule);
+  }
+  .plan-cell {
+    padding: 12px 14px;
+    border-right: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .plan-cell:last-child { border-right: none; }
+  .plan-cell .l {
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .plan-cell .n { font-size: 14px; color: var(--ink); }
+  .plan-cell.tgt .n { color: var(--signal); }
+  .plan-cell.stop .n { color: var(--risk); }
+
+  /* Notes */
+  .notes-list { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; }
+  .notes-list li {
+    font-family: var(--serif); font-size: 12.5px; line-height: 1.45;
+    color: var(--ink-2); padding-left: 12px; position: relative;
+  }
+  .notes-list li::before { content: "·"; color: var(--accent); position: absolute; left: 0; top: -1px; font-weight: bold; }
+
+  /* Calendar (reuse from dashboard rules layout) */
+  .rules { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; background: var(--panel); border: 1px solid var(--rule); }
+  @media (max-width: 900px) { .rules { grid-template-columns: 1fr; } }
+  .rule-cell { padding: 18px 20px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .rule-cell:nth-child(2n) { border-right: none; }
+  .rule-cell:nth-last-child(-n+2) { border-bottom: none; }
+  @media (max-width: 900px) { .rule-cell { border-right: none; } .rule-cell:not(:last-child) { border-bottom: 1px solid var(--rule); } }
+  .rule-cell h4 {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-3); margin: 0 0 8px; font-weight: 500;
+  }
+  .rule-cell h4 .num {
+    font-family: var(--serif); font-style: italic; color: var(--accent);
+    font-size: 14px; margin-right: 6px; letter-spacing: 0;
+  }
+  .rule-cell p { font-family: var(--serif); font-size: 13.5px; line-height: 1.5; color: var(--ink); margin: 0 0 6px; }
+  .rule-cell code { font-family: var(--mono); font-size: 11.5px; background: var(--ground-2); padding: 1px 5px; color: var(--ink); }
+
+  /* News */
+  .intel { background: var(--panel); border: 1px solid var(--rule); }
+  .feed { list-style: none; margin: 0; padding: 0; }
+  .feed li {
+    display: grid;
+    grid-template-columns: 60px 60px 60px 1fr 60px;
+    gap: 14px;
+    padding: 12px 18px;
+    border-bottom: 1px dotted var(--rule);
+    align-items: baseline;
+  }
+  .feed li:last-child { border-bottom: none; }
+  .feed .ts { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.04em; }
+  .feed .src-badge {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-2); padding: 2px 6px; border: 1px solid var(--rule); text-align: center;
+  }
+  .feed .tk { font-family: var(--mono); font-size: 12px; color: var(--ink); letter-spacing: 0.02em; }
+  .feed .hd { font-family: var(--serif); font-size: 13.5px; line-height: 1.4; color: var(--ink); }
+  .feed .hd a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--ink-3); }
+  .feed .hd a:hover { border-bottom-color: var(--accent); }
+  .feed .sent { font-family: var(--mono); font-size: 10.5px; text-align: right; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+  .sent.pos { color: var(--signal); }
+  .sent.neg { color: var(--risk); }
+  .sent.neu { color: var(--ink-3); }
+  @media (max-width: 900px) {
+    .feed li { grid-template-columns: 55px 55px 1fr 55px; }
+    .feed .tk { display: none; }
+  }
+
+  /* Disclosure */
+  .disclosure {
+    margin-top: 36px; padding: 20px 24px;
+    background: transparent;
+    border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule);
+  }
+  .disclosure h4 {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--risk); margin: 0 0 8px; font-weight: 500;
+  }
+  .disclosure p {
+    font-family: var(--serif); font-style: italic; font-size: 13.5px; line-height: 1.55;
+    color: var(--ink-2); margin: 0; max-width: 78ch;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="shell">
+  <header class="masthead">
+    <div>
+      <div class="kicker">The Signal Desk · Metals · Gold &amp; Silver</div>
+      <h1 class="brand">Precious metals, <em>range-projected daily &amp; weekly.</em></h1>
+    </div>
+    <div class="meta">
+      <div class="date" id="run-date">RUN · —</div>
+      <div>FEED · <span id="live-dot">◌</span> <span id="live-label">connecting…</span></div>
+      <div style="margin-top: 4px;"><a href="/">← dashboard</a> · <a href="/handbook">handbook</a></div>
+      <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
+    </div>
+  </header>
+
+  <div class="drivers" id="drivers"></div>
+
+  <div class="section-head">
+    <h2>XAU/USD &amp; XAG/USD · live projection</h2>
+    <span class="aside">Range = ATR₁₄ · 1σ day + √5-day week</span>
+  </div>
+
+  <div class="panels" id="panels">
+    <div class="metal-panel gold" id="panel-XAU">
+      <div class="mp-head">
+        <div>
+          <div class="mp-ticker">XAU/USD</div>
+          <div class="mp-name">Gold Spot · pricing via GC=F futures</div>
+        </div>
+        <div>
+          <div class="mp-price" id="XAU-price">—</div>
+          <div class="mp-change" id="XAU-change">—</div>
+        </div>
+      </div>
+      <div class="mp" id="XAU-body">
+        <p style="color: var(--ink-3); font-style: italic; font-family: var(--serif);">Waiting for live data…</p>
+      </div>
+    </div>
+    <div class="metal-panel silver" id="panel-XAG">
+      <div class="mp-head">
+        <div>
+          <div class="mp-ticker">XAG/USD</div>
+          <div class="mp-name">Silver Spot · pricing via SI=F futures</div>
+        </div>
+        <div>
+          <div class="mp-price" id="XAG-price">—</div>
+          <div class="mp-change" id="XAG-change">—</div>
+        </div>
+      </div>
+      <div class="mp" id="XAG-body">
+        <p style="color: var(--ink-3); font-style: italic; font-family: var(--serif);">Waiting for live data…</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <h2>How range projection works</h2>
+    <span class="aside">Read once, remember always</span>
+  </div>
+
+  <div class="rules">
+    <div class="rule-cell">
+      <h4><span class="num">01</span>Day range</h4>
+      <p>Expected range = current price <code>± 0.5 × ATR₁₄</code>. That's one standard-deviation-ish band for a normal trading day. About <strong>68% of days</strong> stay within it; the other 32% break out with a catalyst.</p>
+    </div>
+    <div class="rule-cell">
+      <h4><span class="num">02</span>Week range</h4>
+      <p>Expected weekly range = current price <code>± ATR₁₄ × √5</code>. Variance scales with the square root of time — five trading days is roughly <strong>2.24×</strong> the single-day band, not 5×.</p>
+    </div>
+    <div class="rule-cell">
+      <h4><span class="num">03</span>Direction bias</h4>
+      <p>Trend is set by the <strong>MA20 slope</strong> and price location vs MA20/50/200. Slope up + price above the stack = long bias. Slope down + price below = short bias. Flat = range-bound.</p>
+    </div>
+    <div class="rule-cell">
+      <h4><span class="num">04</span>Break-of-range signals</h4>
+      <p>A close <em>outside</em> the projected day range with expanding volume is a breakout signal — the range failed and a new trend leg is likely starting. Manage stops around the recent swing.</p>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <h2>Metals drivers · what pushes the price</h2>
+    <span class="aside">Live macro context</span>
+  </div>
+
+  <div class="rules">
+    <div class="rule-cell">
+      <h4><span class="num">DXY</span>US Dollar Index</h4>
+      <p>Dollar down = metals up (they're priced in dollars). Gold especially inverse-correlated to DXY over multi-week windows. Watch <code>103</code> as a psychological pivot.</p>
+    </div>
+    <div class="rule-cell">
+      <h4><span class="num">10Y</span>US Treasury yield</h4>
+      <p>Rising real yields = headwind for gold (no coupon to compete with). Falling yields, especially on soft inflation data = tailwind.</p>
+    </div>
+    <div class="rule-cell">
+      <h4><span class="num">VIX</span>Risk regime</h4>
+      <p>VIX above 20 typically supports gold (safe-haven bid). Silver is more industrial — hurt more by growth fears than helped by risk-off.</p>
+    </div>
+    <div class="rule-cell">
+      <h4><span class="num">RATIO</span>Gold-Silver ratio</h4>
+      <p><code>XAU / XAG</code>. Above 85 = silver historically cheap vs gold. Below 60 = silver expensive. Reversion trades one against the other.</p>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <h2>Metals calendar · what to watch</h2>
+    <span class="aside" id="cal-summary">Curated market-moving events</span>
+  </div>
+
+  <div class="rules" id="metals-calendar"></div>
+
+  <div class="section-head">
+    <h2>Metals news · GLD / SLV / GDX headlines</h2>
+    <span class="aside">Sentiment-scored, sector-aware</span>
+  </div>
+
+  <div class="intel">
+    <ul class="feed" id="feed"></ul>
+  </div>
+
+  <div class="disclosure">
+    <h4>Not investment advice</h4>
+    <p>Range projections are statistical bands, not forecasts. A <code>1σ</code> band contains ~68% of outcomes — the other 32% break it, and those are exactly the days that matter. Metals trade around Fed / CPI / geopolitical catalysts that no ATR model can predict. Treat the projected range as a base-case scaffold, not a promise. See the disclosure on the main dashboard for the full risk statement.</p>
+  </div>
+
+</div>
+
+<script type="module">
+import { analyze, regime } from './analyze.js';
+
+(function () {
+  const root = document.documentElement;
+  const mql = window.matchMedia('(prefers-color-scheme: dark)');
+  const REFRESH_MS = 30000;
+
+  // Theme
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme') || (mql.matches ? 'dark' : 'light');
+    root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    if (lastData) applyAll(lastData);
+  });
+
+  const liveDot = document.getElementById('live-dot');
+  const liveLabel = document.getElementById('live-label');
+  function setLive(state, msg) {
+    const colors = { connecting: 'var(--ink-3)', live: 'var(--signal)', stale: 'var(--caution)', error: 'var(--risk)' };
+    liveDot.style.color = colors[state] || 'var(--ink-3)';
+    liveDot.textContent = state === 'live' ? '●' : state === 'error' ? '✕' : '◌';
+    liveLabel.textContent = msg;
+  }
+  setLive('connecting', 'connecting…');
+
+  const runDateEl = document.getElementById('run-date');
+  function updateRunDate(ms) {
+    const d = new Date(ms || Date.now());
+    const pad = (n) => String(n).padStart(2, '0');
+    runDateEl.textContent = `RUN · ${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+  }
+
+  // Tickers to pull:
+  // GC=F -> XAU (spot proxy), SI=F -> XAG (spot proxy)
+  // DX-Y.NYB -> DXY, ^TNX -> US 10Y, ^VIX
+  // GLD, SLV, GDX for news
+  const METAL_MAP = { 'GC=F': 'XAU', 'SI=F': 'XAG' };
+  const PRICE_TICKERS = ['GC=F', 'SI=F', 'DX-Y.NYB', '^TNX', '^VIX'];
+  const NEWS_TICKERS = ['GLD', 'SLV', 'GDX'];
+
+  let lastData = null;
+
+  async function pull() {
+    try {
+      const qUrl = `/api/quotes?tickers=${encodeURIComponent(PRICE_TICKERS.join(','))}&range=1y`;
+      const nUrl = `/api/news?tickers=${encodeURIComponent(NEWS_TICKERS.join(','))}`;
+      const [qRes, nRes] = await Promise.all([
+        fetch(qUrl, { cache: 'no-store' }),
+        fetch(nUrl, { cache: 'no-store' }).catch(() => null),
+      ]);
+      if (!qRes.ok) throw new Error(`quotes HTTP ${qRes.status}`);
+      const qData = await qRes.json();
+      const nData = nRes && nRes.ok ? await nRes.json() : null;
+      const data = { quotes: qData.quotes || {}, news: nData?.news || {}, asOf: qData.asOf };
+      lastData = data;
+      applyAll(data);
+      updateRunDate(data.asOf);
+      setLive('live', `live · updated 0s ago`);
+    } catch (e) {
+      setLive('error', `feed unavailable · ${e.message}`);
+    }
+  }
+
+  function applyAll(data) {
+    renderDrivers(data);
+    renderMetalPanel('GC=F', 'XAU', data);
+    renderMetalPanel('SI=F', 'XAG', data);
+    renderFeed(data);
+  }
+
+  function renderDrivers(data) {
+    const q = data.quotes;
+    const dxy = q['DX-Y.NYB'];
+    const tnx = q['^TNX'];
+    const vix = q['^VIX'];
+    const gold = q['GC=F'];
+    const silver = q['SI=F'];
+    const ratio = gold?.price && silver?.price ? (gold.price / silver.price) : null;
+
+    const cells = [
+      { label: 'DXY',           value: dxy?.price?.toFixed(2) ?? '—', delta: dxy?.changePct != null ? fmtPct(dxy.changePct) : '—', dir: dirClass(-dxy?.changePct) },  // inverse — down DXY = up metals
+      { label: 'US 10Y',        value: tnx?.price != null ? tnx.price.toFixed(2) + '%' : '—', delta: tnx?.changePct != null ? fmtPct(tnx.changePct) : '—', dir: dirClass(-tnx?.changePct) },
+      { label: 'VIX',           value: vix?.price?.toFixed(1) ?? '—', delta: vix?.changePct != null ? fmtPct(vix.changePct) : '—', dir: dirClass(vix?.changePct) },
+      { label: 'Gold-Silver',   value: ratio?.toFixed(1) ?? '—', delta: ratio ? (ratio > 85 ? 'silver cheap' : ratio < 60 ? 'silver rich' : 'neutral') : '—', dir: 'flat' },
+      { label: 'Regime',        value: vix?.price != null ? regime(vix.price).level.toUpperCase() : '—', delta: vix?.price != null ? regime(vix.price).note.slice(0, 32) : '—', dir: 'flat' },
+    ];
+    document.getElementById('drivers').innerHTML = cells.map(c => `
+      <div class="drv-cell">
+        <div class="label">${c.label}</div>
+        <div class="value">${c.value}</div>
+        <div class="delta ${c.dir}">${c.delta}</div>
+      </div>
+    `).join('');
+  }
+
+  function fmtPct(x) { return `${x >= 0 ? '+' : ''}${x.toFixed(2)}%`; }
+  function dirClass(x) {
+    if (x == null || isNaN(x)) return 'flat';
+    return x > 0.05 ? 'up' : x < -0.05 ? 'down' : 'flat';
+  }
+
+  function renderMetalPanel(ticker, label, data) {
+    const q = data.quotes[ticker];
+    const body = document.getElementById(`${label}-body`);
+    const priceEl = document.getElementById(`${label}-price`);
+    const chgEl = document.getElementById(`${label}-change`);
+    if (!q || q.price == null || !q.bars || q.bars.length < 60) {
+      body.innerHTML = `<p style="color: var(--ink-3); font-style: italic; font-family: var(--serif);">Insufficient data to compute (need ≥60 bars).</p>`;
+      priceEl.textContent = q?.price?.toFixed(2) ?? '—';
+      chgEl.textContent = '—';
+      return;
+    }
+    const a = analyze(q.bars);
+    if (a.insufficient) {
+      body.innerHTML = `<p style="color: var(--ink-3); font-style: italic; font-family: var(--serif);">${a.reason}</p>`;
+      return;
+    }
+
+    priceEl.textContent = `$${q.price.toFixed(2)}`;
+    const chgClass = q.changePct >= 0 ? 'up' : 'down';
+    chgEl.className = `mp-change ${chgClass}`;
+    chgEl.textContent = `${q.changePct >= 0 ? '+' : ''}${q.change.toFixed(2)} (${q.changePct >= 0 ? '+' : ''}${q.changePct.toFixed(2)}%)`;
+
+    // Range projection
+    const atr = a.indicators.atr14;
+    const dayHi = q.price + 0.5 * atr;
+    const dayLo = q.price - 0.5 * atr;
+    const wkHi = q.price + atr * Math.sqrt(5);
+    const wkLo = q.price - atr * Math.sqrt(5);
+    const dayBandPct = (atr / q.price) * 100;
+    const wkBandPct = (atr * Math.sqrt(5) / q.price) * 100 * 2;
+
+    // Trend + directional bias narrative
+    const slope = a.indicators.ma20Slope;
+    const rsi = a.indicators.rsi14;
+    const dist52w = a.indicators.distFrom52w;
+    let bias, biasNote;
+    if (a.trendState.alignedFull && slope > 0.005) { bias = 'BULL BIAS'; biasNote = 'Full MA alignment with MA20 sloping up — direction favors longs; buy pullbacks to MA10/20.'; }
+    else if (a.trendState.alignedMid && slope > 0) { bias = 'CONSTRUCTIVE'; biasNote = 'Above MA20 + MA50, mid-term trend intact but 200d not confirmed. Trade with-trend only.'; }
+    else if (!a.trendState.alignedShort && slope < -0.005) { bias = 'BEAR BIAS'; biasNote = 'Below MA20 with negative slope. Fade rallies; longs need reclaim of MA20.'; }
+    else { bias = 'RANGE'; biasNote = 'No clear trend. Trade the range — sell resistance, buy support until a breakout confirms.'; }
+
+    // Support/resistance from recent swing highs/lows (last 20 bars)
+    const recent = q.bars.slice(-20);
+    const swingHi = Math.max(...recent.map(b => b.h));
+    const swingLo = Math.min(...recent.map(b => b.l));
+
+    // Trade plan (simple)
+    const stopDist = Math.max(atr * 1.5, q.price * 0.02); // 1.5×ATR or 2% (metals move less %-wise than stocks)
+    const stopLong = q.price - stopDist;
+    const targetLong = q.price + 2.5 * stopDist;
+
+    // Setup chip
+    const setupCls = `setup-${a.setup}`;
+
+    body.innerHTML = `
+      <h3>Directional bias</h3>
+      <div class="thesis">
+        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+          <span class="setup-chip ${setupCls}">${a.setup}</span>
+          <span style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; color: var(--accent);">${bias}</span>
+        </div>
+        ${biasNote}
+      </div>
+
+      <h3>Today's projected range</h3>
+      <div class="range">
+        <div class="range-cell">
+          <div class="l">Day high</div>
+          <div class="hi">$${dayHi.toFixed(2)}</div>
+          <div class="band">+${(0.5*atr).toFixed(2)} · +${(0.5*dayBandPct).toFixed(2)}%</div>
+        </div>
+        <div class="range-cell">
+          <div class="l">Day low</div>
+          <div class="lo">$${dayLo.toFixed(2)}</div>
+          <div class="band">−${(0.5*atr).toFixed(2)} · −${(0.5*dayBandPct).toFixed(2)}%</div>
+        </div>
+      </div>
+      <p style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin: 6px 0 0; letter-spacing: 0.06em;">
+        68% of days close within this ~${dayBandPct.toFixed(2)}% band · ATR₁₄ = $${atr.toFixed(2)}
+      </p>
+
+      <h3>Week ahead · 5-day projection</h3>
+      <div class="range">
+        <div class="range-cell">
+          <div class="l">Week high (upside)</div>
+          <div class="hi">$${wkHi.toFixed(2)}</div>
+          <div class="band">+${(atr*Math.sqrt(5)).toFixed(2)} · +${(wkBandPct/2).toFixed(2)}%</div>
+        </div>
+        <div class="range-cell">
+          <div class="l">Week low (downside)</div>
+          <div class="lo">$${wkLo.toFixed(2)}</div>
+          <div class="band">−${(atr*Math.sqrt(5)).toFixed(2)} · −${(wkBandPct/2).toFixed(2)}%</div>
+        </div>
+      </div>
+      <p style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin: 6px 0 0; letter-spacing: 0.06em;">
+        Full-week ~${wkBandPct.toFixed(2)}% ATR band · variance scales with √5 (not 5×) · a Fed / CPI print can widen this materially
+      </p>
+
+      <h3>Levels · recent 20-bar swing</h3>
+      <div class="ind-grid">
+        <span class="k">Resistance (20-bar high)</span> <div></div> <span class="v">$${swingHi.toFixed(2)}</span>
+        <span class="k">Support (20-bar low)</span>   <div></div> <span class="v">$${swingLo.toFixed(2)}</span>
+        <span class="k">Distance to 52w high</span>   <div></div> <span class="v">${dist52w?.toFixed(1) ?? '—'}%</span>
+      </div>
+
+      <h3>Indicators</h3>
+      <div class="ind-grid">
+        <span class="k">MA10 / 20</span>    <div></div> <span class="v">$${a.indicators.ma10?.toFixed(2) ?? '—'} / ${a.indicators.ma20?.toFixed(2) ?? '—'}</span>
+        <span class="k">MA50 / 200</span>   <div></div> <span class="v">$${a.indicators.ma50?.toFixed(2) ?? '—'} / ${a.indicators.ma200?.toFixed(2) ?? '—'}</span>
+        <span class="k">RSI(14)</span>      <div></div> <span class="v">${rsi?.toFixed(1) ?? '—'}</span>
+        <span class="k">ATR(14) · %</span>  <div></div> <span class="v">$${atr.toFixed(2)} · ${a.indicators.atrPct?.toFixed(1)}%</span>
+        <span class="k">20d / 60d ret</span><div></div> <span class="v">${a.indicators.ret20 != null ? (a.indicators.ret20>=0?'+':'')+a.indicators.ret20.toFixed(1) : '—'}% / ${a.indicators.ret60 != null ? (a.indicators.ret60>=0?'+':'')+a.indicators.ret60.toFixed(1) : '—'}%</span>
+        <span class="k">MA20 slope 5d</span><div></div> <span class="v">${(slope*100).toFixed(2)}%</span>
+      </div>
+
+      <h3>Long setup · reference plan</h3>
+      <div class="plan">
+        <div class="plan-cell"><div class="l">Entry (bid)</div><div class="n">$${q.price.toFixed(2)}</div></div>
+        <div class="plan-cell stop"><div class="l">Stop (−${((stopDist/q.price)*100).toFixed(1)}%)</div><div class="n">$${stopLong.toFixed(2)}</div></div>
+        <div class="plan-cell tgt"><div class="l">Target (+2.5R)</div><div class="n">$${targetLong.toFixed(2)}</div></div>
+        <div class="plan-cell"><div class="l">Time stop</div><div class="n">15 days</div></div>
+      </div>
+      <p style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin: 8px 0 0; letter-spacing: 0.06em;">
+        Stop = max(1.5×ATR, 2%). Target = 2.5R. Position size = <code style="background: var(--ground-2); padding: 1px 4px;">(capital × 0.0075) / stop distance</code>.
+        For a short setup, flip stop above resistance ($${swingHi.toFixed(2)}) and target below support.
+      </p>
+
+      <h3>What the tape is saying</h3>
+      <ul class="notes-list">
+        ${a.notes.slice(0, 6).map(n => `<li>${n}</li>`).join('')}
+      </ul>
+    `;
+  }
+
+  // Metals calendar — events that specifically move gold/silver
+  const METALS_EVENTS = [
+    { date: '2026-07-30', tag: 'FOMC',  label: 'Fed decision + presser',           impact: 'high',   note: 'Rate path revision → biggest gold mover of the month. Watch dot plot for cuts.' },
+    { date: '2026-08-13', tag: 'CPI',   label: 'US CPI (July)',                    impact: 'high',   note: 'Hot print → yields up → gold under pressure. Soft print → tailwind.' },
+    { date: '2026-08-22', tag: 'JHOLE', label: 'Jackson Hole symposium',           impact: 'high',   note: 'Powell speech historically pivotal for gold. Dovish tone = bullish.' },
+    { date: '2026-09-05', tag: 'NFP',   label: 'US Nonfarm Payrolls (Aug)',        impact: 'medium', note: 'Weak jobs data supports gold via rate-cut expectations.' },
+    { date: '2026-09-17', tag: 'FOMC',  label: 'Fed decision (Sep)',               impact: 'high',   note: 'SEP release — rate path + inflation forecast. Silver often outperforms in cut cycles.' },
+    { date: '2026-10-13', tag: 'CPI',   label: 'US CPI (Sep)',                     impact: 'high',   note: 'Pre-election CPI — market-moving on any surprise.' },
+    { date: '2026-11-03', tag: 'ELECT', label: 'US midterm elections',             impact: 'medium', note: 'Political uncertainty typically supportive of gold as safe haven.' },
+    { date: '2026-12-16', tag: 'FOMC',  label: 'Fed decision (Dec)',               impact: 'high',   note: 'Year-end positioning; SEP release; gold-silver ratio moves.' },
+  ];
+
+  function renderCalendar() {
+    const now = Date.now();
+    const dayMs = 24 * 3600 * 1000;
+    const upcoming = METALS_EVENTS
+      .map(e => ({ ...e, ts: Date.parse(e.date + 'T00:00:00Z'), daysUntil: Math.round((Date.parse(e.date + 'T00:00:00Z') - now) / dayMs) }))
+      .filter(e => e.daysUntil >= -1)
+      .sort((a, b) => a.ts - b.ts)
+      .slice(0, 6);
+    const impactColor = { high: 'var(--risk)', medium: 'var(--caution)', low: 'var(--ink-3)' };
+    const el = document.getElementById('metals-calendar');
+    el.innerHTML = upcoming.map(e => `
+      <div class="rule-cell">
+        <h4>
+          <span class="num" style="color: ${impactColor[e.impact] || 'var(--accent)'};">${e.daysUntil <= 0 ? 'TODAY' : e.daysUntil + 'd'}</span>
+          <span style="letter-spacing: 0.14em;">${e.tag}</span>
+        </h4>
+        <p><strong>${e.label}</strong> <span style="color: var(--ink-3); font-family: var(--mono); font-size: 11px;">· ${e.date}</span></p>
+        <p style="color: var(--ink-2); font-size: 12.5px;">${e.note}</p>
+      </div>
+    `).join('');
+    if (upcoming[0]) {
+      document.getElementById('cal-summary').textContent = `Nearest · ${upcoming[0].tag} in ${upcoming[0].daysUntil <= 0 ? 'today' : upcoming[0].daysUntil + ' days'}`;
+    }
+  }
+
+  function renderFeed(data) {
+    const rows = [];
+    for (const [tk, n] of Object.entries(data.news || {})) {
+      for (const it of (n.items || [])) rows.push({ tk, ...it });
+    }
+    rows.sort((a, b) => b.ts - a.ts);
+    const items = rows.slice(0, 20);
+    const feedEl = document.getElementById('feed');
+    if (!items.length) {
+      feedEl.innerHTML = `<li style="padding: 24px; text-align: center; color: var(--ink-3); font-family: var(--serif); font-style: italic;">No headlines yet · waiting for next poll</li>`;
+      return;
+    }
+    feedEl.innerHTML = items.map(x => {
+      const s = x.sentiment;
+      const cls = s > 0.15 ? 'pos' : s < -0.15 ? 'neg' : 'neu';
+      const ago = fmtAgo(Date.now() - x.ts);
+      const host = (() => { try { return new URL(x.link).hostname.replace('www.',''); } catch { return x.publisher; } })();
+      return `
+        <li>
+          <span class="ts">${ago}</span>
+          <span class="src-badge">${x.tk}</span>
+          <span class="tk">${x.political ? '<span style="color: var(--caution);">POL</span>' : ''}</span>
+          <span class="hd"><a href="${x.link}" target="_blank" rel="noopener">${x.title}</a> <span style="color: var(--ink-3); font-size: 10px; font-family: var(--mono);">· ${x.publisher || host}</span></span>
+          <span class="sent ${cls}">${s >= 0 ? '+' : ''}${s.toFixed(2)}</span>
+        </li>
+      `;
+    }).join('');
+  }
+
+  function fmtAgo(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h`;
+    return `${Math.floor(h / 24)}d`;
+  }
+
+  renderCalendar();
+  pull();
+  setInterval(pull, REFRESH_MS);
+})();
+</script>

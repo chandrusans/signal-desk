@@ -318,11 +318,11 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v1.0</div>
+      <div class="kicker">Signal Desk · Handbook · v1.1</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
-      <div><a href="/">← back to dashboard</a></div>
+      <div><a href="/">← dashboard</a> · <a href="/metals">metals →</a></div>
       <div>LAST UPDATED · 2026-07-22</div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
@@ -342,6 +342,7 @@
       <li><a href="#calendar">Political calendar</a></li>
       <li><a href="#data">Data sources</a></li>
       <li><a href="#glossary">Glossary</a></li>
+      <li><a href="#metals">Metals page</a></li>
       <li><a href="#changelog">Changelog</a></li>
     </ol>
     <div class="toc-log"><a href="#changelog">See what's new →</a></div>
@@ -580,9 +581,71 @@
       </ul>
     </section>
 
+    <section id="metals">
+      <h2><span class="chnum">Chapter 12</span>Metals page · XAU/USD &amp; XAG/USD</h2>
+      <p>The <a href="/metals">metals page</a> is a dedicated view for gold and silver. Metals trade on different drivers than equities — Fed rates, dollar strength, real yields, geopolitical risk — so they get their own dashboard rather than sitting inside the equity screener.</p>
+
+      <h3>Live pricing source</h3>
+      <p>Yahoo Finance does not serve <code>XAUUSD=X</code> or <code>XAGUSD=X</code> directly. The page uses <code>GC=F</code> (COMEX Gold continuous futures) and <code>SI=F</code> (Silver futures) as the live proxy — basis vs spot is under 0.5%, so the projected ranges hold at spot too. Both symbols are displayed to you as <strong>XAU/USD</strong> and <strong>XAG/USD</strong> per market convention.</p>
+
+      <h3>Range projection · the math</h3>
+      <p>For each metal, two ranges are projected off the current price and 14-day ATR:</p>
+      <ul>
+        <li><strong>Day range</strong> = price <code>± 0.5 × ATR₁₄</code>. This is a ~1σ band for a normal trading day — about 68% of days close inside it.</li>
+        <li><strong>Week range</strong> = price <code>± ATR₁₄ × √5</code>. Variance scales with the square root of time; a week is roughly <strong>2.24×</strong> the daily band, not 5×. A common beginner error is to multiply by 5.</li>
+      </ul>
+      <p>A Fed decision, CPI print, or geopolitical shock can and does widen the actual weekly move well beyond this projection. The band is a base case, not a promise.</p>
+
+      <h3>Directional bias</h3>
+      <p>Each panel labels the tape as one of four states:</p>
+      <ul>
+        <li><strong>BULL BIAS</strong> — full MA alignment + MA20 sloping up. Buy pullbacks to MA10/20.</li>
+        <li><strong>CONSTRUCTIVE</strong> — above MA20 and MA50 but 200d not confirmed. With-trend only.</li>
+        <li><strong>BEAR BIAS</strong> — below MA20 with negative slope. Fade rallies; longs need MA20 reclaim.</li>
+        <li><strong>RANGE</strong> — no clear trend. Sell resistance, buy support.</li>
+      </ul>
+
+      <h3>Drivers strip</h3>
+      <p>The top strip shows the four things you need in your peripheral vision when trading metals:</p>
+      <ul>
+        <li><strong>DXY</strong> — US dollar index. Dollar down = metals up. Inversely coloured (a DXY drop is green because it's a metals tailwind).</li>
+        <li><strong>US 10Y</strong> — Treasury yield. Rising yields = headwind for gold (opportunity cost of holding a non-yielding asset). Inversely coloured.</li>
+        <li><strong>VIX</strong> — risk regime. High VIX often supports gold's safe-haven bid. Silver is more industrial and can suffer with growth fears.</li>
+        <li><strong>Gold-Silver ratio</strong> — <code>XAU / XAG</code>. Above 85 historically means silver is cheap vs gold. Below 60 means silver rich. Traders use extremes for pair trades.</li>
+      </ul>
+
+      <h3>Metals calendar</h3>
+      <p>The events that move metals most: FOMC, CPI, NFP, Jackson Hole, US elections. Countdown shows days-until; impact colour flags priority. High-impact events within 5 days = reduce size regardless of technicals.</p>
+
+      <h3>Trade plan</h3>
+      <p>Same framework as equities but tuned for metals volatility: stop = <code>max(1.5 × ATR, 2%)</code>, target = <code>+2.5R</code>, time stop = 15 days. Metals have lower percentage volatility than stocks so the 2% floor is tighter than the equity 5%.</p>
+      <div class="callout warn">
+        <span class="callout-label">Not all metals move together</span>
+        <p>Gold trades on rates + geopolitics. Silver has ~50% industrial demand, so it also cares about global manufacturing PMIs and copper's direction. When gold rips on a Fed cut and silver lags, that's typically a signal to fade silver's underperformance via the gold-silver ratio.</p>
+      </div>
+    </section>
+
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 12</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 13</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v1.1<br/>2026-07-22</div>
+        <div class="what">
+          <h4>Metals page · XAU/USD &amp; XAG/USD</h4>
+          <ul>
+            <li>New page at <code>/metals</code> covering gold (via <code>GC=F</code> futures) and silver (via <code>SI=F</code>) as XAU/USD and XAG/USD proxies.</li>
+            <li>Live intraday range projection: price <code>± 0.5 × ATR₁₄</code>.</li>
+            <li>Weekly range projection: price <code>± ATR₁₄ × √5</code> (variance-scaled, not multiplied by 5).</li>
+            <li>Drivers strip: DXY, US 10Y, VIX, gold-silver ratio, regime — with metals-appropriate inverse colouring on DXY / 10Y.</li>
+            <li>Directional bias classifier: BULL BIAS / CONSTRUCTIVE / BEAR BIAS / RANGE.</li>
+            <li>Metals calendar: FOMC, CPI, NFP, Jackson Hole, elections — the events that actually move gold.</li>
+            <li>Metals news feed sourced from GLD / SLV / GDX headlines.</li>
+            <li>Cross-links added between dashboard ↔ handbook ↔ metals.</li>
+            <li>New Chapter 12 in handbook explains the range math, drivers, and directional bias states.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v1.0<br/>2026-07-22</div>
