@@ -4,6 +4,10 @@ A momentum-swing signals dashboard for self-directed equity research. Pulls live
 
 **Not investment advice.** This is a research tool. See in-page disclosure.
 
+**Beginners**: read the handbook at `/handbook` (or `handbook.html` in this repo). It explains the point system, setup states, trade plans, and every feature in plain language, with a versioned changelog.
+
+**Contributors**: `CLAUDE.md` at the repo root spells out the handbook maintenance rule — any change to scoring, setups, indicators, or data sources requires a same-commit update to `handbook.html`.
+
 ## What it does
 
 - **Live prices**: 1-year OHLC + volume via Yahoo Finance chart API (no auth key). Polls every 30 seconds.

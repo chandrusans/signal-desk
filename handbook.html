@@ -1,0 +1,686 @@
+<title>Signal Desk — Handbook</title>
+<style>
+  :root {
+    --ground: #F4EFE4;
+    --ground-2: #EDE7D8;
+    --ink: #161512;
+    --ink-2: #3A362E;
+    --ink-3: #6B655A;
+    --rule: #D9D2BF;
+    --panel: #FBF8F0;
+    --accent: #B8863A;
+    --signal: #3B8C5A;
+    --caution: #B57F1F;
+    --risk: #B84438;
+
+    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: ui-sans-serif, -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0E1116;
+      --ground-2: #141821;
+      --ink: #E7E2D6;
+      --ink-2: #B5AF9F;
+      --ink-3: #7C7767;
+      --rule: #262B36;
+      --panel: #161B24;
+      --accent: #D6A24B;
+      --signal: #5FBF83;
+      --caution: #D4A040;
+      --risk: #D96355;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground: #F4EFE4; --ground-2: #EDE7D8; --ink: #161512; --ink-2: #3A362E; --ink-3: #6B655A;
+    --rule: #D9D2BF; --panel: #FBF8F0; --accent: #B8863A; --signal: #3B8C5A; --caution: #B57F1F; --risk: #B84438;
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1116; --ground-2: #141821; --ink: #E7E2D6; --ink-2: #B5AF9F; --ink-3: #7C7767;
+    --rule: #262B36; --panel: #161B24; --accent: #D6A24B; --signal: #5FBF83; --caution: #D4A040; --risk: #D96355;
+  }
+  html { color-scheme: light dark; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--serif); font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+
+  .shell {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 28px 100px;
+    display: grid;
+    grid-template-columns: 210px 1fr;
+    gap: 44px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; padding: 28px 20px 80px; gap: 24px; }
+    .toc { position: static !important; border-right: none !important; border-bottom: 1px solid var(--rule); padding: 0 0 16px; }
+  }
+
+  /* Masthead */
+  .masthead {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--ink);
+    margin-bottom: 32px;
+  }
+  .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+  .brand { font-family: var(--serif); font-size: 40px; line-height: 1; letter-spacing: -0.015em; font-weight: 500; text-wrap: balance; margin: 0; }
+  .brand em { font-style: italic; color: var(--accent); font-weight: 400; }
+  .meta { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-2); line-height: 1.7; }
+  .meta a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+  .meta a:hover { border-bottom-style: solid; }
+
+  /* Table of contents */
+  .toc {
+    position: sticky;
+    top: 24px;
+    padding-right: 20px;
+    border-right: 1px solid var(--rule);
+  }
+  .toc h3 {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 12px;
+    font-weight: 500;
+  }
+  .toc ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: chap;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .toc li {
+    counter-increment: chap;
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .toc li::before {
+    content: counter(chap, decimal-leading-zero) "  ";
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+  }
+  .toc a { color: var(--ink-2); text-decoration: none; border-bottom: 1px dotted transparent; }
+  .toc a:hover { color: var(--ink); border-bottom-color: var(--ink-3); }
+  .toc .toc-log {
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-3);
+    letter-spacing: 0.06em;
+  }
+  .toc .toc-log a { color: var(--accent); border-bottom-color: transparent; }
+
+  /* Content column */
+  .content { max-width: 68ch; }
+  .content section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  .content h2 {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .content h2 .chnum {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 4px;
+    font-style: normal;
+  }
+  .content h3 {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 500;
+    margin: 32px 0 10px;
+    letter-spacing: -0.005em;
+  }
+  .content p { margin: 0 0 14px; }
+  .content p + p { margin-top: 0; }
+  .content ul, .content ol { padding-left: 22px; margin: 8px 0 14px; }
+  .content li { margin-bottom: 6px; }
+  .content code {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--ground-2);
+    padding: 1px 6px;
+    border-radius: 2px;
+    color: var(--ink);
+  }
+  .content a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+  .content a:hover { border-bottom-style: solid; }
+
+  /* Callout */
+  .callout {
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin: 20px 0;
+  }
+  .callout .callout-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+    display: block;
+  }
+  .callout p { margin: 0; font-family: var(--serif); font-size: 15px; line-height: 1.55; }
+  .callout.warn { border-left-color: var(--risk); }
+  .callout.warn .callout-label { color: var(--risk); }
+
+  /* Point-table */
+  .pt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 8px;
+    font-size: 14px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    font-family: var(--sans);
+  }
+  .pt-table th, .pt-table td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  .pt-table th {
+    background: var(--ground-2);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+  .pt-table tr:last-child td { border-bottom: none; }
+  .pt-table td.pts {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  .pt-table td.max {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-3);
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Setup chips (reused from dashboard) */
+  .setup-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border: 1px solid;
+    line-height: 1.5;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  .setup-BREAKOUT { color: var(--signal); border-color: var(--signal); }
+  .setup-PULLBACK { color: var(--accent); border-color: var(--accent); }
+  .setup-EARLY    { color: var(--ink-2); border-color: var(--ink-3); }
+  .setup-EXTENDED { color: var(--caution); border-color: var(--caution); }
+  .setup-BROKEN   { color: var(--risk); border-color: var(--risk); }
+  .setup-AVOID    { color: var(--risk); border-color: var(--risk); }
+
+  /* Version log */
+  .changelog { border-top: 2px solid var(--ink); padding-top: 20px; }
+  .log-entry {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 20px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry .when {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
+  }
+  .log-entry .what h4 {
+    font-family: var(--serif);
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 6px;
+  }
+  .log-entry .what ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
+  .log-entry .what li { margin-bottom: 3px; font-family: var(--sans); }
+
+  /* Disclosure */
+  .disclosure {
+    margin-top: 40px;
+    padding: 20px 22px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--risk);
+  }
+  .disclosure h4 {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--risk);
+    margin: 0 0 8px;
+    font-weight: 500;
+  }
+  .disclosure p { font-size: 14px; margin: 0; color: var(--ink-2); font-style: italic; }
+
+  .theme-toggle {
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--ink-2);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    margin-top: 8px;
+    cursor: pointer;
+  }
+  .theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="shell">
+  <header class="masthead">
+    <div>
+      <div class="kicker">Signal Desk · Handbook · v1.0</div>
+      <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
+    </div>
+    <div class="meta">
+      <div><a href="/">← back to dashboard</a></div>
+      <div>LAST UPDATED · 2026-07-22</div>
+      <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#what">What this is</a></li>
+      <li><a href="#tour">Dashboard tour</a></li>
+      <li><a href="#score">The composite score</a></li>
+      <li><a href="#setups">Setup states</a></li>
+      <li><a href="#plan">Reading a trade plan</a></li>
+      <li><a href="#regime">Regime filter · VIX</a></li>
+      <li><a href="#political">Political overlay</a></li>
+      <li><a href="#screener">The screener</a></li>
+      <li><a href="#calendar">Political calendar</a></li>
+      <li><a href="#data">Data sources</a></li>
+      <li><a href="#glossary">Glossary</a></li>
+      <li><a href="#changelog">Changelog</a></li>
+    </ol>
+    <div class="toc-log"><a href="#changelog">See what's new →</a></div>
+  </nav>
+
+  <main class="content">
+
+    <section id="what">
+      <h2><span class="chnum">Chapter 01</span>What this is</h2>
+      <p>Signal Desk is a research tool for a self-directed retail investor doing swing trading in liquid US equities. It watches a small pinned list of tickers, pulls their live prices from Yahoo Finance every 30 seconds, computes a set of real technical indicators, weighs the news flow around each name, and gives every ticker a composite score from 0 to 100.</p>
+      <p>It also proposes a trade plan — where to enter, where to place your stop, where to take profit — computed from live volatility, not from a hardcoded number. And it tells you when to <em>not</em> trade, because most of the time no clean setup exists.</p>
+      <div class="callout">
+        <span class="callout-label">The single most important idea</span>
+        <p>The desk is not telling you what to buy. It's screening the tape and producing an opinion. You keep the decision. The tool's job is to make the reasoning transparent so you can disagree with it intelligently.</p>
+      </div>
+    </section>
+
+    <section id="tour">
+      <h2><span class="chnum">Chapter 02</span>Dashboard tour</h2>
+      <p>Top to bottom on the main page:</p>
+      <ol>
+        <li><strong>Masthead + pulse strip</strong> — page-wide status. Feed health (live / stale / error), last update time, S&amp;P/Nasdaq/DXY/rates, and — most importantly — the <strong>regime cell</strong> showing the current VIX level and what it allows.</li>
+        <li><strong>Top candidates</strong> — up to 5 pinned tickers, reordered every poll so the highest-scoring pick sits at rank 01. Each card shows current price, intraday change, computed setup state, the composite score, and a 14-day sparkline.</li>
+        <li><strong>Detail panel</strong> — click any card to expand. Shows the setup and regime callout, transparent score breakdown, live indicators (SMAs, RSI, ATR, returns), an ATR-derived trade plan, and a full exit checklist.</li>
+        <li><strong>Strategy rulebook</strong> — the six mechanical rules the framework operates by (universe, entry, stop, target, sizing, regime).</li>
+        <li><strong>Political calendar</strong> — curated market-moving events (FOMC, elections, tariff reviews) with days-until countdown.</li>
+        <li><strong>Market intelligence</strong> — live news feed pulled from Yahoo Finance, with sentiment scores per headline and a POL badge on political ones.</li>
+        <li><strong>Backtest harness</strong> — pick a strategy variant + universe + window; see equity curve and stats.</li>
+        <li><strong>Screener</strong> — filter a 20-ticker universe by score, market cap, P/E, momentum, sentiment, and setup state.</li>
+        <li><strong>Data source architecture</strong> — what feeds are live vs still mock.</li>
+        <li><strong>Disclosure</strong> — the not-investment-advice paragraph. Read it.</li>
+      </ol>
+    </section>
+
+    <section id="score">
+      <h2><span class="chnum">Chapter 03</span>The composite score</h2>
+      <p>The composite score is a number from 0 to 100 that summarizes everything the desk knows about a stock. Higher is better. It's computed from real market data on each poll, so it changes as the tape moves.</p>
+      <p>The score is the sum of five base components plus two overlay adjustments:</p>
+
+      <table class="pt-table">
+        <thead>
+          <tr><th>Component</th><th>What it measures</th><th class="max">Max</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Trend</strong></td>
+            <td>Alignment of price vs moving averages (MA20, MA50, MA200) and the direction of the 20-day MA. Full alignment (price &gt; MA20 &gt; MA50 &gt; MA200) plus upward MA slope = maximum.</td>
+            <td class="max">30 pts</td>
+          </tr>
+          <tr>
+            <td><strong>Momentum</strong></td>
+            <td>20-day price return, adjusted for RSI. Strong 20d gains score high; overbought RSI (&gt;75) or oversold (&lt;30) applies a penalty.</td>
+            <td class="max">25 pts</td>
+          </tr>
+          <tr>
+            <td><strong>Location</strong></td>
+            <td>How close price is to the 52-week high. At/near the high = full points; more than 20% below = zero.</td>
+            <td class="max">20 pts</td>
+          </tr>
+          <tr>
+            <td><strong>Volume</strong></td>
+            <td>Ratio of 5-day average volume to 20-day average volume. Expanding volume (&gt;1.3×) = accumulation, scores high.</td>
+            <td class="max">15 pts</td>
+          </tr>
+          <tr>
+            <td><strong>Volatility</strong></td>
+            <td>14-day ATR as a % of price. The tradable sweet spot is 1.5–4%; too quiet or too wild scores less.</td>
+            <td class="max">10 pts</td>
+          </tr>
+          <tr>
+            <td><strong>News catalyst</strong></td>
+            <td>Overlay. Live headline sentiment (keyword-scored) from the last 24 hours. More headlines with stronger sentiment moves this more.</td>
+            <td class="max">±10 pts</td>
+          </tr>
+          <tr>
+            <td><strong>Political overlay</strong></td>
+            <td>Overlay. Political headlines are scored using a sector-aware lexicon — "chips act" is bullish for semis but neutral for healthcare, "antitrust" is bearish for big tech, etc.</td>
+            <td class="max">±8 pts</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>The base components (trend + momentum + location + volume + volatility) sum to a maximum of 100. The overlays can push the score up or down by an additional 18 combined. The final score is clamped to the 0–100 range.</p>
+
+      <h3>How to read the score</h3>
+      <ul>
+        <li><strong>75+</strong> — every dimension is firing. This is what an A+ setup looks like. Rare.</li>
+        <li><strong>55–74</strong> — strong trend + momentum, worth watching. May trade if the setup state is BREAKOUT or PULLBACK.</li>
+        <li><strong>35–54</strong> — mixed. Something is missing (probably trend alignment or volume). Not a trade — a watchlist item.</li>
+        <li><strong>Below 35</strong> — broken or basing. Skip.</li>
+      </ul>
+      <div class="callout warn">
+        <span class="callout-label">Score is not permission to trade</span>
+        <p>A high score means the tape looks good. It doesn't mean the current bar is a valid entry. Always check the <strong>setup state</strong> below the score — it's what tells you whether an entry actually exists.</p>
+      </div>
+    </section>
+
+    <section id="setups">
+      <h2><span class="chnum">Chapter 04</span>Setup states</h2>
+      <p>Each ticker is classified into one of six mechanical setup states. This tells you what action, if any, the framework thinks is appropriate right now.</p>
+
+      <p><span class="setup-chip setup-BREAKOUT">BREAKOUT</span> Price is at a 20-day high on expanding volume (5d/20d ratio ≥ 1.2×), RSI is between 55 and 72, and the trend is aligned. This is the cleanest momentum entry — enter at market. Full sizing.</p>
+
+      <p><span class="setup-chip setup-PULLBACK">PULLBACK</span> Trend is intact, price has pulled back to within 2% of the 10-day moving average, RSI has cooled to 40–58, and 20-day return is still positive. This is buying the dip inside an uptrend. Enter on close within the pullback zone.</p>
+
+      <p><span class="setup-chip setup-EARLY">EARLY</span> Uptrend is forming (price above MA20 and MA50) but no confirmed breakout or pullback entry yet. Watchlist only. Don't enter blindly — wait for the setup to graduate to BREAKOUT or PULLBACK.</p>
+
+      <p><span class="setup-chip setup-EXTENDED">EXTENDED</span> Price is more than 6% above the MA20 or RSI is above 78. Chasing here has poor risk/reward. Wait for a pullback to MA10/20 before considering entry.</p>
+
+      <p><span class="setup-chip setup-BROKEN">BROKEN</span> Price is below MA20 or MA50. Trend is broken. Skip until the stock builds a new base and reclaims the moving averages on volume.</p>
+
+      <p><span class="setup-chip setup-AVOID">AVOID</span> Nothing clean. No entry criteria met. Do nothing.</p>
+
+      <p>Most days, the majority of tickers show EARLY, BROKEN, or AVOID. That's normal — clean setups are rare. The system rejecting a trade is doing its job.</p>
+    </section>
+
+    <section id="plan">
+      <h2><span class="chnum">Chapter 05</span>Reading a trade plan</h2>
+      <p>When you open a pick's detail panel, the trade plan block shows four cells:</p>
+      <ul>
+        <li><strong>Entry band</strong> — the price range to enter within. For BREAKOUT setups it's tight around current price; for PULLBACK it's a zone around the MA10.</li>
+        <li><strong>Stop</strong> — where you cut the loss, no exceptions. Calculated as <code>max(1.5 × ATR₁₄, 5%)</code> below entry, capped at 10%.</li>
+        <li><strong>Target</strong> — where you take profit. Set at <code>+2.5R</code> above entry, meaning the reward is 2.5× the risk you took.</li>
+        <li><strong>Time stop</strong> — 15 trading days. If the trade is flat after three weeks, close it — opportunity cost.</li>
+      </ul>
+
+      <h3>The R-multiple system</h3>
+      <p>All targets and stops are measured in "R" — the initial risk you took. If your entry was $100 and your stop was $95, then <code>R = $5</code>. A +2R gain means the trade is up $10. A +2.5R target means you're aiming for $12.50.</p>
+      <p>This is the professional way to size trades — instead of fixed dollar profits, everything is expressed relative to your original risk. A 60% win rate at 2.5R average wins is highly profitable even after losses.</p>
+
+      <h3>The exit checklist</h3>
+      <p>Every detail panel includes a mechanical exit checklist:</p>
+      <ol>
+        <li>Hard stop hit → exit full position, no averaging down.</li>
+        <li>Price hits +1R → trail stop to breakeven.</li>
+        <li>Price hits +2R → trail stop to +1R.</li>
+        <li>Target hit → scale half, trail remainder under MA20.</li>
+        <li>Flat after 15 trading days → close (opportunity cost).</li>
+        <li>SPY closes below its 50-day MA → exit entire momentum book.</li>
+      </ol>
+      <div class="callout">
+        <span class="callout-label">Position sizing</span>
+        <p>The framework uses risk-parity: <strong>risk 0.75% of capital per trade</strong>. Shares = <code>(capital × 0.0075) / stop distance</code>. Wider ATR → smaller position. Every trade risks the same dollar amount regardless of how volatile the stock is.</p>
+      </div>
+    </section>
+
+    <section id="regime">
+      <h2><span class="chnum">Chapter 06</span>Regime filter · VIX</h2>
+      <p>The VIX (CBOE Volatility Index) measures expected market volatility. The desk pulls it live and uses it to gate what setups it will trade.</p>
+      <ul>
+        <li><strong>VIX &lt; 15 · Calm.</strong> Full sizing. All setup types allowed.</li>
+        <li><strong>VIX 15–20 · Normal.</strong> Full sizing but only A+ setups (BREAKOUT and PULLBACK).</li>
+        <li><strong>VIX 20–25 · Elevated.</strong> Half sizing. PULLBACK entries only — no chasing breakouts into vol.</li>
+        <li><strong>VIX 25–35 · Stress.</strong> Quarter sizing at most. No new longs. Manage existing risk.</li>
+        <li><strong>VIX &gt; 35 · Crisis.</strong> No new positions. Exit weakest holdings. Hedge the book.</li>
+      </ul>
+      <p>The regime cell in the pulse strip shows the current VIX and what the framework will let you do. The detail panel also shows an explicit "Regime blocks new entry on this setup" line when a candidate's setup isn't allowed under the current regime.</p>
+    </section>
+
+    <section id="political">
+      <h2><span class="chnum">Chapter 07</span>Political overlay</h2>
+      <p>Political events move stocks materially. Tariffs, sanctions, drug-pricing bills, antitrust rulings, FOMC decisions — these can matter more than any technical setup for weeks at a time.</p>
+      <p>Every headline in the news feed is scanned for political trigger words (<code>tariff</code>, <code>antitrust</code>, <code>fomc</code>, <code>sanctions</code>, <code>chips act</code>, <code>congress</code>, etc.). If any match, the headline gets a <strong>POL badge</strong> in the intel feed.</p>
+      <h3>Sector-aware sentiment</h3>
+      <p>Political sentiment is not a global bull/bear score — the same word can mean opposite things depending on the sector. Each pinned ticker is tagged with a political sector:</p>
+      <ul>
+        <li><strong>semis</strong> — NVDA, AMD, ASML, MRVL. "Chips act" bullish, "export controls" bearish.</li>
+        <li><strong>defense</strong> — PLTR, CAT. "Budget increase" and "conflict" bullish, "peace talks" bearish.</li>
+        <li><strong>energy</strong> — XOM. "Drilling permit" bullish, "climate rules" bearish.</li>
+        <li><strong>healthcare</strong> — LLY, NVAX. "FDA approval" bullish, "drug pricing" bearish.</li>
+        <li><strong>tech-mega</strong> — META, MSFT, GOOGL, AMZN, CRWD. "Antitrust" bearish, "settled" bullish.</li>
+        <li><strong>crypto</strong> — HOOD, COIN. "Spot ETF approved" bullish, "SEC crackdown" bearish.</li>
+        <li><strong>ev</strong> — TSLA, F. "Tax credit" bullish, "credit removed" bearish.</li>
+      </ul>
+      <p>The political overlay adjusts the composite score by up to ±8 points based on the volume and average sentiment of political headlines in the last 24 hours, weighted through the ticker's sector lexicon.</p>
+    </section>
+
+    <section id="screener">
+      <h2><span class="chnum">Chapter 08</span>The screener</h2>
+      <p>Below the fold, the screener runs the same composite scoring against a 20-ticker universe (mix of megacaps, momentum names, sectors). Use it when the pinned picks aren't showing setups you like — sort by score descending and see what's actually setting up in the wider market.</p>
+      <p>Filter controls:</p>
+      <ul>
+        <li><strong>Sector</strong> — GICS-style sector filter (Semiconductors, Software, Cybersecurity, etc.)</li>
+        <li><strong>Min composite score</strong> — drop everything below your threshold</li>
+        <li><strong>Min market cap</strong> — currently static; live cap requires a fundamentals API (see data sources)</li>
+        <li><strong>Max P/E</strong> — currently static</li>
+        <li><strong>Min momentum (20d)</strong> — live, computed from real bars</li>
+        <li><strong>Min sentiment</strong> — currently static</li>
+      </ul>
+      <p>Every column header is clickable to sort. Setup states are shown as chips in the Setup column.</p>
+    </section>
+
+    <section id="calendar">
+      <h2><span class="chnum">Chapter 09</span>Political calendar</h2>
+      <p>A curated list of upcoming events that historically move markets. Auto-hides past events and sorts by nearest first. Each event shows:</p>
+      <ul>
+        <li><strong>Days until</strong> — countdown in the leftmost slot; TODAY when it hits.</li>
+        <li><strong>Tag</strong> — FOMC / ELECTION / CHINA / FISCAL / GOVSHUT / MACRO.</li>
+        <li><strong>Note</strong> — which sectors typically react and why.</li>
+      </ul>
+      <p>The impact colour on the countdown (red = high impact, amber = medium) tells you how much attention to pay. A high-impact event within 5 days is a good reason to reduce sizing on affected sectors regardless of what the technicals say.</p>
+    </section>
+
+    <section id="data">
+      <h2><span class="chnum">Chapter 10</span>Data sources</h2>
+      <h3>Live</h3>
+      <ul>
+        <li><strong>Prices, OHLC, volume, VIX</strong> — Yahoo Finance chart API. No auth key. Polled every 30 seconds.</li>
+        <li><strong>News headlines</strong> — Yahoo Finance search endpoint. Also no key. Pulled on each poll.</li>
+        <li><strong>Sentiment (general + political)</strong> — computed client-side from headlines using keyword lexicons.</li>
+        <li><strong>All technical indicators</strong> — computed in the browser from the 1-year OHLC series.</li>
+      </ul>
+      <h3>Still mock or static</h3>
+      <ul>
+        <li><strong>Market cap and P/E</strong> in the screener — would need Finnhub free tier or SEC filings.</li>
+        <li><strong>Insider / options-flow narratives</strong> in the older intel section — placeholder data.</li>
+        <li><strong>Political calendar</strong> — curated list, not scraped. Update by editing the array in <code>index.html</code>.</li>
+        <li><strong>Reddit mention counts</strong> — blocked without OAuth (see README for setup).</li>
+      </ul>
+    </section>
+
+    <section id="glossary">
+      <h2><span class="chnum">Chapter 11</span>Glossary</h2>
+      <ul>
+        <li><strong>ATR</strong> — Average True Range. A measure of a stock's typical daily price movement in dollars. Used to size stops so they respect the stock's natural volatility.</li>
+        <li><strong>RSI</strong> — Relative Strength Index. Momentum oscillator from 0 to 100. Above 70 = overbought, below 30 = oversold. Between 40 and 70 is where healthy trends live.</li>
+        <li><strong>SMA</strong> — Simple Moving Average. Average closing price over N days. Trend-following indicator.</li>
+        <li><strong>MA alignment</strong> — When shorter MAs sit above longer ones (price &gt; MA20 &gt; MA50 &gt; MA200). Confirms an uptrend across timeframes.</li>
+        <li><strong>R-multiple</strong> — Trade result expressed as a multiple of initial risk. A +2R winner made twice what you were willing to lose.</li>
+        <li><strong>R:R ratio</strong> — Reward-to-risk ratio. A 3:1 setup risks $1 to make $3.</li>
+        <li><strong>Regime</strong> — The current volatility environment, quantified by VIX. Dictates position sizing and which setups are eligible.</li>
+        <li><strong>Composite score</strong> — The 0–100 rank Signal Desk assigns each ticker, summing across trend / momentum / location / volume / volatility / catalysts / political.</li>
+        <li><strong>Setup state</strong> — A mechanical classification of what action, if any, is appropriate: BREAKOUT, PULLBACK, EARLY, EXTENDED, BROKEN, AVOID.</li>
+        <li><strong>FOMC</strong> — Federal Open Market Committee. The Fed body that sets interest rates. Meetings are the biggest scheduled market-moving events.</li>
+        <li><strong>Section 301</strong> — US trade-law tool for imposing tariffs. Reviews typically move semis, EV, and solar stocks.</li>
+      </ul>
+    </section>
+
+    <section id="changelog" class="changelog">
+      <h2><span class="chnum">Chapter 12</span>Changelog</h2>
+      <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v1.0<br/>2026-07-22</div>
+        <div class="what">
+          <h4>Handbook shipped</h4>
+          <ul>
+            <li>Full onboarding handbook at <code>/handbook</code> covering all features, the point system, setup logic, trade-plan mechanics, regime filter, and political overlay.</li>
+            <li>Sticky table of contents for navigation.</li>
+            <li>Versioned changelog at the bottom of this page.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="log-entry">
+        <div class="when">Round 3<br/>2026-07-22</div>
+        <div class="what">
+          <h4>Political overlay</h4>
+          <ul>
+            <li>News API expanded with political keyword detection and sector-aware sentiment scoring (semis, defense, energy, healthcare, fin, tech-mega, crypto, ev).</li>
+            <li>Political overlay component added to the composite score (max ±8 pts).</li>
+            <li>Intel feed badges political headlines with a POL tag; new POLITICS filter chip.</li>
+            <li>Political calendar section with curated upcoming events (FOMC, elections, tariff reviews, fiscal deadlines).</li>
+            <li>Word-boundary matching to eliminate false positives (e.g. "Warren" no longer matches "war").</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="log-entry">
+        <div class="when">Round 2<br/>2026-07-22</div>
+        <div class="what">
+          <h4>Live news + sentiment catalyst</h4>
+          <ul>
+            <li>New serverless endpoint <code>/api/news</code> pulling real headlines from Yahoo Finance per ticker.</li>
+            <li>Keyword-based sentiment scoring on every headline (−1 to +1).</li>
+            <li>Intel feed replaced with live headlines sorted by time, showing publisher, age, and sentiment.</li>
+            <li>Trending chips derived from real news volume per ticker.</li>
+            <li>News catalyst component added to composite score (max ±10 pts).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="log-entry">
+        <div class="when">Round 1<br/>2026-07-22</div>
+        <div class="what">
+          <h4>Real trader-grade analytics</h4>
+          <ul>
+            <li>Serverless <code>/api/quotes</code> endpoint proxying Yahoo Finance for 1-year OHLC + volume.</li>
+            <li>Analyzer module (<code>analyze.js</code>) computing SMA (10/20/50/200), RSI(14), ATR(14), 20d/60d returns, 52-week high distance, and volume expansion.</li>
+            <li>Composite score with transparent five-factor breakdown (trend + momentum + location + volume + volatility).</li>
+            <li>Setup classifier: BREAKOUT / PULLBACK / EARLY / EXTENDED / BROKEN / AVOID.</li>
+            <li>ATR-based trade plans with entry band, mechanical stop, R-multiple target, and time stop.</li>
+            <li>VIX regime filter gating position sizing and eligible setups.</li>
+            <li>Strategy rulebook section describing the six operating rules.</li>
+            <li>Picks auto-reorder every poll by computed score.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="log-entry">
+        <div class="when">v0.1<br/>2026-07-22</div>
+        <div class="what">
+          <h4>Initial dashboard (mock data)</h4>
+          <ul>
+            <li>FT-paper light / graphite dark themes with amber-gold accent.</li>
+            <li>Ranked candidates, market pulse strip, detail panel, market intel feed, backtest chart, screener, data-source architecture, disclosure.</li>
+            <li>All data hardcoded — replaced with live feeds in Round 1.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <div class="disclosure">
+      <h4>Not investment advice</h4>
+      <p>Signal Desk is a research and educational tool. Everything shown — the score, the setup call, the trade plan, the sizing suggestion — is a mechanical output of the framework, not a recommendation to trade. Historical backtests do not predict future returns. Momentum strategies can and do lose money, especially in regime transitions. You are responsible for your own due diligence, position sizing, and stop discipline. Never risk capital you cannot afford to lose.</p>
+    </div>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  const root = document.documentElement;
+  const mql = window.matchMedia('(prefers-color-scheme: dark)');
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme') || (mql.matches ? 'dark' : 'light');
+    root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+  });
+  // Smooth-scroll TOC links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      const id = a.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (el) {
+        e.preventDefault();
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.pushState(null, '', '#' + id);
+      }
+    });
+  });
+})();
+</script>
