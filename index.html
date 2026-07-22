@@ -1116,8 +1116,195 @@
     background: var(--ground);
   }
 
+  /* --------------------------------------------------------------------
+   * UI trends layer — glass, neumorphism, motion, dark-mode-first depth
+   * ------------------------------------------------------------------ */
+
+  :root {
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+    /* Neumorphism (light theme defaults — subtle) */
+    --neu-hi: rgba(255, 255, 255, 0.9);
+    --neu-lo: rgba(96, 84, 60, 0.14);
+    --neu-inset-hi: rgba(255, 255, 255, 0.7);
+    --neu-inset-lo: rgba(96, 84, 60, 0.16);
+    /* Glass */
+    --glass-bg: rgba(251, 248, 240, 0.72);
+    --glass-border: rgba(22, 21, 18, 0.10);
+    --glass-blur: 20px;
+    /* Card glow */
+    --card-glow: transparent;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --neu-hi: rgba(255, 255, 255, 0.045);
+      --neu-lo: rgba(0, 0, 0, 0.55);
+      --neu-inset-hi: rgba(255, 255, 255, 0.03);
+      --neu-inset-lo: rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(14, 17, 22, 0.65);
+      --glass-border: rgba(214, 162, 75, 0.12);
+      --card-glow: rgba(214, 162, 75, 0.06);
+    }
+    /* Subtle atmospheric background gradient in dark theme */
+    body {
+      background:
+        radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.06), transparent 60%),
+        radial-gradient(900px 600px at 90% 100%, rgba(59, 140, 90, 0.045), transparent 55%),
+        var(--ground);
+    }
+  }
+  :root[data-theme="light"] {
+    --neu-hi: rgba(255, 255, 255, 0.9);
+    --neu-lo: rgba(96, 84, 60, 0.14);
+    --neu-inset-hi: rgba(255, 255, 255, 0.7);
+    --neu-inset-lo: rgba(96, 84, 60, 0.16);
+    --glass-bg: rgba(251, 248, 240, 0.72);
+    --glass-border: rgba(22, 21, 18, 0.10);
+    --card-glow: transparent;
+  }
+  :root[data-theme="light"] body { background: var(--ground); }
+  :root[data-theme="dark"] {
+    --neu-hi: rgba(255, 255, 255, 0.045);
+    --neu-lo: rgba(0, 0, 0, 0.55);
+    --neu-inset-hi: rgba(255, 255, 255, 0.03);
+    --neu-inset-lo: rgba(0, 0, 0, 0.5);
+    --glass-bg: rgba(14, 17, 22, 0.65);
+    --glass-border: rgba(214, 162, 75, 0.12);
+    --card-glow: rgba(214, 162, 75, 0.06);
+  }
+  :root[data-theme="dark"] body {
+    background:
+      radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.06), transparent 60%),
+      radial-gradient(900px 600px at 90% 100%, rgba(59, 140, 90, 0.045), transparent 55%),
+      var(--ground);
+  }
+
+  /* --- Neumorphism on interactive controls --- */
+  .tabbar { border-bottom: 1px solid var(--rule); }
+  .tab {
+    border-radius: 10px 10px 0 0;
+    transition: color 0.18s var(--ease-out), background 0.18s var(--ease-out), transform 0.18s var(--ease-out);
+  }
+  .tab:hover:not(.on) {
+    color: var(--ink);
+    background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 6%, transparent));
+  }
+  .tab.on {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
+    box-shadow: inset 0 -2px 0 var(--accent);
+    border-bottom-color: transparent;
+  }
+  .handbook-btn {
+    border-radius: 8px;
+    background: var(--panel);
+    box-shadow: 3px 3px 8px var(--neu-lo), -3px -3px 8px var(--neu-hi);
+    transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), color 0.18s var(--ease-out);
+  }
+  .handbook-btn:hover, .handbook-btn:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 4px 4px 12px var(--neu-lo), -4px -4px 12px var(--neu-hi);
+    color: var(--ink);
+  }
+  .handbook-btn:active {
+    transform: translateY(0);
+    box-shadow: inset 2px 2px 6px var(--neu-inset-lo), inset -2px -2px 6px var(--neu-inset-hi);
+  }
+  .handbook-btn .hb-glyph { box-shadow: 0 0 8px var(--accent); }
+
+  .theme-toggle {
+    border-radius: 6px;
+    background: var(--panel);
+    box-shadow: 2px 2px 6px var(--neu-lo), -2px -2px 6px var(--neu-hi);
+    transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), color 0.18s var(--ease-out);
+    border: none;
+  }
+  .theme-toggle:hover {
+    transform: translateY(-1px);
+    box-shadow: 3px 3px 8px var(--neu-lo), -3px -3px 8px var(--neu-hi);
+  }
+  .theme-toggle:active {
+    transform: translateY(0);
+    box-shadow: inset 2px 2px 4px var(--neu-inset-lo), inset -2px -2px 4px var(--neu-inset-hi);
+  }
+
+  .seg { border-radius: 6px; overflow: hidden; }
+  .seg button { transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out); }
+  .seg button.on { box-shadow: inset 0 -2px 0 var(--accent); }
+
+  /* --- Glassmorphism on the handbook drawer --- */
+  .hb-backdrop {
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px) saturate(140%);
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+  }
+  .hb-drawer {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    border-left: 1px solid var(--glass-border);
+    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.45), inset 1px 0 0 rgba(255, 255, 255, 0.06);
+  }
+  .hb-header {
+    background: transparent;
+    border-bottom: 1px solid var(--glass-border);
+  }
+
+  /* --- Card hover-lift motion --- */
+  .card {
+    transition: transform 0.22s var(--ease-out), border-color 0.18s var(--ease-out), box-shadow 0.22s var(--ease-out);
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--card-glow), 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  .card.active {
+    box-shadow: 0 0 0 1px var(--accent), 0 8px 32px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+
+  /* --- Live-dot pulse animation --- */
+  @keyframes live-pulse {
+    0%, 100% { opacity: 1; text-shadow: 0 0 6px currentColor; }
+    50% { opacity: 0.65; text-shadow: 0 0 0px currentColor; }
+  }
+  #live-dot { display: inline-block; animation: live-pulse 2s var(--ease-inout) infinite; }
+
+  /* --- Page-load stagger fade-in --- */
+  @keyframes rise-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .masthead { animation: rise-in 0.5s var(--ease-out) both; }
+  .pulse    { animation: rise-in 0.5s var(--ease-out) 0.08s both; }
+  .section-head { animation: rise-in 0.5s var(--ease-out) 0.16s both; }
+  .desk     { animation: rise-in 0.5s var(--ease-out) 0.24s both; }
+  .rules    { animation: rise-in 0.5s var(--ease-out) 0.30s both; }
+  .intel    { animation: rise-in 0.5s var(--ease-out) 0.36s both; }
+  .back-grid { animation: rise-in 0.5s var(--ease-out) 0.42s both; }
+  .screen-grid { animation: rise-in 0.5s var(--ease-out) 0.48s both; }
+
+  /* --- Sparkline draw-in when it enters view --- */
+  .spark polyline {
+    stroke-dasharray: 240;
+    stroke-dashoffset: 240;
+    animation: draw-in 1.2s var(--ease-out) 0.3s forwards;
+  }
+  @keyframes draw-in { to { stroke-dashoffset: 0; } }
+
+  /* --- Signal-desk logomark styling --- */
+  .brand-mark {
+    display: inline-block;
+    vertical-align: -6px;
+    margin-right: 12px;
+    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 32%, transparent));
+    animation: spin-slow 60s linear infinite;
+  }
+  @keyframes spin-slow { to { transform: rotate(360deg); } }
+
+  /* --- Pulse cell subtle glow on live-updating values --- */
+  .pulse-cell .value { transition: color 0.3s var(--ease-out); }
+
   @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; animation: none !important; }
+    *, .brand-mark, #live-dot, .spark polyline { transition: none !important; animation: none !important; }
   }
 </style>
 
@@ -1137,7 +1324,24 @@
   <header class="masthead">
     <div>
       <div class="kicker">The Signal Desk · Issue No. 042 · Cycle-window 30d</div>
-      <h1 class="brand">Momentum candidates, <em>ranked & reasoned.</em></h1>
+      <h1 class="brand">
+        <svg class="brand-mark" width="42" height="42" viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <radialGradient id="lg" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="21" cy="21" r="20" fill="none" stroke="var(--accent)" stroke-width="0.6" opacity="0.4"/>
+          <circle cx="21" cy="21" r="14" fill="none" stroke="var(--accent)" stroke-width="0.8" opacity="0.65"/>
+          <circle cx="21" cy="21" r="8"  fill="none" stroke="var(--accent)" stroke-width="1" opacity="0.9"/>
+          <circle cx="21" cy="21" r="3.5" fill="url(#lg)"/>
+          <circle cx="21" cy="21" r="1.6" fill="var(--accent)"/>
+          <line x1="21" y1="1" x2="21" y2="6" stroke="var(--accent)" stroke-width="0.6" opacity="0.4"/>
+          <line x1="21" y1="36" x2="21" y2="41" stroke="var(--accent)" stroke-width="0.6" opacity="0.4"/>
+          <line x1="1" y1="21" x2="6" y2="21" stroke="var(--accent)" stroke-width="0.6" opacity="0.4"/>
+          <line x1="36" y1="21" x2="41" y2="21" stroke="var(--accent)" stroke-width="0.6" opacity="0.4"/>
+        </svg>Momentum candidates, <em>ranked & reasoned.</em></h1>
     </div>
     <div class="meta">
       <div class="date" id="run-date"></div>

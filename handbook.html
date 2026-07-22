@@ -324,15 +324,79 @@
   }
   .theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
 
+  /* --- UI trends layer for handbook --- */
+  :root {
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --glass-bg: rgba(251, 248, 240, 0.72);
+    --glass-border: rgba(22, 21, 18, 0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --glass-bg: rgba(14, 17, 22, 0.65);
+      --glass-border: rgba(214, 162, 75, 0.12);
+    }
+    /* Subtle atmospheric background (only when standalone, not embedded) */
+    body:not(.embedded) {
+      background:
+        radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.05), transparent 60%),
+        var(--ground);
+    }
+  }
+  :root[data-theme="dark"] body:not(.embedded) {
+    background:
+      radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.05), transparent 60%),
+      var(--ground);
+  }
+  /* When embedded in the drawer iframe, background becomes transparent so
+     the drawer's glass shows through */
+  body.embedded { background: transparent !important; }
+  body.embedded .toc {
+    background: color-mix(in srgb, var(--panel) 40%, transparent);
+    padding: 16px 20px;
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    backdrop-filter: blur(12px);
+  }
+
+  /* Bullet hover motion */
+  .toc li {
+    transition: transform 0.18s var(--ease-out), color 0.18s var(--ease-out);
+  }
+  .toc li:hover { transform: translateX(2px); }
+  .toc li:hover::before { color: var(--accent); }
+
+  .theme-toggle {
+    border-radius: 6px;
+    transition: transform 0.18s var(--ease-out), border-color 0.18s var(--ease-out);
+  }
+  .theme-toggle:hover { transform: translateY(-1px); }
+
+  /* Section entrance stagger */
+  @keyframes hb-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .content section {
+    animation: hb-rise 0.5s var(--ease-out) both;
+  }
+  .content section:nth-of-type(1) { animation-delay: 0.05s; }
+  .content section:nth-of-type(2) { animation-delay: 0.10s; }
+  .content section:nth-of-type(3) { animation-delay: 0.15s; }
+  .content section:nth-of-type(n+4) { animation-delay: 0.20s; }
+
+  /* Active bullet gentle pulse when following scroll */
+  @keyframes bullet-pulse {
+    0%, 100% { text-shadow: 0 0 4px var(--accent); }
+    50% { text-shadow: 0 0 10px var(--accent); }
+  }
+  .toc li.active::before { animation: bullet-pulse 2.4s var(--ease-out) infinite; }
+
   @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; animation: none !important; }
+    *, .toc li.active::before { transition: none !important; animation: none !important; }
   }
 </style>
 
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v1.2</div>
+      <div class="kicker">Signal Desk · Handbook · v1.3</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -681,6 +745,21 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 13</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v1.3<br/>2026-07-22</div>
+        <div class="what">
+          <h4>UI/UX refresh — glass, neu, motion, illustration</h4>
+          <ul>
+            <li><strong>Neumorphism</strong> on the tab bar, Handbook button, theme toggle, and segmented controls — soft raised look, pressed state on click, tactile feel without shouting.</li>
+            <li><strong>Glassmorphism</strong> on the Handbook drawer: frosted-glass panel with <code>backdrop-filter: blur(20px) saturate(160%)</code> so the underlying dashboard shows through with soft depth. Backdrop also blurred.</li>
+            <li><strong>Motion</strong>: staggered rise-in on page load (masthead → pulse → sections cascade); hover-lift on candidate cards with soft glow shadow; sparkline path draws in on refresh; live-feed dot pulses; slowly-rotating logomark; bullet hover on TOC nudges right.</li>
+            <li><strong>Illustration</strong>: concentric-arc bullseye logomark on the dashboard masthead with radial glow; embossed Au (gold) and Ag (silver) coin illustrations on the metals panels.</li>
+            <li><strong>Dark mode as hero</strong>: atmospheric radial gradients (amber + green ambient light) added to the dark ground; sharper glow on active cards and the accent dot; light theme kept clean and unchanged.</li>
+            <li>All animations respect <code>prefers-reduced-motion</code> — instant transitions when the OS asks for them.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v1.2<br/>2026-07-22</div>
