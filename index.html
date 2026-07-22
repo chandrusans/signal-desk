@@ -1,4 +1,13 @@
 <title>Signal Desk — Momentum Candidates</title>
+<script>
+  // Apply persisted theme BEFORE first paint to prevent flash.
+  (function () {
+    try {
+      var t = localStorage.getItem('sd-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
 <style>
   :root {
     --ground: #F4EFE4;
@@ -1661,17 +1670,30 @@ import { analyze, regime } from './analyze.js';
   // ------- Theme toggle -------
   const root = document.documentElement;
   const btn = document.getElementById('theme-toggle');
-  const stored = null; // artifact context: no persistence
   const mql = window.matchMedia('(prefers-color-scheme: dark)');
   function currentTheme() {
     return root.getAttribute('data-theme') || (mql.matches ? 'dark' : 'light');
   }
-  btn.addEventListener('click', () => {
-    const next = currentTheme() === 'dark' ? 'light' : 'dark';
+  function applyTheme(next) {
     root.setAttribute('data-theme', next);
+    try { localStorage.setItem('sd-theme', next); } catch (e) {}
+    // Sync any open handbook iframe on this page
+    const frame = document.getElementById('hb-frame');
+    if (frame && frame.contentWindow) {
+      try { frame.contentWindow.postMessage({ type: 'sd-theme', theme: next }, '*'); } catch (e) {}
+    }
     renderHarness();
     renderPicks();
     if (activeTicker) renderDetail(activeTicker);
+  }
+  btn.addEventListener('click', () => {
+    applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+  });
+  // Accept theme sync from an embedded handbook (if the user toggles from there)
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'sd-theme' && (e.data.theme === 'dark' || e.data.theme === 'light')) {
+      applyTheme(e.data.theme);
+    }
   });
 
   // ------- Run date -------

@@ -1,4 +1,12 @@
 <title>Signal Desk — Handbook</title>
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('sd-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
 <style>
   :root {
     --ground: #F4EFE4;
@@ -883,9 +891,24 @@
     if (nav) nav.style.display = 'none';
   }
 
+  function applyTheme(next) {
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('sd-theme', next); } catch (e) {}
+    // If embedded, notify the parent page so the dashboard/metals view stays in sync
+    if (embedded) {
+      try { window.parent.postMessage({ type: 'sd-theme', theme: next }, '*'); } catch (e) {}
+    }
+  }
   document.getElementById('theme-toggle').addEventListener('click', () => {
     const cur = root.getAttribute('data-theme') || (mql.matches ? 'dark' : 'light');
-    root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+  // Accept theme sync from the parent (dashboard toggle while drawer open)
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'sd-theme' && (e.data.theme === 'dark' || e.data.theme === 'light')) {
+      root.setAttribute('data-theme', e.data.theme);
+      try { localStorage.setItem('sd-theme', e.data.theme); } catch (_) {}
+    }
   });
   // Smooth-scroll TOC links + mark active bullet
   function markActive(id) {

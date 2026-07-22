@@ -1,4 +1,12 @@
 <title>Signal Desk — Metals · Gold & Silver</title>
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('sd-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
 <style>
   :root {
     --ground: #F4EFE4;
@@ -774,10 +782,23 @@ import { analyze, regime } from './analyze.js';
   let inFlight = false;
 
   // Theme
+  function applyTheme(next) {
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('sd-theme', next); } catch (e) {}
+    const frame = document.getElementById('hb-frame');
+    if (frame && frame.contentWindow) {
+      try { frame.contentWindow.postMessage({ type: 'sd-theme', theme: next }, '*'); } catch (e) {}
+    }
+    if (lastData) applyAll(lastData);
+  }
   document.getElementById('theme-toggle').addEventListener('click', () => {
     const cur = root.getAttribute('data-theme') || (mql.matches ? 'dark' : 'light');
-    root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
-    if (lastData) applyAll(lastData);
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'sd-theme' && (e.data.theme === 'dark' || e.data.theme === 'light')) {
+      applyTheme(e.data.theme);
+    }
   });
 
   const liveDot = document.getElementById('live-dot');
