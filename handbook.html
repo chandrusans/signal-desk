@@ -404,7 +404,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v1.3</div>
+      <div class="kicker">Signal Desk · Handbook · v1.4</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -447,6 +447,13 @@
       <ul>
         <li><a href="#screener">The screener</a></li>
         <li><a href="#calendar">Political calendar</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-sub">Portfolio</div>
+      <ul>
+        <li><a href="#dashboard">Dashboard · your positions</a></li>
       </ul>
     </div>
 
@@ -706,8 +713,54 @@
       </ul>
     </section>
 
+    <section id="dashboard">
+      <h2><span class="chnum">Chapter 12</span>Dashboard · your positions</h2>
+      <p>The <a href="/dashboard">Dashboard</a> is your personal portfolio view. Anything you actually own goes here; the desk then tracks it live and — most importantly — tells you when a seasoned PM would sell it. This isn't a P&amp;L calculator. It's a decision-support layer for every open position.</p>
+
+      <h3>Adding a position</h3>
+      <p>Fill the Add form with ticker, share count, buy price, buy date, and optionally a manual stop. Everything is stored locally in your browser (no server, no account). Use Export JSON regularly if you care about the data — clear browser data and it's gone.</p>
+      <p>If you don't set a stop, the desk defaults to <code>5% below entry</code> — a reasonable equity swing default. Override it any time via the Edit button.</p>
+
+      <h3>The verdict system</h3>
+      <p>Every position gets one of four verdicts, refreshed on each poll (15s). Verdicts are colour-coded on the card's left rail and sorted so the ones needing attention float to the top:</p>
+      <ul>
+        <li><span class="setup-chip" style="color: var(--risk); border-color: var(--risk);">SELL</span> Exit the whole position. Reasons that trigger it: hard stop hit, setup broken with a loss, regime turned stress/crisis, time stop with no follow-through after 15 days.</li>
+        <li><span class="setup-chip" style="color: var(--caution); border-color: var(--caution);">TRIM</span> Take partial profit. Reasons: RSI overbought (&gt;78) on a &gt;2R winner, setup went EXTENDED on a winner, MA20 slope negative on a winner.</li>
+        <li><span class="setup-chip" style="color: var(--signal); border-color: var(--signal);">HOLD</span> Do nothing yet. Fresh positions, or profitable positions with trend intact. The reason line will tell you where to trail your stop.</li>
+        <li><span class="setup-chip" style="color: var(--accent); border-color: var(--accent);">WATCH</span> Decision imminent. Price is within a fraction of R of your stop or target — be at your screen.</li>
+      </ul>
+
+      <h3>How the sell logic thinks</h3>
+      <p>The verdict function checks rules in priority order and returns the first match:</p>
+      <ol>
+        <li><strong>Hard stop hit</strong> — no exceptions, no averaging down.</li>
+        <li><strong>Regime turned</strong> (VIX &gt; 25) — protect the whole book.</li>
+        <li><strong>Setup broken with loss</strong> — trend dead, cut before it compounds.</li>
+        <li><strong>Time stop</strong> — 15 trading days with less than 1R gain means the thesis didn't materialize. Free the capital for a better setup.</li>
+        <li><strong>Overextended winner</strong> — RSI &gt; 78 with a &gt;2R gain, or setup gone EXTENDED. Scale half, move stop up.</li>
+        <li><strong>Trend deteriorating on a winner</strong> — MA20 slope negative with &gt;1R gain. Protect gains before they roundtrip.</li>
+        <li><strong>Fresh position</strong> — first 3 days, always HOLD to give the setup room.</li>
+        <li><strong>Winner with intact trend</strong> — HOLD, trail stop per R-multiple gained.</li>
+        <li><strong>Near stop or target</strong> — WATCH.</li>
+      </ol>
+      <div class="callout">
+        <span class="callout-label">Personalization</span>
+        <p>You can override any position's stop via the Edit button. The verdict engine will re-evaluate against your custom stop on the next poll. Notes fields (planned) let you tag entries with your thesis so future-you knows why past-you bought it.</p>
+      </div>
+
+      <h3>Portfolio summary strip</h3>
+      <p>Above the position list: portfolio value, unrealized P&amp;L in $ and %, position count, count of action alerts (sell + trim), and current regime. When SELL or TRIM alerts &gt; 0, the alert cell turns red — a nudge to open the dashboard.</p>
+
+      <h3>Import / Export / Clear</h3>
+      <p>Export JSON downloads your full portfolio as a plain JSON file — commit it to a private repo if you want history. Import reads a previously-exported file and replaces the current portfolio (with confirmation). Clear wipes everything after confirmation. These give you data portability without any server dependency.</p>
+      <div class="callout warn">
+        <span class="callout-label">Data lives only in your browser</span>
+        <p>Positions are stored in <code>localStorage</code> under key <code>sd-portfolio-v1</code>. Clearing site data, switching browsers, or using incognito will make them disappear. Export before doing any of that.</p>
+      </div>
+    </section>
+
     <section id="metals">
-      <h2><span class="chnum">Chapter 12</span>Metals page · XAU/USD &amp; XAG/USD</h2>
+      <h2><span class="chnum">Chapter 13</span>Metals page · XAU/USD &amp; XAG/USD</h2>
       <p>The <a href="/metals">metals page</a> is a dedicated view for gold and silver. Metals trade on different drivers than equities — Fed rates, dollar strength, real yields, geopolitical risk — so they get their own dashboard rather than sitting inside the equity screener.</p>
 
       <h3>Live pricing source</h3>
@@ -751,8 +804,26 @@
     </section>
 
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 13</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 14</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v1.4<br/>2026-07-22</div>
+        <div class="what">
+          <h4>Personal portfolio Dashboard + navigation refactor</h4>
+          <ul>
+            <li>Renamed the old "Dashboard" tab to <strong>Stocks</strong> — it was always a momentum screener; naming now matches function.</li>
+            <li>New <strong>Dashboard</strong> tab is your personal portfolio tracker at <code>/dashboard</code>: add positions with ticker, qty, buy price, buy date, and optional stop.</li>
+            <li>Each position gets a live <strong>action verdict</strong> refreshed every 15s: SELL / TRIM / HOLD / WATCH, with a plain-English reason based on the same momentum-swing engine that scores the Stocks page.</li>
+            <li>Sell logic follows a real PM playbook: hard-stop hit, regime turned, setup broken with loss, time stop (15 trading days), overextended winner (RSI &gt; 78), trend deteriorating on a winner, or fresh-position HOLD.</li>
+            <li>Portfolio summary strip: total value, unrealized P&amp;L in $ and %, position count, count of action alerts (sell + trim), current VIX regime.</li>
+            <li>Positions sorted so SELL &gt; TRIM &gt; WATCH &gt; HOLD — the ones needing action float to the top.</li>
+            <li>Fully personal: data stored only in browser localStorage (<code>sd-portfolio-v1</code>), never sent anywhere. Import / Export JSON for backup and portability.</li>
+            <li>Live P&amp;L flashes green/red on each price refresh, same as the Stocks page.</li>
+            <li>New Chapter 12 in this handbook explains the verdict system and sell logic in full.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v1.3<br/>2026-07-22</div>
