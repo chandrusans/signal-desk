@@ -87,10 +87,11 @@ function avgVolume(bars, lookback) {
 
 // ------- Core analysis -------
 
-export function analyze(bars) {
+export function analyze(bars, extras = {}) {
   if (!bars || bars.length < 60) {
     return { insufficient: true, reason: 'need ≥60 bars of history' };
   }
+  const news = extras.news;
   const closes = bars.map((b) => b.c);
   const price = closes[closes.length - 1];
 
@@ -167,7 +168,18 @@ export function analyze(bars) {
     else notes.push(`ATR ${atrPct.toFixed(1)}% — too wild, cut size`);
   }
 
-  const score = Math.max(0, Math.min(100, parts.trend + parts.momentum + parts.location + parts.volume + parts.volatility));
+  // Catalyst adjustment from live news sentiment (max ±10)
+  let catalyst = 0;
+  if (news && news.count24h > 0) {
+    const intensity = Math.min(news.count24h, 5) * 2; // 2..10
+    catalyst = Math.round(news.avgSentiment * intensity);
+    if (catalyst > 0) notes.push(`News catalyst: ${news.count24h} headlines / 24h · avg sentiment ${news.avgSentiment >= 0 ? '+' : ''}${news.avgSentiment} → +${catalyst} pts`);
+    else if (catalyst < 0) notes.push(`News drag: ${news.count24h} headlines / 24h · avg sentiment ${news.avgSentiment.toFixed(2)} → ${catalyst} pts`);
+    else notes.push(`News flow: ${news.count24h} headlines / 24h · sentiment neutral`);
+  }
+  parts.catalyst = catalyst;
+
+  const score = Math.max(0, Math.min(100, parts.trend + parts.momentum + parts.location + parts.volume + parts.volatility + catalyst));
 
   // ---- Setup classifier ----
   let setup = 'AVOID', setupReason = '';

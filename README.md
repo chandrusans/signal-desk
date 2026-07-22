@@ -75,6 +75,28 @@ Returns:
 }
 ```
 
-## What's not live yet
+## What's live
 
-Currently mock: composite hand-picked ticker list, Reddit/news/insider narratives in the intel feed, sector/market-cap/P/E in the screener. Roadmap: `api/reddit.js` (PRAW), `api/news.js` (Finnhub free tier), `api/fundamentals.js`.
+- Prices, OHLC, volume, VIX regime → `/api/quotes` (Yahoo Finance)
+- News headlines + keyword-based sentiment per ticker → `/api/news` (Yahoo Finance search)
+- News sentiment feeds into the composite score as a **catalyst adjustment** (max ±10 pts)
+
+## What's still mock
+
+- The pinned ticker list is hand-picked (NVDA / PLTR / CRWD / HOOD / ASML) — Round 3 would auto-populate from top-scoring universe candidates
+- Insider / options-flow / analyst-rating narratives in the intel feed still hardcoded
+- Screener market cap and P/E values still hardcoded (need Finnhub free tier)
+
+## Reddit — future add-on (requires OAuth)
+
+Reddit blocked anonymous JSON reads in 2023, so pulling mention counts requires registering an app:
+
+1. Go to https://www.reddit.com/prefs/apps → **Create app** → type **script**
+2. Note the `client_id` (under the app name) and `client_secret`
+3. In Vercel project settings → **Environment Variables**, add:
+   - `REDDIT_CLIENT_ID`
+   - `REDDIT_CLIENT_SECRET`
+   - `REDDIT_USER_AGENT` (e.g. `signal-desk/1.0 by chandrusans`)
+4. Redeploy — an `api/reddit.js` handler can then use the client-credentials OAuth flow (60 req/min) to search r/wallstreetbets, r/stocks, r/investing per ticker.
+
+That endpoint isn't shipped yet — say the word and it's ~1 hour of work once you have the credentials.

@@ -1528,6 +1528,11 @@ import { analyze, regime } from './analyze.js';
         <span class="pk">Location</span>    <div class="bar-track"><div class="bar-fill" style="width: ${(a.parts.location/20)*100}%"></div></div>    <span class="pv">${a.parts.location}/20</span>
         <span class="pk">Volume</span>      <div class="bar-track"><div class="bar-fill" style="width: ${(a.parts.volume/15)*100}%"></div></div>      <span class="pv">${a.parts.volume}/15</span>
         <span class="pk">Volatility</span>  <div class="bar-track"><div class="bar-fill" style="width: ${(a.parts.volatility/10)*100}%"></div></div>  <span class="pv">${a.parts.volatility}/10</span>
+        ${a.parts.catalyst != null && a.parts.catalyst !== 0 ? `
+        <span class="pk">News catalyst</span>
+        <div class="bar-track"><div class="bar-fill" style="width: ${Math.min(100, Math.abs(a.parts.catalyst) * 10)}%; background: ${a.parts.catalyst >= 0 ? 'var(--signal)' : 'var(--risk)'};"></div></div>
+        <span class="pv" style="color: ${a.parts.catalyst >= 0 ? 'var(--signal)' : 'var(--risk)'};">${a.parts.catalyst >= 0 ? '+' : ''}${a.parts.catalyst}</span>
+        ` : ''}
       </div>
 
       <h3>What the tape is saying</h3>
@@ -1871,15 +1876,23 @@ import { analyze, regime } from './analyze.js';
     return [...new Set([...picks.map(p => p.ticker), ...universe.map(u => u.ticker), '^VIX'])];
   }
 
+  let latestNews = {};
+
   async function pullQuotes() {
     const tickers = tickerList().join(',');
+    const newsTickers = tickerList().filter(t => !t.startsWith('^')).join(',');
     try {
-      const res = await fetch(`/api/quotes?tickers=${encodeURIComponent(tickers)}&range=1y`, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const quotes = data.quotes || {};
-      applyQuotes(quotes);
-      lastGoodAt = data.asOf || Date.now();
+      const [qRes, nRes] = await Promise.all([
+        fetch(`/api/quotes?tickers=${encodeURIComponent(tickers)}&range=1y`, { cache: 'no-store' }),
+        fetch(`/api/news?tickers=${encodeURIComponent(newsTickers)}`, { cache: 'no-store' }).catch(() => null),
+      ]);
+      if (!qRes.ok) throw new Error(`quotes HTTP ${qRes.status}`);
+      const qData = await qRes.json();
+      const nData = nRes && nRes.ok ? await nRes.json() : null;
+      if (nData && nData.news) latestNews = nData.news;
+      applyQuotes(qData.quotes || {}, latestNews);
+      renderIntelLive();
+      lastGoodAt = qData.asOf || Date.now();
       updateRunDate(lastGoodAt);
       const secsAgo = Math.round((Date.now() - lastGoodAt) / 1000);
       setLive('live', `live · updated ${secsAgo}s ago`);
@@ -1895,8 +1908,8 @@ import { analyze, regime } from './analyze.js';
 
   let currentRegime = { level: 'unknown', sizeMult: 1, allow: [], note: 'connecting…' };
 
-  function applyQuotes(quotes) {
-    // Picks: derive live price, analytics, computed score, ATR-based plan
+  function applyQuotes(quotes, news = {}) {
+    // Picks: derive live price, analytics (with news catalyst), computed score, ATR-based plan
     picks.forEach(p => {
       const q = quotes[p.ticker];
       if (!q || q.price == null) return;
@@ -1905,27 +1918,26 @@ import { analyze, regime } from './analyze.js';
       p.todayChangePct = q.changePct;
       p.volume = q.volume;
       if (q.bars && q.bars.length >= 60) {
-        const a = analyze(q.bars);
+        const a = analyze(q.bars, { news: news[p.ticker] });
         if (!a.insufficient) {
           p.analysis = a;
-          p.score = a.score;              // OVERRIDE hand score with computed
+          p.score = a.score;
           p.setup = a.setup;
           p.setupReason = a.setupReason;
           p.spark = q.bars.slice(-14).map(b => b.c);
         }
       }
     });
-    // Universe (screener): compute per-ticker analysis, override mom/score
     universe.forEach(u => {
       const q = quotes[u.ticker];
       if (!q || q.price == null) return;
       u.price = q.price;
       if (q.bars && q.bars.length >= 60) {
-        const a = analyze(q.bars);
+        const a = analyze(q.bars, { news: news[u.ticker] });
         if (!a.insufficient) {
           u.analysis = a;
           u.score = a.score;
-          u.mom = a.indicators.ret20 ?? u.mom;  // real 20d return
+          u.mom = a.indicators.ret20 ?? u.mom;
           u.setup = a.setup;
         }
       }
@@ -1959,6 +1971,63 @@ import { analyze, regime } from './analyze.js';
       <div class="value ${currentRegime.level}">${currentRegime.level.toUpperCase()}</div>
       <div class="delta flat" style="max-width: 22ch;">${currentRegime.note}</div>
     `;
+  }
+
+  function renderIntelLive() {
+    // Flatten news across all tickers into one time-sorted feed
+    const rows = [];
+    for (const [tk, n] of Object.entries(latestNews)) {
+      for (const it of (n.items || [])) {
+        rows.push({ tk, ...it });
+      }
+    }
+    rows.sort((a, b) => b.ts - a.ts);
+    const items = intelFilter === 'ALL' || intelFilter === 'NEWS' ? rows : [];
+    // Update trending chips using aggregate news volume as proxy
+    const volByTk = {};
+    Object.entries(latestNews).forEach(([tk, n]) => { volByTk[tk] = n.count24h || 0; });
+    const trending = Object.entries(volByTk).sort((a,b) => b[1] - a[1]).slice(0, 6)
+      .filter(([,v]) => v > 0)
+      .map(([tk, v]) => ({ tk, d: `${v}/24h` }));
+
+    const chips = ['ALL', 'NEWS'];
+    intelHead.innerHTML = '<span class="label">Trending</span>' +
+      trending.map(t => `<span class="chip"><span>${t.tk}</span><span class="delta">${t.d}</span></span>`).join('') +
+      '<span class="label" style="margin-left: 12px;">Source</span>' +
+      chips.map(c => `<button class="chip filter ${intelFilter===c?'on':''}" data-f="${c}">${c}</button>`).join('');
+    intelHead.querySelectorAll('.chip.filter').forEach(el => {
+      el.addEventListener('click', () => { intelFilter = el.dataset.f; renderIntelLive(); });
+    });
+
+    if (items.length === 0) {
+      feedEl.innerHTML = `<li style="padding: 24px; text-align: center; color: var(--ink-3); font-family: var(--serif); font-style: italic; grid-template-columns: 1fr;">No headlines in the last window · waiting for next poll</li>`;
+      return;
+    }
+    feedEl.innerHTML = items.slice(0, 30).map(x => {
+      const s = x.sentiment;
+      const cls = s > 0.15 ? 'pos' : s < -0.15 ? 'neg' : 'neu';
+      const ago = fmtAgo(Date.now() - x.ts);
+      const host = (() => { try { return new URL(x.link).hostname.replace('www.',''); } catch { return x.publisher; } })();
+      return `
+        <li>
+          <span class="ts">${ago}</span>
+          <span class="src-badge src-news">NEWS</span>
+          <span class="tk">${x.tk}</span>
+          <span class="hd"><a href="${x.link}" target="_blank" rel="noopener">${x.title}</a> <span style="color: var(--ink-3); font-size: 10px; font-family: var(--mono);">· ${x.publisher || host}</span></span>
+          <span class="sent ${cls}">${s >= 0 ? '+' : ''}${s.toFixed(2)}</span>
+        </li>
+      `;
+    }).join('');
+  }
+
+  function fmtAgo(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h`;
+    return `${Math.floor(h / 24)}d`;
   }
 
   // Kick off + poll
