@@ -1271,6 +1271,37 @@
   }
   #live-dot { display: inline-block; animation: live-pulse 2s var(--ease-inout) infinite; }
 
+  /* --- Price change flash --- */
+  @keyframes flash-up {
+    0%   { background: color-mix(in srgb, var(--signal) 45%, transparent); color: var(--signal); }
+    100% { background: transparent; color: inherit; }
+  }
+  @keyframes flash-down {
+    0%   { background: color-mix(in srgb, var(--risk) 45%, transparent); color: var(--risk); }
+    100% { background: transparent; color: inherit; }
+  }
+  .flash-up   { animation: flash-up 1.4s var(--ease-out); border-radius: 3px; }
+  .flash-down { animation: flash-down 1.4s var(--ease-out); border-radius: 3px; }
+
+  /* --- Refresh countdown / manual refresh button --- */
+  .refresh-btn {
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--ink-3);
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    margin-left: 6px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+  }
+  .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .next-refresh { color: var(--ink-3); font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; margin-left: 4px; }
+
   /* --- Page-load stagger fade-in --- */
   @keyframes rise-in {
     from { opacity: 0; transform: translateY(6px); }
@@ -1348,7 +1379,7 @@
     </div>
     <div class="meta">
       <div class="date" id="run-date"></div>
-      <div id="live-status">FEED · <span id="live-dot">◌</span> <span id="live-label">connecting…</span></div>
+      <div id="live-status">FEED · <span id="live-dot">◌</span> <span id="live-label">connecting…</span> <button class="refresh-btn" id="refresh-now" title="Force refresh now">↻ Refresh</button></div>
       <div>MODEL · composite v3.2</div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
@@ -1840,7 +1871,7 @@ import { analyze, regime } from './analyze.js';
       <div class="card ${p.ticker === activeTicker ? 'active' : ''}" data-ticker="${p.ticker}" tabindex="0" role="button" aria-pressed="${p.ticker === activeTicker}">
         <div class="rank">${String(i+1).padStart(2,'0')}</div>
         <div class="card-body">
-          <div class="ticker">${p.ticker} <span style="color: var(--ink-3); font-size: 12px; font-weight: 400; letter-spacing: 0;">· $${p.price.toFixed(2)}</span>${p.todayChangePct != null ? ` <span style="font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: 0.02em; color: ${p.todayChangePct >= 0 ? 'var(--signal)' : 'var(--risk)'};">${p.todayChangePct >= 0 ? '+' : ''}${p.todayChangePct.toFixed(2)}%</span>` : ''}</div>
+          <div class="ticker">${p.ticker} <span data-flash-ticker="${p.ticker}" style="color: var(--ink-3); font-size: 12px; font-weight: 400; letter-spacing: 0; padding: 0 2px;">· $${p.price.toFixed(2)}</span>${p.todayChangePct != null ? ` <span style="font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: 0.02em; color: ${p.todayChangePct >= 0 ? 'var(--signal)' : 'var(--risk)'};">${p.todayChangePct >= 0 ? '+' : ''}${p.todayChangePct.toFixed(2)}%</span>` : ''}</div>
           <div class="name">${p.name}</div>
           ${setupChip}
           <div class="thesis">${p.setup && p.setupReason ? p.setupReason : p.thesis}</div>
@@ -1900,7 +1931,7 @@ import { analyze, regime } from './analyze.js';
     detailEl.innerHTML = `
       <div class="detail-head">
         <div class="t">${p.ticker}</div>
-        <div class="p">$${p.price.toFixed(2)}${p.todayChangePct != null ? ` <span style="color: ${p.todayChangePct >= 0 ? 'var(--signal)' : 'var(--risk)'};">${p.todayChangePct >= 0 ? '+' : ''}${p.todayChangePct.toFixed(2)}%</span>` : ''} · score ${p.score}</div>
+        <div class="p"><span data-flash-ticker="${p.ticker}" style="padding: 0 3px;">$${p.price.toFixed(2)}</span>${p.todayChangePct != null ? ` <span style="color: ${p.todayChangePct >= 0 ? 'var(--signal)' : 'var(--risk)'};">${p.todayChangePct >= 0 ? '+' : ''}${p.todayChangePct.toFixed(2)}%</span>` : ''} · score ${p.score}</div>
       </div>
 
       ${setupCallout}
@@ -2258,8 +2289,10 @@ import { analyze, regime } from './analyze.js';
   });
 
   // ------- Live quotes -------
-  const REFRESH_MS = 30000;
-  const STALE_MS = 90000;
+  const REFRESH_MS = 15000;
+  const STALE_MS = 60000;
+  const prevPrices = {};      // track last-known price per ticker so we can flash on change
+  let inFlight = false;
   let lastGoodAt = 0;
 
   // Political-exposure sector map — governs how political headlines are scored per ticker.
@@ -2290,10 +2323,37 @@ import { analyze, regime } from './analyze.js';
 
   let latestNews = {};
 
+  // Snapshot per-ticker prices before applyQuotes so we can compute deltas → flash after render.
+  const pendingFlashes = {}; // ticker -> 'up'|'down'
+  function recordPriceChanges(quotes) {
+    Object.entries(quotes).forEach(([t, q]) => {
+      if (q?.price == null) return;
+      const prev = prevPrices[t];
+      if (prev != null && q.price !== prev) {
+        pendingFlashes[t] = q.price > prev ? 'up' : 'down';
+      }
+      prevPrices[t] = q.price;
+    });
+  }
+  function applyPendingFlashes() {
+    // Match any element with data-flash-ticker attribute set to the changed ticker.
+    Object.entries(pendingFlashes).forEach(([t, dir]) => {
+      document.querySelectorAll(`[data-flash-ticker="${t}"]`).forEach(el => {
+        el.classList.remove('flash-up', 'flash-down');
+        // force reflow so re-triggering works
+        void el.offsetWidth;
+        el.classList.add(dir === 'up' ? 'flash-up' : 'flash-down');
+      });
+    });
+    for (const k of Object.keys(pendingFlashes)) delete pendingFlashes[k];
+  }
+
   async function pullQuotes() {
-    const tickers = tickerList().join(',');
-    const newsTickers = tickerList().filter(t => !t.startsWith('^')).join(',');
+    if (inFlight) return;
+    inFlight = true;
     try {
+      const tickers = tickerList().join(',');
+      const newsTickers = tickerList().filter(t => !t.startsWith('^')).join(',');
       const [qRes, nRes] = await Promise.all([
         fetch(`/api/quotes?tickers=${encodeURIComponent(tickers)}&range=1y`, { cache: 'no-store' }),
         fetch(`/api/news?tickers=${encodeURIComponent(newsTickers)}&sectors=${encodeURIComponent(sectorsParam())}`, { cache: 'no-store' }).catch(() => null),
@@ -2302,12 +2362,13 @@ import { analyze, regime } from './analyze.js';
       const qData = await qRes.json();
       const nData = nRes && nRes.ok ? await nRes.json() : null;
       if (nData && nData.news) latestNews = nData.news;
+      recordPriceChanges(qData.quotes || {});
       applyQuotes(qData.quotes || {}, latestNews);
       renderIntelLive();
+      applyPendingFlashes();
       lastGoodAt = qData.asOf || Date.now();
       updateRunDate(lastGoodAt);
-      const secsAgo = Math.round((Date.now() - lastGoodAt) / 1000);
-      setLive('live', `live · updated ${secsAgo}s ago`);
+      updateLiveLabel();
     } catch (e) {
       const age = Date.now() - lastGoodAt;
       if (lastGoodAt && age < STALE_MS) {
@@ -2315,6 +2376,19 @@ import { analyze, regime } from './analyze.js';
       } else {
         setLive('error', `feed unavailable · ${e.message}`);
       }
+    } finally {
+      inFlight = false;
+    }
+  }
+
+  function updateLiveLabel() {
+    if (!lastGoodAt) return;
+    const age = Math.max(0, Math.round((Date.now() - lastGoodAt) / 1000));
+    const nextIn = Math.max(0, Math.round((REFRESH_MS - (Date.now() - lastGoodAt)) / 1000));
+    if (age < STALE_MS / 1000) {
+      setLive('live', `live · updated ${age}s ago · next in ${nextIn}s`);
+    } else {
+      setLive('stale', `stale · last ok ${age}s ago`);
     }
   }
 
@@ -2497,14 +2571,22 @@ import { analyze, regime } from './analyze.js';
   // Kick off + poll
   pullQuotes();
   setInterval(pullQuotes, REFRESH_MS);
-  // Age counter tick so "updated 15s ago" advances between fetches
-  setInterval(() => {
-    if (lastGoodAt) {
-      const age = Date.now() - lastGoodAt;
-      if (age < STALE_MS) setLive('live', `live · updated ${Math.round(age/1000)}s ago`);
-      else setLive('stale', `stale · last ok ${Math.round(age/1000)}s ago`);
-    }
-  }, 1000);
+  // Age counter tick — updates "updated Ns ago · next in Ns" every second
+  setInterval(updateLiveLabel, 1000);
+
+  // Manual refresh button
+  const refreshBtn = document.getElementById('refresh-now');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = '↻ Refreshing…';
+      await pullQuotes();
+      setTimeout(() => {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = '↻ Refresh';
+      }, 800);
+    });
+  }
 
   renderPicks();
   renderDetail(activeTicker);

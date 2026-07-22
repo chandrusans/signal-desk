@@ -528,6 +528,21 @@
   }
   #live-dot { display: inline-block; animation: live-pulse 2s var(--ease-inout) infinite; }
 
+  /* Price flash */
+  @keyframes flash-up { 0% { background: color-mix(in srgb, var(--signal) 45%, transparent); color: var(--signal); } 100% { background: transparent; color: inherit; } }
+  @keyframes flash-down { 0% { background: color-mix(in srgb, var(--risk) 45%, transparent); color: var(--risk); } 100% { background: transparent; color: inherit; } }
+  .flash-up   { animation: flash-up 1.4s var(--ease-out); border-radius: 3px; }
+  .flash-down { animation: flash-down 1.4s var(--ease-out); border-radius: 3px; }
+
+  .refresh-btn {
+    background: transparent; border: 1px solid var(--rule); color: var(--ink-3);
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 3px 7px; margin-left: 6px; cursor: pointer; border-radius: 3px;
+    transition: color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+  }
+  .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
   /* Page-load stagger */
   @keyframes rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   .masthead { animation: rise-in 0.5s var(--ease-out) both; }
@@ -573,7 +588,7 @@
     </div>
     <div class="meta">
       <div class="date" id="run-date">RUN · —</div>
-      <div>FEED · <span id="live-dot">◌</span> <span id="live-label">connecting…</span></div>
+      <div>FEED · <span id="live-dot">◌</span> <span id="live-label">connecting…</span> <button class="refresh-btn" id="refresh-now" title="Force refresh now">↻ Refresh</button></div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
   </header>
@@ -601,7 +616,7 @@
           <div class="mp-name">Gold Spot · pricing via GC=F futures</div>
         </div>
         <div>
-          <div class="mp-price" id="XAU-price">—</div>
+          <div class="mp-price" id="XAU-price" data-flash-ticker="GC=F">—</div>
           <div class="mp-change" id="XAU-change">—</div>
         </div>
       </div>
@@ -624,7 +639,7 @@
           <div class="mp-name">Silver Spot · pricing via SI=F futures</div>
         </div>
         <div>
-          <div class="mp-price" id="XAG-price">—</div>
+          <div class="mp-price" id="XAG-price" data-flash-ticker="SI=F">—</div>
           <div class="mp-change" id="XAG-change">—</div>
         </div>
       </div>
@@ -754,7 +769,9 @@ import { analyze, regime } from './analyze.js';
 (function () {
   const root = document.documentElement;
   const mql = window.matchMedia('(prefers-color-scheme: dark)');
-  const REFRESH_MS = 30000;
+  const REFRESH_MS = 15000;
+  const prevPrices = {};
+  let inFlight = false;
 
   // Theme
   document.getElementById('theme-toggle').addEventListener('click', () => {
@@ -790,7 +807,31 @@ import { analyze, regime } from './analyze.js';
 
   let lastData = null;
 
+  const pendingFlashes = {}; // ticker -> 'up' | 'down'
+  function recordPriceChanges(quotes) {
+    Object.entries(quotes).forEach(([t, q]) => {
+      if (q?.price == null) return;
+      const prev = prevPrices[t];
+      if (prev != null && q.price !== prev) {
+        pendingFlashes[t] = q.price > prev ? 'up' : 'down';
+      }
+      prevPrices[t] = q.price;
+    });
+  }
+  function applyPendingFlashes() {
+    Object.entries(pendingFlashes).forEach(([t, dir]) => {
+      document.querySelectorAll(`[data-flash-ticker="${t}"]`).forEach(el => {
+        el.classList.remove('flash-up', 'flash-down');
+        void el.offsetWidth;
+        el.classList.add(dir === 'up' ? 'flash-up' : 'flash-down');
+      });
+    });
+    for (const k of Object.keys(pendingFlashes)) delete pendingFlashes[k];
+  }
+
   async function pull() {
+    if (inFlight) return;
+    inFlight = true;
     try {
       const qUrl = `/api/quotes?tickers=${encodeURIComponent(PRICE_TICKERS.join(','))}&range=1y`;
       const nUrl = `/api/news?tickers=${encodeURIComponent(NEWS_TICKERS.join(','))}`;
@@ -803,12 +844,26 @@ import { analyze, regime } from './analyze.js';
       const nData = nRes && nRes.ok ? await nRes.json() : null;
       const data = { quotes: qData.quotes || {}, news: nData?.news || {}, asOf: qData.asOf };
       lastData = data;
+      recordPriceChanges(data.quotes);
       applyAll(data);
+      applyPendingFlashes();
       updateRunDate(data.asOf);
-      setLive('live', `live · updated 0s ago`);
+      updateLiveLabel();
     } catch (e) {
       setLive('error', `feed unavailable · ${e.message}`);
+    } finally {
+      inFlight = false;
     }
+  }
+
+  let lastGoodAt = 0;
+  function updateLiveLabel() {
+    if (lastData) lastGoodAt = lastData.asOf;
+    if (!lastGoodAt) return;
+    const age = Math.max(0, Math.round((Date.now() - lastGoodAt) / 1000));
+    const nextIn = Math.max(0, Math.round((REFRESH_MS - (Date.now() - lastGoodAt)) / 1000));
+    if (age < 60) setLive('live', `live · updated ${age}s ago · next in ${nextIn}s`);
+    else setLive('stale', `stale · last ok ${age}s ago`);
   }
 
   function applyAll(data) {
@@ -1062,5 +1117,19 @@ import { analyze, regime } from './analyze.js';
   renderCalendar();
   pull();
   setInterval(pull, REFRESH_MS);
+  setInterval(updateLiveLabel, 1000);
+
+  const refreshBtn = document.getElementById('refresh-now');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = '↻ Refreshing…';
+      await pull();
+      setTimeout(() => {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = '↻ Refresh';
+      }, 800);
+    });
+  }
 })();
 </script>
