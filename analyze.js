@@ -179,7 +179,18 @@ export function analyze(bars, extras = {}) {
   }
   parts.catalyst = catalyst;
 
-  const score = Math.max(0, Math.min(100, parts.trend + parts.momentum + parts.location + parts.volume + parts.volatility + catalyst));
+  // Political overlay — sector-aware, max ±8
+  let political = 0;
+  if (news && news.political24h > 0) {
+    const polIntensity = Math.min(news.political24h, 4) * 2; // 2..8
+    political = Math.round(news.avgPoliticalSentiment * polIntensity);
+    if (political > 0) notes.push(`Political tailwind (${news.sector || 'generic'}): ${news.political24h} political headlines · avg ${news.avgPoliticalSentiment >= 0 ? '+' : ''}${news.avgPoliticalSentiment} → +${political} pts`);
+    else if (political < 0) notes.push(`Political headwind (${news.sector || 'generic'}): ${news.political24h} political headlines · avg ${news.avgPoliticalSentiment.toFixed(2)} → ${political} pts`);
+    else notes.push(`Political flow: ${news.political24h} headlines, sentiment neutral for this sector`);
+  }
+  parts.political = political;
+
+  const score = Math.max(0, Math.min(100, parts.trend + parts.momentum + parts.location + parts.volume + parts.volatility + catalyst + political));
 
   // ---- Setup classifier ----
   let setup = 'AVOID', setupReason = '';

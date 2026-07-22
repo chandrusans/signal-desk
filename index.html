@@ -1066,6 +1066,13 @@
   </div>
 
   <div class="section-head">
+    <h2>Political calendar · what a real trader watches</h2>
+    <span class="aside" id="pol-cal-summary">Curated events that historically move markets</span>
+  </div>
+
+  <div class="rules" id="pol-calendar"></div>
+
+  <div class="section-head">
     <h2>Market intelligence · what's being said</h2>
     <span class="aside">Filter by source · updated every 5 min</span>
   </div>
@@ -1298,7 +1305,7 @@ import { analyze, regime } from './analyze.js';
   // ------- Candidates (illustrative) -------
   const picks = [
     {
-      ticker: 'NVDA', name: 'NVIDIA Corp · Semiconductors',
+      ticker: 'NVDA', name: 'NVIDIA Corp · Semiconductors', polSector: 'semis',
       score: 87, price: 148.20,
       spark: [130,131,129,133,135,134,136,140,138,142,145,146,148],
       thesis: 'AI-infra capex cycle re-accelerating into Q3 earnings; hyperscaler orders leaked positive.',
@@ -1319,7 +1326,7 @@ import { analyze, regime } from './analyze.js';
       ]
     },
     {
-      ticker: 'PLTR', name: 'Palantir Technologies · Data & AI',
+      ticker: 'PLTR', name: 'Palantir Technologies · Data & AI', polSector: 'defense',
       score: 79, price: 42.80,
       spark: [36,37,36,38,39,38,40,41,40,42,41,43,42],
       thesis: 'Government AI contract vertical accelerating; earnings catalyst inside 30-day window.',
@@ -1340,7 +1347,7 @@ import { analyze, regime } from './analyze.js';
       ]
     },
     {
-      ticker: 'CRWD', name: 'CrowdStrike Holdings · Cybersecurity',
+      ticker: 'CRWD', name: 'CrowdStrike Holdings · Cybersecurity', polSector: 'tech-mega',
       score: 73, price: 268.40,
       spark: [255,258,257,260,262,261,263,265,264,266,267,266,268],
       thesis: 'Post-outage recovery arc thesis playing out; institutional re-accumulation visible.',
@@ -1361,7 +1368,7 @@ import { analyze, regime } from './analyze.js';
       ]
     },
     {
-      ticker: 'HOOD', name: 'Robinhood Markets · Fin services',
+      ticker: 'HOOD', name: 'Robinhood Markets · Fin services', polSector: 'crypto',
       score: 71, price: 32.10,
       spark: [28,29,28,30,31,30,31,32,31,32,31,32,32],
       thesis: 'Reddit-driven momentum play — retail chatter leading price by 5–8 days; crypto revenue tailwind confirmed after.',
@@ -1382,7 +1389,7 @@ import { analyze, regime } from './analyze.js';
       ]
     },
     {
-      ticker: 'ASML', name: 'ASML Holding · Semi equipment',
+      ticker: 'ASML', name: 'ASML Holding · Semi equipment', polSector: 'semis',
       score: 68, price: 748.20,
       spark: [710,715,720,718,725,730,728,735,738,742,745,747,748],
       thesis: 'EUV order-book visibility strong into 2027; Chinese demand normalization thesis.',
@@ -1532,6 +1539,11 @@ import { analyze, regime } from './analyze.js';
         <span class="pk">News catalyst</span>
         <div class="bar-track"><div class="bar-fill" style="width: ${Math.min(100, Math.abs(a.parts.catalyst) * 10)}%; background: ${a.parts.catalyst >= 0 ? 'var(--signal)' : 'var(--risk)'};"></div></div>
         <span class="pv" style="color: ${a.parts.catalyst >= 0 ? 'var(--signal)' : 'var(--risk)'};">${a.parts.catalyst >= 0 ? '+' : ''}${a.parts.catalyst}</span>
+        ` : ''}
+        ${a.parts.political != null && a.parts.political !== 0 ? `
+        <span class="pk">Political overlay</span>
+        <div class="bar-track"><div class="bar-fill" style="width: ${Math.min(100, Math.abs(a.parts.political) * 12)}%; background: ${a.parts.political >= 0 ? 'var(--signal)' : 'var(--risk)'};"></div></div>
+        <span class="pv" style="color: ${a.parts.political >= 0 ? 'var(--signal)' : 'var(--risk)'};">${a.parts.political >= 0 ? '+' : ''}${a.parts.political}</span>
         ` : ''}
       </div>
 
@@ -1872,8 +1884,30 @@ import { analyze, regime } from './analyze.js';
   const STALE_MS = 90000;
   let lastGoodAt = 0;
 
+  // Political-exposure sector map — governs how political headlines are scored per ticker.
+  // Reflects each name's regulatory / geopolitical exposure, not GICS sector.
+  const POL_SECTORS = {
+    NVDA:'semis', AMD:'semis', ASML:'semis', MRVL:'semis',
+    META:'tech-mega', MSFT:'tech-mega', GOOGL:'tech-mega', AMZN:'tech-mega',
+    SNOW:'tech-mega', NET:'tech-mega', CRWD:'tech-mega',
+    PLTR:'defense', CAT:'defense',
+    HOOD:'crypto', COIN:'crypto',
+    TSLA:'ev', F:'ev',
+    LLY:'healthcare', NVAX:'healthcare',
+    XOM:'energy',
+  };
+  function polSectorFor(ticker) {
+    return POL_SECTORS[ticker] || null;
+  }
+
   function tickerList() {
     return [...new Set([...picks.map(p => p.ticker), ...universe.map(u => u.ticker), '^VIX'])];
+  }
+  function sectorsParam() {
+    return tickerList()
+      .filter(t => !t.startsWith('^') && polSectorFor(t))
+      .map(t => `${t}:${polSectorFor(t)}`)
+      .join(',');
   }
 
   let latestNews = {};
@@ -1884,7 +1918,7 @@ import { analyze, regime } from './analyze.js';
     try {
       const [qRes, nRes] = await Promise.all([
         fetch(`/api/quotes?tickers=${encodeURIComponent(tickers)}&range=1y`, { cache: 'no-store' }),
-        fetch(`/api/news?tickers=${encodeURIComponent(newsTickers)}`, { cache: 'no-store' }).catch(() => null),
+        fetch(`/api/news?tickers=${encodeURIComponent(newsTickers)}&sectors=${encodeURIComponent(sectorsParam())}`, { cache: 'no-store' }).catch(() => null),
       ]);
       if (!qRes.ok) throw new Error(`quotes HTTP ${qRes.status}`);
       const qData = await qRes.json();
@@ -1982,7 +2016,10 @@ import { analyze, regime } from './analyze.js';
       }
     }
     rows.sort((a, b) => b.ts - a.ts);
-    const items = intelFilter === 'ALL' || intelFilter === 'NEWS' ? rows : [];
+    let items;
+    if (intelFilter === 'ALL' || intelFilter === 'NEWS') items = rows;
+    else if (intelFilter === 'POLITICS') items = rows.filter(r => r.political);
+    else items = [];
     // Update trending chips using aggregate news volume as proxy
     const volByTk = {};
     Object.entries(latestNews).forEach(([tk, n]) => { volByTk[tk] = n.count24h || 0; });
@@ -1990,7 +2027,8 @@ import { analyze, regime } from './analyze.js';
       .filter(([,v]) => v > 0)
       .map(([tk, v]) => ({ tk, d: `${v}/24h` }));
 
-    const chips = ['ALL', 'NEWS'];
+    const polCount = rows.filter(r => r.political).length;
+    const chips = ['ALL', 'NEWS', 'POLITICS'];
     intelHead.innerHTML = '<span class="label">Trending</span>' +
       trending.map(t => `<span class="chip"><span>${t.tk}</span><span class="delta">${t.d}</span></span>`).join('') +
       '<span class="label" style="margin-left: 12px;">Source</span>' +
@@ -2008,16 +2046,64 @@ import { analyze, regime } from './analyze.js';
       const cls = s > 0.15 ? 'pos' : s < -0.15 ? 'neg' : 'neu';
       const ago = fmtAgo(Date.now() - x.ts);
       const host = (() => { try { return new URL(x.link).hostname.replace('www.',''); } catch { return x.publisher; } })();
+      const polTag = x.political ? `<span class="src-badge src-rating" style="margin-left: 4px;" title="Political headline · sector-scored ${x.politicalSentiment >= 0 ? '+' : ''}${x.politicalSentiment}">POL</span>` : '';
       return `
         <li>
           <span class="ts">${ago}</span>
-          <span class="src-badge src-news">NEWS</span>
+          <span class="src-badge src-news">NEWS${polTag}</span>
           <span class="tk">${x.tk}</span>
-          <span class="hd"><a href="${x.link}" target="_blank" rel="noopener">${x.title}</a> <span style="color: var(--ink-3); font-size: 10px; font-family: var(--mono);">· ${x.publisher || host}</span></span>
+          <span class="hd"><a href="${x.link}" target="_blank" rel="noopener">${x.title}</a> <span style="color: var(--ink-3); font-size: 10px; font-family: var(--mono);">· ${x.publisher || host}${x.political ? ` · political · sector ${latestNews[x.tk]?.sector || 'generic'}` : ''}</span></span>
           <span class="sent ${cls}">${s >= 0 ? '+' : ''}${s.toFixed(2)}</span>
         </li>
       `;
     }).join('');
+  }
+
+  // Curated political calendar — real events a discretionary macro/momentum trader watches.
+  // ISO dates in UTC-ish; auto-hides past events. Update as needed.
+  const POLITICAL_EVENTS = [
+    { date: '2026-07-30', tag: 'FOMC',    label: 'Fed decision + presser',            impact: 'high',   note: 'Rate path revision; tech/crypto/rate-sensitive names react most' },
+    { date: '2026-08-22', tag: 'MACRO',   label: 'Jackson Hole symposium',            impact: 'high',   note: 'Powell speech historically sets Q3 tone' },
+    { date: '2026-09-17', tag: 'FOMC',    label: 'Fed decision (Sep)',                impact: 'high',   note: 'SEP release — dot plot moves the whole risk complex' },
+    { date: '2026-10-01', tag: 'FISCAL',  label: 'US fiscal year begins',             impact: 'medium', note: 'Defense contract awards, appropriations activity' },
+    { date: '2026-10-28', tag: 'FOMC',    label: 'Fed decision (Oct)',                impact: 'high',   note: 'Pre-election meeting; usually held-neutral' },
+    { date: '2026-11-03', tag: 'ELECTION',label: 'US midterm elections',              impact: 'high',   note: 'Control of Congress → tax, regulation, defense budget path' },
+    { date: '2026-12-16', tag: 'FOMC',    label: 'Fed decision (Dec)',                impact: 'high',   note: 'Year-end SEP; positioning into new year' },
+    { date: '2026-08-01', tag: 'CHINA',   label: 'Section 301 review deadline',       impact: 'medium', note: 'Semis / EV / solar tariff outlook — direct semis + energy impact' },
+    { date: '2026-09-30', tag: 'GOVSHUT', label: 'Continuing resolution expires',     impact: 'high',   note: 'Shutdown risk; defense contractors + fed-adjacent names hit first' },
+  ];
+
+  function renderPolCalendar() {
+    const now = Date.now();
+    const dayMs = 24 * 3600 * 1000;
+    const upcoming = POLITICAL_EVENTS
+      .map(e => ({ ...e, ts: Date.parse(e.date + 'T00:00:00Z'), daysUntil: Math.round((Date.parse(e.date + 'T00:00:00Z') - now) / dayMs) }))
+      .filter(e => e.daysUntil >= -1)
+      .sort((a, b) => a.ts - b.ts)
+      .slice(0, 6);
+    const el = document.getElementById('pol-calendar');
+    if (!el) return;
+    if (!upcoming.length) {
+      el.innerHTML = `<div class="rule-cell"><h4>No upcoming events</h4><p>Calendar list needs updating.</p></div>`;
+      return;
+    }
+    const impactColor = { high: 'var(--risk)', medium: 'var(--caution)', low: 'var(--ink-3)' };
+    el.innerHTML = upcoming.map(e => `
+      <div class="rule-cell">
+        <h4>
+          <span class="num" style="color: ${impactColor[e.impact] || 'var(--accent)'};">${e.daysUntil <= 0 ? 'TODAY' : e.daysUntil + 'd'}</span>
+          <span style="letter-spacing: 0.14em;">${e.tag}</span>
+        </h4>
+        <p>
+          <strong>${e.label}</strong>
+          <span style="color: var(--ink-3); font-family: var(--mono); font-size: 11px;"> · ${e.date}</span>
+        </p>
+        <p style="color: var(--ink-2); font-size: 12.5px;">${e.note}</p>
+      </div>
+    `).join('');
+    const nearest = upcoming[0];
+    const sumEl = document.getElementById('pol-cal-summary');
+    if (sumEl) sumEl.textContent = `Nearest · ${nearest.tag} in ${nearest.daysUntil <= 0 ? 'today' : nearest.daysUntil + ' days'}`;
   }
 
   function fmtAgo(ms) {
@@ -2047,5 +2133,6 @@ import { analyze, regime } from './analyze.js';
   renderIntel();
   renderHarness();
   renderScreen();
+  renderPolCalendar();
 })();
 </script>
