@@ -92,32 +92,46 @@
     margin: 0 0 12px;
     font-weight: 500;
   }
-  .toc ol {
+  .toc-group { margin-bottom: 18px; }
+  .toc-group + .toc-group { padding-top: 14px; border-top: 1px dotted var(--rule); }
+  .toc-sub {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--accent);
+    margin: 0 0 8px;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+  .toc ul {
     list-style: none;
     margin: 0;
     padding: 0;
-    counter-reset: chap;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
   .toc li {
-    counter-increment: chap;
     font-family: var(--sans);
     font-size: 13px;
     line-height: 1.4;
+    padding-left: 14px;
+    position: relative;
   }
   .toc li::before {
-    content: counter(chap, decimal-leading-zero) "  ";
-    font-family: var(--mono);
-    font-size: 10.5px;
-    color: var(--accent);
-    letter-spacing: 0.06em;
+    content: "◦";
+    color: var(--ink-3);
+    position: absolute;
+    left: 0;
+    top: -1px;
+    font-size: 14px;
   }
+  .toc li.active::before { content: "●"; color: var(--accent); }
   .toc a { color: var(--ink-2); text-decoration: none; border-bottom: 1px dotted transparent; }
   .toc a:hover { color: var(--ink); border-bottom-color: var(--ink-3); }
+  .toc li.active a { color: var(--ink); }
   .toc .toc-log {
-    margin-top: 20px;
+    margin-top: 16px;
     padding-top: 14px;
     border-top: 1px solid var(--rule);
     font-family: var(--mono);
@@ -318,34 +332,73 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v1.1</div>
+      <div class="kicker">Signal Desk · Handbook · v1.2</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
-      <div><a href="/">← dashboard</a> · <a href="/metals">metals →</a></div>
+      <div id="hb-topnav"><a href="/">← dashboard</a> · <a href="/metals">metals →</a></div>
       <div>LAST UPDATED · 2026-07-22</div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
   </header>
 
-  <nav class="toc">
+  <nav class="toc" aria-label="Handbook contents">
     <h3>Contents</h3>
-    <ol>
-      <li><a href="#what">What this is</a></li>
-      <li><a href="#tour">Dashboard tour</a></li>
-      <li><a href="#score">The composite score</a></li>
-      <li><a href="#setups">Setup states</a></li>
-      <li><a href="#plan">Reading a trade plan</a></li>
-      <li><a href="#regime">Regime filter · VIX</a></li>
-      <li><a href="#political">Political overlay</a></li>
-      <li><a href="#screener">The screener</a></li>
-      <li><a href="#calendar">Political calendar</a></li>
-      <li><a href="#data">Data sources</a></li>
-      <li><a href="#glossary">Glossary</a></li>
-      <li><a href="#metals">Metals page</a></li>
-      <li><a href="#changelog">Changelog</a></li>
-    </ol>
-    <div class="toc-log"><a href="#changelog">See what's new →</a></div>
+
+    <div class="toc-group">
+      <div class="toc-sub">Getting started</div>
+      <ul>
+        <li><a href="#what">What this is</a></li>
+        <li><a href="#tour">Dashboard tour</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-sub">How it scores</div>
+      <ul>
+        <li><a href="#score">The composite score</a></li>
+        <li><a href="#setups">Setup states</a></li>
+        <li><a href="#plan">Reading a trade plan</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-sub">Filters &amp; context</div>
+      <ul>
+        <li><a href="#regime">Regime filter · VIX</a></li>
+        <li><a href="#political">Political overlay</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-sub">Screener &amp; planning</div>
+      <ul>
+        <li><a href="#screener">The screener</a></li>
+        <li><a href="#calendar">Political calendar</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-sub">Metals</div>
+      <ul>
+        <li><a href="#metals">Metals page · XAU/USD &amp; XAG/USD</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-sub">Reference</div>
+      <ul>
+        <li><a href="#data">Data sources</a></li>
+        <li><a href="#glossary">Glossary</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-sub">What's new</div>
+      <ul>
+        <li><a href="#changelog">Changelog</a></li>
+      </ul>
+    </div>
   </nav>
 
   <main class="content">
@@ -630,6 +683,19 @@
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
 
       <div class="log-entry">
+        <div class="when">v1.2<br/>2026-07-22</div>
+        <div class="what">
+          <h4>Unified navigation — tabs + Handbook drawer</h4>
+          <ul>
+            <li>Dashboard and Metals now switch via a shared <strong>tab bar</strong> at the top of each view — active tab underlined in the amber accent.</li>
+            <li>Handbook is now a <strong>slide-over drawer</strong> opened from the top-right button; it opens on top of the current view and closes with the X button, backdrop click, or Escape key.</li>
+            <li>Handbook TOC restructured as <strong>bullet-styled sub-headings</strong> (Getting started, How it scores, Filters &amp; context, Screener &amp; planning, Metals, Reference, What's new) — click any bullet to jump to that chapter; the active chapter's bullet fills in as you scroll.</li>
+            <li>Handbook detects when it's embedded in the drawer iframe and hides its own cross-navigation links to avoid breaking the containing view.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="log-entry">
         <div class="when">v1.1<br/>2026-07-22</div>
         <div class="what">
           <h4>Metals page · XAU/USD &amp; XAG/USD</h4>
@@ -729,11 +795,25 @@
 (function () {
   const root = document.documentElement;
   const mql = window.matchMedia('(prefers-color-scheme: dark)');
+
+  // Hide standalone cross-links when embedded in the drawer iframe
+  const embedded = window.self !== window.top;
+  if (embedded) {
+    document.body.classList.add('embedded');
+    const nav = document.getElementById('hb-topnav');
+    if (nav) nav.style.display = 'none';
+  }
+
   document.getElementById('theme-toggle').addEventListener('click', () => {
     const cur = root.getAttribute('data-theme') || (mql.matches ? 'dark' : 'light');
     root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
   });
-  // Smooth-scroll TOC links
+  // Smooth-scroll TOC links + mark active bullet
+  function markActive(id) {
+    document.querySelectorAll('.toc li').forEach(li => {
+      li.classList.toggle('active', li.querySelector('a')?.getAttribute('href') === '#' + id);
+    });
+  }
   document.querySelectorAll('a[href^="#"]').forEach(a => {
     a.addEventListener('click', (e) => {
       const id = a.getAttribute('href').slice(1);
@@ -742,8 +822,20 @@
         e.preventDefault();
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         history.pushState(null, '', '#' + id);
+        markActive(id);
       }
     });
   });
+
+  // Auto-highlight bullet based on scroll position
+  const sections = [...document.querySelectorAll('.content section[id]')];
+  const io = new IntersectionObserver((entries) => {
+    const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+    if (visible) markActive(visible.target.id);
+  }, { rootMargin: '-15% 0px -70% 0px', threshold: 0 });
+  sections.forEach(s => io.observe(s));
+
+  // Initial active from hash
+  if (location.hash) markActive(location.hash.slice(1));
 })();
 </script>

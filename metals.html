@@ -397,12 +397,46 @@
     color: var(--ink-2); margin: 0; max-width: 78ch;
   }
 
+  /* Tab bar + Handbook button (mirrored from dashboard) */
+  .tabbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 0 12px; margin-bottom: 20px; border-bottom: 1px solid var(--rule); }
+  .tabbar-tabs { display: flex; gap: 0; }
+  .tab { padding: 10px 22px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); text-decoration: none; border: none; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; background: transparent; cursor: pointer; }
+  .tab:hover { color: var(--ink); }
+  .tab.on { color: var(--ink); border-bottom-color: var(--accent); }
+  .handbook-btn { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+  .handbook-btn:hover, .handbook-btn:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
+  .handbook-btn .hb-glyph { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+
+  /* Handbook slide-over drawer */
+  .hb-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 900; animation: hb-bg-in 0.2s ease-out; }
+  @keyframes hb-bg-in { from { opacity: 0; } to { opacity: 1; } }
+  .hb-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(960px, 92vw); background: var(--ground); z-index: 1000; display: flex; flex-direction: column; box-shadow: -8px 0 40px rgba(0, 0, 0, 0.35); animation: hb-in 0.24s ease-out; }
+  @keyframes hb-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  .hb-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--rule); background: var(--panel); }
+  .hb-title { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+  .hb-title strong { color: var(--ink); }
+  .hb-close { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 12px; cursor: pointer; }
+  .hb-close:hover, .hb-close:focus-visible { border-color: var(--ink); color: var(--ink); outline: none; }
+  .hb-frame { flex: 1; border: none; width: 100%; background: var(--ground); }
+
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
   }
 </style>
 
 <div class="shell">
+
+  <nav class="tabbar" role="tablist" aria-label="Views">
+    <div class="tabbar-tabs">
+      <a href="/" class="tab" data-view="dashboard" role="tab" aria-selected="false">Dashboard</a>
+      <a href="/metals" class="tab on" data-view="metals" role="tab" aria-selected="true">Metals</a>
+    </div>
+    <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
+      <span class="hb-glyph" aria-hidden="true"></span>
+      Handbook
+    </button>
+  </nav>
+
   <header class="masthead">
     <div>
       <div class="kicker">The Signal Desk · Metals · Gold &amp; Silver</div>
@@ -411,7 +445,6 @@
     <div class="meta">
       <div class="date" id="run-date">RUN · —</div>
       <div>FEED · <span id="live-dot">◌</span> <span id="live-label">connecting…</span></div>
-      <div style="margin-top: 4px;"><a href="/">← dashboard</a> · <a href="/handbook">handbook</a></div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
   </header>
@@ -526,6 +559,45 @@
   </div>
 
 </div>
+
+<!-- Handbook slide-over drawer (loads /handbook in iframe; ESC or backdrop to close) -->
+<div class="hb-backdrop" id="hb-backdrop" hidden></div>
+<aside class="hb-drawer" id="hb-drawer" hidden aria-modal="true" role="dialog" aria-labelledby="hb-title">
+  <header class="hb-header">
+    <span class="hb-title" id="hb-title"><strong>Handbook</strong> — click any chapter to jump</span>
+    <button class="hb-close" id="hb-close" aria-label="Close handbook">Close ✕</button>
+  </header>
+  <iframe class="hb-frame" id="hb-frame" title="Signal Desk Handbook" src="about:blank" loading="lazy"></iframe>
+</aside>
+
+<script>
+(function () {
+  const btn = document.getElementById('open-handbook');
+  const drawer = document.getElementById('hb-drawer');
+  const backdrop = document.getElementById('hb-backdrop');
+  const closeBtn = document.getElementById('hb-close');
+  const frame = document.getElementById('hb-frame');
+  if (!btn || !drawer || !frame) return;
+  let loaded = false;
+  function open() {
+    if (!loaded) { frame.src = '/handbook'; loaded = true; }
+    drawer.hidden = false;
+    backdrop.hidden = false;
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => closeBtn.focus(), 100);
+  }
+  function close() {
+    drawer.hidden = true;
+    backdrop.hidden = true;
+    document.body.style.overflow = '';
+    btn.focus();
+  }
+  btn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  backdrop.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !drawer.hidden) close(); });
+})();
+</script>
 
 <script type="module">
 import { analyze, regime } from './analyze.js';
