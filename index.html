@@ -915,6 +915,24 @@
   .verdict-AVOID { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 12%, transparent); }
   .verdict-SELL  { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 18%, transparent); }
 
+  /* Filter bar (Setup / Verdict / Show) */
+  .filter-bar {
+    display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+    padding: 14px 0; margin-bottom: 10px;
+    border-bottom: 1px dotted var(--rule);
+  }
+  .filter-group { display: flex; align-items: center; gap: 8px; }
+  .filter-group .flbl {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .picks-empty {
+    padding: 40px 20px; text-align: center;
+    color: var(--ink-3); font-family: var(--serif); font-style: italic; font-size: 15px;
+    background: var(--panel); border: 1px dashed var(--rule);
+  }
+  .picks-empty strong { color: var(--ink); font-style: normal; font-family: var(--sans); font-weight: 500; }
+
   /* Track button on Stocks pick cards — adds ticker to Dashboard portfolio */
   .track-btn {
     background: transparent; border: 1px dashed var(--rule); color: var(--ink-3);
@@ -1623,15 +1641,40 @@
 
   <div class="section-head">
     <h2>Top candidates · ranked by live composite score</h2>
-    <span class="aside">
-      <span style="margin-right: 10px;">Show</span>
-      <span class="seg" id="seg-show" style="display: inline-flex; vertical-align: middle;">
+    <span class="aside" id="picks-count">—</span>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="flbl">Setup</span>
+      <div class="seg" id="seg-setup">
+        <button data-v="ALL" class="on">All</button>
+        <button data-v="BREAKOUT">Breakout</button>
+        <button data-v="PULLBACK">Pullback</button>
+        <button data-v="EARLY">Early</button>
+        <button data-v="EXTENDED">Extended</button>
+        <button data-v="BROKEN">Broken</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="flbl">Verdict</span>
+      <div class="seg" id="seg-verdict">
+        <button data-v="ALL" class="on">All</button>
+        <button data-v="BUY">Buy</button>
+        <button data-v="HOLD">Hold</button>
+        <button data-v="SELL">Sell</button>
+        <button data-v="AVOID">Avoid</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="flbl">Show</span>
+      <div class="seg" id="seg-show">
         <button data-v="5" class="on">5</button>
         <button data-v="10">10</button>
         <button data-v="25">25</button>
         <button data-v="999">All</button>
-      </span>
-    </span>
+      </div>
+    </div>
   </div>
 
   <div class="desk">
@@ -2271,8 +2314,24 @@ import { analyze, regime } from './analyze.js';
   }
 
   let showCount = 5;
+  let setupFilter = 'ALL';
+  let verdictFilter = 'ALL';
+  const picksCountEl = document.getElementById('picks-count');
+
   function renderPicks() {
-    const visible = picks.slice(0, showCount);
+    // Apply filters BEFORE slicing to showCount so "Show 25" of BUYs actually
+    // shows 25 BUYs, not 25 of everything filtered down to a handful.
+    const filtered = picks.filter(p => {
+      if (setupFilter !== 'ALL' && p.setup !== setupFilter) return false;
+      if (verdictFilter !== 'ALL' && verdictForStock(p) !== verdictFilter) return false;
+      return true;
+    });
+    const visible = filtered.slice(0, showCount);
+    if (picksCountEl) picksCountEl.textContent = `${visible.length} of ${filtered.length} matches · ${picks.length} scanned`;
+    if (visible.length === 0) {
+      picksEl.innerHTML = `<div class="picks-empty"><strong>No candidates match your filters.</strong><br/>Loosen the setup or verdict filter to see more.</div>`;
+      return;
+    }
     picksEl.innerHTML = visible.map((p, i) => {
       const tops = topSources(p, 3);
       const badges = tops.map(s => `<span class="origin-badge ${originClass(s.src)}">${s.src} <span class="w">${s.w}</span></span>`).join('');
@@ -3117,15 +3176,20 @@ import { analyze, regime } from './analyze.js';
   // Re-render picks when the buzz feed loads so the "Mentioned by N" pills appear
   document.addEventListener('buzz-updated', () => { renderPicks(); });
 
-  // Show N candidates seg-ctrl
-  document.querySelectorAll('#seg-show button').forEach(b => {
-    b.addEventListener('click', () => {
-      document.querySelectorAll('#seg-show button').forEach(x => x.classList.remove('on'));
-      b.classList.add('on');
-      showCount = parseInt(b.dataset.v, 10);
-      renderPicks();
+  // Filter seg-ctrls (Setup, Verdict, Show)
+  function wireSeg(id, onChange) {
+    document.querySelectorAll(`#${id} button`).forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll(`#${id} button`).forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        onChange(b.dataset.v);
+        renderPicks();
+      });
     });
-  });
+  }
+  wireSeg('seg-setup',   v => { setupFilter = v; });
+  wireSeg('seg-verdict', v => { verdictFilter = v; });
+  wireSeg('seg-show',    v => { showCount = parseInt(v, 10); });
 
   // Publish current pick tickers so the buzz drawer can request them
   window.__pick_tickers = picks.map(p => p.ticker);

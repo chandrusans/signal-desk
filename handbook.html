@@ -404,7 +404,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v2.2</div>
+      <div class="kicker">Signal Desk · Handbook · v2.3</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -865,6 +865,21 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 15</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v2.3<br/>2026-07-23</div>
+        <div class="what">
+          <h4>Stocks — Setup + Verdict filters</h4>
+          <ul>
+            <li>New filter bar on the Stocks page below the section head, mirroring the Options page layout.</li>
+            <li><strong>Setup</strong> filter: <code>All</code> · <code>Breakout</code> · <code>Pullback</code> · <code>Early</code> · <code>Extended</code> · <code>Broken</code> — instantly narrow to just the setups you want to inspect.</li>
+            <li><strong>Verdict</strong> filter: <code>All</code> · <code>Buy</code> · <code>Hold</code> · <code>Sell</code> · <code>Avoid</code> — see only the calls that match your action orientation.</li>
+            <li><strong>Show</strong> control (5 / 10 / 25 / All) moved into the filter bar for consistency; count line in the section head now shows <em>N of M matches · scanned</em>.</li>
+            <li>Filters apply <em>before</em> the show-limit slice — so "Show 25 · Verdict BUY" surfaces up to 25 BUY calls, not 25 of everything filtered to a handful.</li>
+            <li>Empty state renders a clear "no matches — loosen a filter" panel when filters produce zero results.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v2.2<br/>2026-07-23</div>
