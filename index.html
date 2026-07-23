@@ -1407,39 +1407,6 @@
   </div>
 
   <div class="section-head">
-    <h2>Strategy · momentum-swing rulebook</h2>
-    <span class="aside">Long-only · 15 trading-day horizon · A+ setups only</span>
-  </div>
-
-  <div class="rules">
-    <div class="rule-cell">
-      <h4><span class="num">01</span>Universe</h4>
-      <p>Liquid US equities only. Min market cap <code>$2B</code>, min 20-day average dollar volume <code>$50M</code>. No pinks, no biotech binaries. Scan runs against the screener universe on this page.</p>
-    </div>
-    <div class="rule-cell">
-      <h4><span class="num">02</span>Entry — two setups only</h4>
-      <p><strong>BREAKOUT</strong>: price at 20-day high on volume ≥ 1.2× the 20-day average, RSI 55–72, trend aligned (Px&gt;MA20&gt;MA50). Enter at market.<br/>
-      <strong>PULLBACK</strong>: uptrend intact, price pulls back to MA10 (±2%), RSI 40–58, 20d return &gt; 3%. Enter on close within pullback zone.</p>
-    </div>
-    <div class="rule-cell">
-      <h4><span class="num">03</span>Stop — mechanical, non-negotiable</h4>
-      <p>Initial stop at <code>max(1.5 × ATR₁₄, 5%)</code> below entry, capped at 10%. Trail to breakeven at <code>+1R</code>, to <code>+1R</code> at <code>+2R</code>. Time stop: exit if flat after <code>15 trading days</code> — opportunity cost is real.</p>
-    </div>
-    <div class="rule-cell">
-      <h4><span class="num">04</span>Target</h4>
-      <p>Primary target <code>+2.5R</code> — matches the R-multiple math for hitting 15–25% on winners at these stop widths. Scale half at target, trail rest under 20-day MA.</p>
-    </div>
-    <div class="rule-cell">
-      <h4><span class="num">05</span>Sizing — risk parity</h4>
-      <p>Risk <code>0.75% of capital</code> per trade. Shares = <code>(capital × 0.0075) / stop distance</code>. Wider ATR → smaller position, tighter ATR → larger. Portfolio-max 5 concurrent positions, sector cap 40%.</p>
-    </div>
-    <div class="rule-cell">
-      <h4><span class="num">06</span>Regime filter</h4>
-      <p><code>VIX &lt; 20</code>: full sizing. <code>VIX 20–25</code>: half size, pullbacks only. <code>VIX &gt; 25</code>: no new longs, manage existing. If SPY closes below its 50-day MA, exit all long momentum book.</p>
-    </div>
-  </div>
-
-  <div class="section-head">
     <h2>Political calendar · what a real trader watches</h2>
     <span class="aside" id="pol-cal-summary">Curated events that historically move markets</span>
   </div>
@@ -1564,39 +1531,6 @@
         </thead>
         <tbody id="screen-body"></tbody>
       </table>
-    </div>
-  </div>
-
-  <div class="section-head">
-    <h2>Data source architecture</h2>
-    <span class="aside">Feeds the composite score</span>
-  </div>
-
-  <div class="arch">
-    <div class="arch-cell">
-      <div class="src-name"><span class="status-dot live"></span>Price & Volume</div>
-      <div class="src-role">Live intraday price, change, volume, 22-day close series → sparklines & 30d momentum.</div>
-      <div class="src-api">yahoo finance chart api · /api/quotes · 30s poll</div>
-    </div>
-    <div class="arch-cell">
-      <div class="src-name"><span class="status-dot mock"></span>News & Sentiment</div>
-      <div class="src-role">Headline classification, earnings coverage, catalyst tagging with LLM scoring.</div>
-      <div class="src-api">benzinga · newsapi · finnhub</div>
-    </div>
-    <div class="arch-cell">
-      <div class="src-name"><span class="status-dot mock"></span>Social & Reddit</div>
-      <div class="src-role">Mention velocity, sentiment polarity, WSB / stocks / investing subreddit tracking.</div>
-      <div class="src-api">reddit api · stocktwits · pushshift</div>
-    </div>
-    <div class="arch-cell">
-      <div class="src-name"><span class="status-dot mock"></span>Options Flow</div>
-      <div class="src-role">Unusual call/put ratio, dark-pool prints, near-term expiry positioning.</div>
-      <div class="src-api">cheddarflow · unusualwhales</div>
-    </div>
-    <div class="arch-cell">
-      <div class="src-name"><span class="status-dot mock"></span>Institutional</div>
-      <div class="src-role">13F changes, insider transactions, analyst rating revisions, short interest.</div>
-      <div class="src-api">sec edgar · fintel · quiverquant</div>
     </div>
   </div>
 
