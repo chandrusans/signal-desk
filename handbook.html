@@ -404,7 +404,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v1.4</div>
+      <div class="kicker">Signal Desk · Handbook · v1.5</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -806,6 +806,22 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 14</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v1.5<br/>2026-07-23</div>
+        <div class="what">
+          <h4>Dashboard: faster entry + richer per-position analytics</h4>
+          <ul>
+            <li><strong>Quick-add</strong>: one input, type <code>NVDA 10</code> and press Enter. Buy price fills from the live quote, date defaults to today, stop defaults to −5%. Optional syntax: <code>TICKER QTY [@ PRICE] [YYYY-MM-DD] [STOP]</code> in any order after the ticker + qty.</li>
+            <li><strong>Live ticker validation</strong>: as you type, a chip beside the input shows the current price and change % (green = valid, red = not found).</li>
+            <li><strong>Bulk paste</strong>: expand the panel and paste many positions at once, one per line, same syntax. Get a per-line success/error report.</li>
+            <li><strong>Sample portfolio</strong>: one click seeds five realistic positions across setups so you can see the verdict engine in action without entering anything.</li>
+            <li><strong>Detailed form</strong> still available under progressive disclosure — for precise entry of each field.</li>
+            <li><strong>Position card redesigned</strong> — every position now shows a full analytics strip below the primary row: tomorrow's projected price range (±0.5·ATR₁₄), week-ahead range (±ATR·√5), distance to stop and target in $ and %, 20-bar support and resistance, 20d/60d momentum returns, RSI, ATR%, distance from 52w high, cost basis, and position size as % of the portfolio.</li>
+            <li>Setup state chip moved inline next to the ticker so it's visible without scanning.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v1.4<br/>2026-07-22</div>

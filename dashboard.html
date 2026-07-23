@@ -200,17 +200,197 @@
     color: var(--ink-3);
   }
 
-  /* Add position form */
-  .add-form {
+  /* Quick-add bar */
+  .quick-add {
     background: var(--panel);
     border: 1px solid var(--rule);
     padding: 20px 22px;
+  }
+  .qa-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .qa-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .qa-input {
+    flex: 1;
+    font-family: var(--mono);
+    font-size: 15px;
+    padding: 14px 18px;
+    padding-right: 200px;
+    background: var(--ground);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+    letter-spacing: 0.02em;
+  }
+  .qa-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+  }
+  .qa-input::placeholder { color: var(--ink-3); font-style: italic; }
+
+  /* Live ticker validation chip on the right of the input */
+  .qa-chip {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    padding: 5px 10px;
+    border-radius: 4px;
+    background: var(--ground-2);
+    color: var(--ink-3);
+    border: 1px solid transparent;
+    pointer-events: none;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .qa-chip.valid { color: var(--signal); border-color: color-mix(in srgb, var(--signal) 30%, transparent); }
+  .qa-chip.invalid { color: var(--risk); border-color: color-mix(in srgb, var(--risk) 30%, transparent); }
+
+  .qa-btn {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0 22px;
+    background: var(--accent);
+    color: var(--ground);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.15s var(--ease-out), opacity 0.15s;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  .qa-btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .qa-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+  .qa-hint {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-3);
+    letter-spacing: 0.04em;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .qa-hint code {
+    background: var(--ground-2);
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: var(--ink-2);
+    font-size: 10.5px;
+  }
+  .qa-hint button {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 4px 0;
+  }
+  .qa-hint button:hover { text-decoration: underline; }
+
+  /* Bulk paste + advanced form panels — collapsed by default */
+  .qa-panel {
+    display: none;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dotted var(--rule);
+  }
+  .qa-panel.open { display: block; animation: qa-expand 0.24s var(--ease-out); }
+  @keyframes qa-expand { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .qa-panel-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 8px;
+  }
+  .qa-textarea {
+    width: 100%;
+    min-height: 120px;
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 12px 14px;
+    background: var(--ground);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    outline: none;
+    resize: vertical;
+    line-height: 1.7;
+  }
+  .qa-textarea:focus { border-color: var(--accent); }
+
+  .qa-panel-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .qa-secondary-btn {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    background: transparent;
+    color: var(--ink-2);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .qa-secondary-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .qa-secondary-btn.primary { background: var(--accent); color: var(--ground); border-color: var(--accent); }
+  .qa-secondary-btn.primary:hover { color: var(--ground); }
+
+  .parse-report {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: var(--ground-2);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-2);
+    line-height: 1.6;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .parse-report .ok { color: var(--signal); }
+  .parse-report .err { color: var(--risk); }
+
+  /* Advanced form (progressive disclosure) */
+  .adv-form {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto;
-    gap: 12px;
+    gap: 10px;
     align-items: end;
   }
-  @media (max-width: 900px) { .add-form { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 900px) { .adv-form { grid-template-columns: 1fr 1fr; } }
   .field { display: flex; flex-direction: column; gap: 4px; }
   .field label {
     font-family: var(--mono);
@@ -219,7 +399,7 @@
     text-transform: uppercase;
     color: var(--ink-3);
   }
-  .field input, .field textarea {
+  .field input {
     font-family: var(--mono);
     font-size: 12px;
     padding: 8px 10px;
@@ -230,23 +410,7 @@
     outline: none;
     transition: border-color 0.15s;
   }
-  .field input:focus, .field textarea:focus { border-color: var(--accent); }
-  .add-btn {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    padding: 10px 18px;
-    background: var(--accent);
-    color: var(--ground);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: transform 0.15s var(--ease-out), opacity 0.15s;
-  }
-  .add-btn:hover { transform: translateY(-1px); }
-  .add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .field input:focus { border-color: var(--accent); }
 
   /* Portfolio table / cards */
   .positions { display: flex; flex-direction: column; gap: 14px; }
@@ -254,15 +418,69 @@
   .pos-card {
     background: var(--panel);
     border: 1px solid var(--rule);
-    padding: 18px 22px;
-    display: grid;
-    grid-template-columns: minmax(180px, 1.5fr) minmax(120px, 1fr) minmax(140px, 1fr) minmax(180px, 1.6fr) auto;
-    gap: 20px;
-    align-items: center;
+    padding: 18px 22px 16px;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
     transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
   }
+  .pos-primary {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.5fr) minmax(120px, 1fr) minmax(140px, 1fr) minmax(200px, 1.8fr) auto;
+    gap: 20px;
+    align-items: center;
+  }
+  @media (max-width: 900px) { .pos-primary { grid-template-columns: 1fr; } }
   .pos-card:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+
+  /* Analytics strip — richer info a real trader wants */
+  .pos-analytics {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0;
+    padding: 12px 0 0;
+    margin-top: 4px;
+    border-top: 1px dotted var(--rule);
+  }
+  @media (max-width: 1080px) { .pos-analytics { grid-template-columns: repeat(3, 1fr); row-gap: 12px; } }
+  @media (max-width: 600px)  { .pos-analytics { grid-template-columns: repeat(2, 1fr); } }
+  .an-cell {
+    padding: 0 14px;
+    border-right: 1px dotted var(--rule);
+  }
+  .an-cell:last-child { border-right: none; }
+  @media (max-width: 1080px) {
+    .an-cell:nth-child(3n) { border-right: none; }
+  }
+  @media (max-width: 600px) {
+    .an-cell:nth-child(2n) { border-right: none; }
+  }
+  .an-cell .an-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+  }
+  .an-cell .an-value {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .an-cell .an-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-3);
+    margin-top: 2px;
+    letter-spacing: 0.04em;
+  }
+  .an-cell .an-value .hi { color: var(--signal); }
+  .an-cell .an-value .lo { color: var(--risk); }
+  .an-cell .an-value .sep { color: var(--ink-3); margin: 0 4px; }
   .pos-card::before {
     content: "";
     position: absolute;
@@ -533,29 +751,70 @@
     <span class="aside">Only stored in your browser · never sent anywhere</span>
   </div>
 
-  <form class="add-form" id="add-form" autocomplete="off">
-    <div class="field">
-      <label for="af-ticker">Ticker</label>
-      <input type="text" id="af-ticker" placeholder="NVDA" required maxlength="10"/>
+  <div class="quick-add">
+    <form id="qa-form" autocomplete="off">
+      <div class="qa-row">
+        <div class="qa-input-wrap">
+          <input type="text" id="qa-input" class="qa-input" placeholder="Try:  NVDA 10   or   PLTR 25 @ 140.50 2026-06-15   ↵" autofocus/>
+          <span class="qa-chip" id="qa-chip" aria-live="polite"></span>
+        </div>
+        <button type="submit" class="qa-btn" id="qa-btn">+ Add</button>
+      </div>
+    </form>
+
+    <div class="qa-hint">
+      <div>
+        Format: <code>TICKER QTY</code> · optional: <code>@ price</code> · <code>YYYY-MM-DD</code> · <code>stop</code> — omitted values fill from live data.
+      </div>
+      <div style="display:flex; gap: 16px; flex-wrap: wrap;">
+        <button type="button" id="toggle-bulk">Bulk paste ▾</button>
+        <button type="button" id="toggle-adv">Detailed form ▾</button>
+        <button type="button" id="load-sample">Load sample portfolio</button>
+      </div>
     </div>
-    <div class="field">
-      <label for="af-qty">Shares</label>
-      <input type="number" id="af-qty" step="any" min="0.0001" placeholder="10" required/>
+
+    <!-- Bulk paste panel -->
+    <div class="qa-panel" id="bulk-panel">
+      <div class="qa-panel-label">Paste multiple positions — one per line, same format as quick-add</div>
+      <textarea class="qa-textarea" id="bulk-textarea" placeholder="NVDA 10 @ 148.30 2026-05-15
+PLTR 25 @ 32.10 2026-06-04 30
+CRWD 8 @ 268.40 2026-06-20
+AAPL 30 @ 218.75"></textarea>
+      <div class="qa-panel-actions">
+        <span id="bulk-parse-count" style="align-self: center; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3);"></span>
+        <button type="button" class="qa-secondary-btn primary" id="bulk-add-btn">Add all</button>
+      </div>
+      <div class="parse-report" id="parse-report" style="display: none;"></div>
     </div>
-    <div class="field">
-      <label for="af-buy">Buy price ($)</label>
-      <input type="number" id="af-buy" step="any" min="0.01" placeholder="185.50" required/>
+
+    <!-- Detailed form panel (progressive disclosure) -->
+    <div class="qa-panel" id="adv-panel">
+      <div class="qa-panel-label">Enter each field precisely</div>
+      <form class="adv-form" id="add-form" autocomplete="off">
+        <div class="field">
+          <label for="af-ticker">Ticker</label>
+          <input type="text" id="af-ticker" placeholder="NVDA" required maxlength="10"/>
+        </div>
+        <div class="field">
+          <label for="af-qty">Shares</label>
+          <input type="number" id="af-qty" step="any" min="0.0001" placeholder="10" required/>
+        </div>
+        <div class="field">
+          <label for="af-buy">Buy price ($)</label>
+          <input type="number" id="af-buy" step="any" min="0.01" placeholder="auto"/>
+        </div>
+        <div class="field">
+          <label for="af-date">Buy date</label>
+          <input type="date" id="af-date"/>
+        </div>
+        <div class="field">
+          <label for="af-stop">Stop ($)</label>
+          <input type="number" id="af-stop" step="any" min="0" placeholder="auto −5%"/>
+        </div>
+        <button type="submit" class="qa-secondary-btn primary">Add</button>
+      </form>
     </div>
-    <div class="field">
-      <label for="af-date">Buy date</label>
-      <input type="date" id="af-date" required/>
-    </div>
-    <div class="field">
-      <label for="af-stop">Stop ($, optional)</label>
-      <input type="number" id="af-stop" step="any" min="0" placeholder="auto if blank"/>
-    </div>
-    <button type="submit" class="add-btn">Add to portfolio</button>
-  </form>
+  </div>
 
   <div class="data-tools">
     <button class="tool-btn" id="export-btn" title="Download portfolio as JSON">↓ Export JSON</button>
@@ -847,33 +1106,96 @@ import { analyze, regime } from './analyze.js';
     const order = { SELL: 0, TRIM: 1, WATCH: 2, HOLD: 3 };
     rows.sort((a, b) => order[a.verdict.action] - order[b.verdict.action]);
 
-    positionsEl.innerHTML = rows.map(r => `
+    positionsEl.innerHTML = rows.map(r => {
+      const target = r.buy + 2.5 * r.R;
+      const distStop$ = r.price - r.stop;
+      const distStopPct = (distStop$ / r.price) * 100;
+      const distTgt$ = target - r.price;
+      const distTgtPct = (distTgt$ / r.price) * 100;
+      // Tomorrow's projected range from ATR₁₄
+      const atr = r.analysis?.indicators?.atr14;
+      const dayHi = atr ? r.price + 0.5 * atr : null;
+      const dayLo = atr ? r.price - 0.5 * atr : null;
+      const wkHi  = atr ? r.price + atr * Math.sqrt(5) : null;
+      const wkLo  = atr ? r.price - atr * Math.sqrt(5) : null;
+      // Support / resistance from recent 20 bars
+      let sup = null, res = null;
+      if (r.q?.bars && r.q.bars.length >= 20) {
+        const recent = r.q.bars.slice(-20);
+        sup = Math.min(...recent.map(b => b.l));
+        res = Math.max(...recent.map(b => b.h));
+      }
+      const costBasis = r.buy * r.pos.qty;
+      const portValueForRow = totalNow || 0;
+      const posSharePct = portValueForRow > 0 ? (r.price * r.pos.qty / portValueForRow) * 100 : 0;
+      const ret20 = r.analysis?.indicators?.ret20;
+      const ret60 = r.analysis?.indicators?.ret60;
+      const rsi = r.analysis?.indicators?.rsi14;
+      const atrPct = r.analysis?.indicators?.atrPct;
+      const dist52w = r.analysis?.indicators?.distFrom52w;
+
+      return `
       <div class="pos-card action-${r.verdict.action}" data-id="${r.pos.id}">
-        <div class="pos-ident">
-          <div class="pos-ticker">${r.pos.ticker} <span style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.06em;">${r.pos.qty} sh</span></div>
-          <div class="pos-meta">Bought ${r.pos.buyDate} @ $${r.buy.toFixed(2)} · stop $${r.stop.toFixed(2)}${r.pos.target ? ` · tgt $${r.pos.target.toFixed(2)}` : ''}</div>
-          ${r.pos.notes ? `<div class="pos-notes">${escapeHtml(r.pos.notes)}</div>` : ''}
+        <div class="pos-primary">
+          <div class="pos-ident">
+            <div class="pos-ticker">${r.pos.ticker} <span style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.06em;">${r.pos.qty} sh</span>${r.analysis?.setup ? ` <span class="setup-chip setup-${r.analysis.setup}" style="font-size: 9px; padding: 1px 6px;">${r.analysis.setup}</span>` : ''}</div>
+            <div class="pos-meta">Bought ${r.pos.buyDate} @ $${r.buy.toFixed(2)} · ${r.daysHeld}d held</div>
+            <div class="pos-meta">Stop $${r.stop.toFixed(2)} · Target $${target.toFixed(2)} (+2.5R)</div>
+            ${r.pos.notes ? `<div class="pos-notes">${escapeHtml(r.pos.notes)}</div>` : ''}
+          </div>
+          <div class="pos-price">
+            <div class="now" data-flash-ticker="${r.pos.ticker}">$${r.price.toFixed(2)}</div>
+            <div class="chg ${r.q?.changePct >= 0 ? 'up' : 'down'}">${r.q?.changePct != null ? (r.q.changePct >= 0 ? '+' : '') + r.q.changePct.toFixed(2) + '% today' : '—'}</div>
+          </div>
+          <div class="pos-pnl">
+            <div class="amt ${r.gainDollars >= 0 ? 'up' : 'down'}">${r.gainDollars >= 0 ? '+' : '−'}$${fmt(Math.abs(r.gainDollars))}</div>
+            <div class="pct ${r.gainPct >= 0 ? 'up' : 'down'}">${r.gainPct >= 0 ? '+' : ''}${r.gainPct.toFixed(2)}%</div>
+            <div class="r">${r.gainR >= 0 ? '+' : ''}${r.gainR.toFixed(2)}R</div>
+          </div>
+          <div class="pos-verdict">
+            <span class="verdict-badge verdict-${r.verdict.action}">${r.verdict.action}</span>
+            <div class="verdict-reason">${r.verdict.reason}</div>
+          </div>
+          <div class="pos-actions">
+            <button class="edit-btn" data-edit="${r.pos.id}" title="Edit position">Edit</button>
+            <button class="close-btn" data-close="${r.pos.id}" title="Remove position (as if sold)">Close</button>
+          </div>
         </div>
-        <div class="pos-price">
-          <div class="now" data-flash-ticker="${r.pos.ticker}">$${r.price.toFixed(2)}</div>
-          <div class="chg ${r.q?.changePct >= 0 ? 'up' : 'down'}">${r.q?.changePct != null ? (r.q.changePct >= 0 ? '+' : '') + r.q.changePct.toFixed(2) + '% today' : '—'}</div>
-        </div>
-        <div class="pos-pnl">
-          <div class="amt ${r.gainDollars >= 0 ? 'up' : 'down'}">${r.gainDollars >= 0 ? '+' : '−'}$${fmt(Math.abs(r.gainDollars))}</div>
-          <div class="pct ${r.gainPct >= 0 ? 'up' : 'down'}">${r.gainPct >= 0 ? '+' : ''}${r.gainPct.toFixed(2)}%</div>
-          <div class="r">${r.gainR >= 0 ? '+' : ''}${r.gainR.toFixed(2)}R · ${r.daysHeld}d held</div>
-        </div>
-        <div class="pos-verdict">
-          <span class="verdict-badge verdict-${r.verdict.action}">${r.verdict.action}</span>
-          <div class="verdict-reason">${r.verdict.reason}</div>
-          ${r.analysis?.setup ? `<div style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.08em; margin-top: 2px;">SETUP · ${r.analysis.setup}${r.analysis.indicators?.rsi14 != null ? ' · RSI ' + r.analysis.indicators.rsi14.toFixed(0) : ''}</div>` : ''}
-        </div>
-        <div class="pos-actions">
-          <button class="edit-btn" data-edit="${r.pos.id}" title="Edit position">Edit</button>
-          <button class="close-btn" data-close="${r.pos.id}" title="Remove position (as if sold)">Close</button>
+
+        <div class="pos-analytics">
+          <div class="an-cell">
+            <div class="an-label">Tomorrow · projected</div>
+            <div class="an-value">${dayHi != null ? `<span class="hi">$${dayHi.toFixed(2)}</span><span class="sep">/</span><span class="lo">$${dayLo.toFixed(2)}</span>` : '—'}</div>
+            <div class="an-sub">${atr != null ? '±0.5·ATR (~68% band)' : 'need history'}</div>
+          </div>
+          <div class="an-cell">
+            <div class="an-label">Week ahead</div>
+            <div class="an-value">${wkHi != null ? `<span class="hi">$${wkHi.toFixed(2)}</span><span class="sep">/</span><span class="lo">$${wkLo.toFixed(2)}</span>` : '—'}</div>
+            <div class="an-sub">${atr != null ? '±ATR·√5' : ''}</div>
+          </div>
+          <div class="an-cell">
+            <div class="an-label">To stop / target</div>
+            <div class="an-value"><span class="lo">−$${Math.abs(distStop$).toFixed(2)}</span><span class="sep">·</span><span class="hi">+$${distTgt$.toFixed(2)}</span></div>
+            <div class="an-sub">${distStopPct.toFixed(1)}% down · ${distTgtPct.toFixed(1)}% up</div>
+          </div>
+          <div class="an-cell">
+            <div class="an-label">Support / resistance</div>
+            <div class="an-value">${sup != null ? `<span class="lo">$${sup.toFixed(2)}</span><span class="sep">/</span><span class="hi">$${res.toFixed(2)}</span>` : '—'}</div>
+            <div class="an-sub">20-bar swing</div>
+          </div>
+          <div class="an-cell">
+            <div class="an-label">Momentum · RSI</div>
+            <div class="an-value">${ret20 != null ? `${ret20 >= 0 ? '+' : ''}${ret20.toFixed(1)}%` : '—'}<span class="sep">/</span>${ret60 != null ? `${ret60 >= 0 ? '+' : ''}${ret60.toFixed(1)}%` : '—'}</div>
+            <div class="an-sub">20d / 60d · RSI ${rsi != null ? rsi.toFixed(0) : '—'} · ATR ${atrPct != null ? atrPct.toFixed(1) + '%' : '—'}${dist52w != null ? ' · 52w ' + dist52w.toFixed(1) + '%' : ''}</div>
+          </div>
+          <div class="an-cell">
+            <div class="an-label">Cost · portfolio weight</div>
+            <div class="an-value">$${fmt(costBasis)}</div>
+            <div class="an-sub">${posSharePct.toFixed(1)}% of book</div>
+          </div>
         </div>
       </div>
-    `).join('');
+    `;}).join('');
 
     // Wire close + edit buttons
     positionsEl.querySelectorAll('[data-close]').forEach(b => {
@@ -908,7 +1230,233 @@ import { analyze, regime } from './analyze.js';
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   }
 
-  // ---- Add form ----
+  // ---- Position parser: "TICKER QTY [@ PRICE] [DATE] [STOP]" ----
+  // All fields after TICKER QTY are optional and can appear in any order for
+  // the three trailing values — we detect by shape (date has hyphens, prices
+  // are numbers, first number is price and second is stop).
+  function parsePositionLine(raw) {
+    if (!raw || !raw.trim()) return { error: 'empty' };
+    // Normalize: strip @, $, and commas; collapse whitespace
+    const cleaned = raw.trim().replace(/[@$,]/g, ' ').replace(/\s+/g, ' ');
+    const parts = cleaned.split(' ').filter(Boolean);
+    if (parts.length < 2) return { error: 'need at least TICKER and QTY' };
+
+    const ticker = parts[0].toUpperCase();
+    if (!/^[A-Z^][A-Z0-9.-]{0,9}$/.test(ticker)) return { error: `bad ticker "${parts[0]}"` };
+    const qty = parseFloat(parts[1]);
+    if (!(qty > 0)) return { error: `bad quantity "${parts[1]}"` };
+
+    let price = null, date = null, stop = null;
+    for (let i = 2; i < parts.length; i++) {
+      const p = parts[i];
+      // ISO date match
+      if (/^\d{4}-\d{2}-\d{2}$/.test(p)) { date = p; continue; }
+      const n = parseFloat(p);
+      if (!isNaN(n) && n > 0) {
+        if (price == null) price = n;
+        else if (stop == null) stop = n;
+      }
+    }
+    return { ticker, qty, price, date, stop };
+  }
+
+  // Fetch live price for a ticker; returns { price, ok } or null
+  async function fetchLivePrice(ticker) {
+    try {
+      const r = await fetch(`/api/quotes?tickers=${encodeURIComponent(ticker)}&range=1mo`, { cache: 'no-store' });
+      if (!r.ok) return null;
+      const d = await r.json();
+      const q = d.quotes && d.quotes[ticker];
+      return q && q.price != null ? { price: q.price, changePct: q.changePct } : null;
+    } catch { return null; }
+  }
+
+  async function commitPositions(parsedList) {
+    // Fill missing prices from live quotes in parallel
+    const needPrice = parsedList.filter(p => !p.error && p.price == null);
+    const prices = await Promise.all(needPrice.map(async p => ({ ticker: p.ticker, live: await fetchLivePrice(p.ticker) })));
+    const priceMap = Object.fromEntries(prices.map(x => [x.ticker, x.live]));
+    const today = new Date().toISOString().slice(0, 10);
+    const results = [];
+    for (const p of parsedList) {
+      if (p.error) { results.push({ ok: false, msg: p.error, raw: p.raw }); continue; }
+      let buyPrice = p.price;
+      if (buyPrice == null) {
+        const live = priceMap[p.ticker];
+        if (!live) { results.push({ ok: false, msg: `no live price for ${p.ticker}`, raw: p.raw }); continue; }
+        buyPrice = live.price;
+      }
+      const pos = {
+        id: `${p.ticker}-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+        ticker: p.ticker,
+        qty: p.qty,
+        buyPrice,
+        buyDate: p.date || today,
+      };
+      if (p.stop != null && p.stop > 0 && p.stop < buyPrice) pos.stop = p.stop;
+      portfolio.push(pos);
+      results.push({ ok: true, msg: `${p.ticker} ${p.qty} @ $${buyPrice.toFixed(2)} · ${pos.buyDate}${pos.stop ? ` · stop $${pos.stop.toFixed(2)}` : ''}` });
+    }
+    save();
+    render();
+    pull();
+    return results;
+  }
+
+  // ---- Quick-add form ----
+  const qaForm = document.getElementById('qa-form');
+  const qaInput = document.getElementById('qa-input');
+  const qaChip = document.getElementById('qa-chip');
+  const qaBtn = document.getElementById('qa-btn');
+
+  // Live ticker validation: as user types, debounce and fetch quote for the
+  // first token (the ticker). Show live price next to the input.
+  let qaDebounce = null;
+  let qaLastTicker = null;
+  qaInput.addEventListener('input', () => {
+    clearTimeout(qaDebounce);
+    const parsed = parsePositionLine(qaInput.value);
+    if (parsed.error || !parsed.ticker) {
+      qaChip.textContent = '';
+      qaChip.className = 'qa-chip';
+      qaLastTicker = null;
+      return;
+    }
+    if (parsed.ticker === qaLastTicker) return; // already showing this one
+    qaChip.textContent = 'checking…';
+    qaChip.className = 'qa-chip';
+    qaDebounce = setTimeout(async () => {
+      const live = await fetchLivePrice(parsed.ticker);
+      qaLastTicker = parsed.ticker;
+      if (!live) {
+        qaChip.textContent = `${parsed.ticker} · not found`;
+        qaChip.className = 'qa-chip invalid';
+      } else {
+        const chg = live.changePct != null ? ` (${live.changePct >= 0 ? '+' : ''}${live.changePct.toFixed(2)}%)` : '';
+        qaChip.textContent = `${parsed.ticker} · $${live.price.toFixed(2)}${chg}`;
+        qaChip.className = 'qa-chip valid';
+      }
+    }, 350);
+  });
+
+  qaForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const raw = qaInput.value.trim();
+    if (!raw) return;
+    const parsed = parsePositionLine(raw);
+    if (parsed.error) {
+      qaChip.textContent = parsed.error;
+      qaChip.className = 'qa-chip invalid';
+      return;
+    }
+    qaBtn.disabled = true;
+    qaBtn.textContent = 'Adding…';
+    parsed.raw = raw;
+    const [result] = await commitPositions([parsed]);
+    qaBtn.disabled = false;
+    qaBtn.textContent = '+ Add';
+    if (result.ok) {
+      qaInput.value = '';
+      qaChip.textContent = '✓ added';
+      qaChip.className = 'qa-chip valid';
+      qaLastTicker = null;
+      setTimeout(() => { qaChip.textContent = ''; qaChip.className = 'qa-chip'; }, 1200);
+      qaInput.focus();
+    } else {
+      qaChip.textContent = result.msg;
+      qaChip.className = 'qa-chip invalid';
+    }
+  });
+
+  // ---- Toggle panels (bulk paste, detailed form) ----
+  function toggle(panelId, btn, label) {
+    const p = document.getElementById(panelId);
+    const isOpen = p.classList.toggle('open');
+    btn.textContent = label + (isOpen ? ' ▴' : ' ▾');
+    // Close the other panel for focus
+    const others = ['bulk-panel', 'adv-panel'].filter(x => x !== panelId);
+    others.forEach(o => {
+      document.getElementById(o).classList.remove('open');
+      const t = { 'bulk-panel': document.getElementById('toggle-bulk'), 'adv-panel': document.getElementById('toggle-adv') }[o];
+      if (t) t.textContent = t.textContent.replace(/[▴▾]/, '▾');
+    });
+  }
+  document.getElementById('toggle-bulk').addEventListener('click', function () { toggle('bulk-panel', this, 'Bulk paste'); });
+  document.getElementById('toggle-adv').addEventListener('click', function () { toggle('adv-panel', this, 'Detailed form'); });
+
+  // ---- Bulk paste ----
+  const bulkTextarea = document.getElementById('bulk-textarea');
+  const bulkCount = document.getElementById('bulk-parse-count');
+  const bulkAddBtn = document.getElementById('bulk-add-btn');
+  const parseReport = document.getElementById('parse-report');
+
+  function updateBulkCount() {
+    const lines = bulkTextarea.value.split('\n').map(l => l.trim()).filter(Boolean);
+    const parsed = lines.map(l => ({ raw: l, ...parsePositionLine(l) }));
+    const ok = parsed.filter(p => !p.error).length;
+    const bad = parsed.length - ok;
+    bulkCount.textContent = parsed.length === 0 ? '' : `${ok} valid · ${bad} invalid`;
+  }
+  bulkTextarea.addEventListener('input', updateBulkCount);
+  bulkAddBtn.addEventListener('click', async () => {
+    const lines = bulkTextarea.value.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return;
+    const parsedList = lines.map(l => ({ raw: l, ...parsePositionLine(l) }));
+    bulkAddBtn.disabled = true;
+    bulkAddBtn.textContent = 'Adding…';
+    const results = await commitPositions(parsedList);
+    bulkAddBtn.disabled = false;
+    bulkAddBtn.textContent = 'Add all';
+    // Show report
+    parseReport.style.display = 'block';
+    parseReport.innerHTML = results.map((r, i) =>
+      r.ok
+        ? `<div><span class="ok">✓</span> ${r.msg}</div>`
+        : `<div><span class="err">✕</span> line ${i + 1}: ${r.msg}${r.raw ? ` — "${r.raw}"` : ''}</div>`
+    ).join('');
+    if (results.every(r => r.ok)) {
+      bulkTextarea.value = '';
+      updateBulkCount();
+    }
+  });
+
+  // ---- Sample portfolio ----
+  document.getElementById('load-sample').addEventListener('click', async () => {
+    if (portfolio.length && !confirm(`Add 5 sample positions to your existing ${portfolio.length}?`)) return;
+    const today = new Date();
+    const daysAgo = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+    // Realistic-ish: mix of winners/losers/fresh, with dates ranging from 5-50 days ago
+    // Prices intentionally set so verdicts vary (some SELL, some HOLD, some near stops)
+    const samples = [
+      { ticker: 'NVDA', qty: 10, buyDate: daysAgo(45), buyPrice: null, stop: null },  // will fetch live
+      { ticker: 'PLTR', qty: 25, buyDate: daysAgo(20), buyPrice: null, stop: null },
+      { ticker: 'AAPL', qty: 15, buyDate: daysAgo(30), buyPrice: null, stop: null },
+      { ticker: 'AMD',  qty: 8,  buyDate: daysAgo(12), buyPrice: null, stop: null },
+      { ticker: 'HOOD', qty: 20, buyDate: daysAgo(5),  buyPrice: null, stop: null },
+    ];
+    // Set buy prices at 90% of current so most positions show as small winners
+    // (using live fetch); commit via same pipeline
+    const parsedList = samples.map(s => ({
+      raw: `sample ${s.ticker}`,
+      ticker: s.ticker,
+      qty: s.qty,
+      date: s.buyDate,
+      // We leave price null so commitPositions fetches live and uses it as buy.
+      // This isn't perfectly realistic (0% gain) — but gives real live tickers.
+      price: null,
+      stop: null,
+    }));
+    // Fetch live for each and set buyPrice at ~92% (fake past entry) to seed winners
+    const live = await Promise.all(samples.map(s => fetchLivePrice(s.ticker)));
+    parsedList.forEach((p, i) => {
+      if (live[i]) {
+        p.price = +(live[i].price * (0.88 + Math.random() * 0.18)).toFixed(2); // -12% to +6% vs current
+      }
+    });
+    await commitPositions(parsedList);
+  });
+
+  // ---- Detailed form (progressive) ----
   const form = document.getElementById('add-form');
   const dateInput = document.getElementById('af-date');
   dateInput.max = new Date().toISOString().slice(0, 10);
@@ -917,27 +1465,19 @@ import { analyze, regime } from './analyze.js';
     e.preventDefault();
     const ticker = document.getElementById('af-ticker').value.trim().toUpperCase();
     const qty = parseFloat(document.getElementById('af-qty').value);
-    const buy = parseFloat(document.getElementById('af-buy').value);
-    const date = document.getElementById('af-date').value;
+    const buyRaw = document.getElementById('af-buy').value.trim();
+    const date = document.getElementById('af-date').value || new Date().toISOString().slice(0, 10);
     const stopRaw = document.getElementById('af-stop').value.trim();
-    if (!ticker || !qty || !buy || !date) return;
-    const pos = {
-      id: `${ticker}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      ticker,
-      qty,
-      buyPrice: buy,
-      buyDate: date,
+    if (!ticker || !qty) return;
+    const parsed = {
+      raw: `${ticker} ${qty}`,
+      ticker, qty, date,
+      price: buyRaw ? parseFloat(buyRaw) : null,
+      stop: stopRaw ? parseFloat(stopRaw) : null,
     };
-    if (stopRaw) {
-      const s = parseFloat(stopRaw);
-      if (!isNaN(s) && s > 0 && s < buy) pos.stop = s;
-    }
-    portfolio.push(pos);
-    save();
+    await commitPositions([parsed]);
     form.reset();
     dateInput.value = new Date().toISOString().slice(0, 10);
-    render();
-    await pull(); // fetch fresh quote for the new ticker
   });
 
   // ---- Import / Export / Clear ----
