@@ -1346,8 +1346,209 @@
   /* --- Pulse cell subtle glow on live-updating values --- */
   .pulse-cell .value { transition: color 0.3s var(--ease-out); }
 
+  /* Trader Buzz drawer (right-side slide-over) */
+  .buzz-btn {
+    position: fixed;
+    top: 96px;
+    right: 20px;
+    z-index: 850;
+    background: var(--panel);
+    color: var(--ink-2);
+    border: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-radius: 8px 0 0 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: -3px 3px 12px rgba(0,0,0,0.15), inset 1px 0 0 var(--glass-border);
+    transition: transform 0.18s var(--ease-out), color 0.18s;
+  }
+  .buzz-btn:hover { color: var(--ink); transform: translateX(-2px); }
+  .buzz-btn .live-dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 6px var(--accent);
+    animation: buzz-pulse 2s var(--ease-inout) infinite;
+  }
+  @keyframes buzz-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .buzz-btn .count {
+    background: var(--accent); color: var(--ground); padding: 1px 6px;
+    border-radius: 8px; font-size: 9px; font-weight: 600;
+  }
+
+  .buzz-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    z-index: 890;
+  }
+  .buzz-backdrop.open { display: block; animation: bz-bg-in 0.2s ease-out; }
+  @keyframes bz-bg-in { from { opacity: 0; } to { opacity: 1; } }
+
+  .buzz-drawer {
+    display: none;
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: min(500px, 92vw);
+    z-index: 900;
+    flex-direction: column;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border-left: 1px solid var(--glass-border);
+    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.45), inset 1px 0 0 rgba(255,255,255,0.06);
+  }
+  .buzz-drawer.open { display: flex; animation: bz-in 0.24s var(--ease-out); }
+  @keyframes bz-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+  .buzz-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px; border-bottom: 1px solid var(--glass-border);
+  }
+  .buzz-title {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .buzz-title strong { color: var(--ink); }
+  .buzz-title .demo {
+    color: var(--caution); font-size: 9.5px; margin-left: 8px;
+    padding: 1px 6px; border: 1px solid var(--caution); border-radius: 3px;
+  }
+  .buzz-close {
+    background: transparent; border: 1px solid var(--rule); color: var(--ink-2);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 6px 10px; cursor: pointer; border-radius: 4px;
+  }
+  .buzz-close:hover { color: var(--ink); border-color: var(--ink); }
+
+  .buzz-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .buzz-trending {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--ground-2);
+  }
+  .buzz-trending .lbl {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px;
+  }
+  .trending-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .trending-chip {
+    padding: 4px 10px;
+    background: var(--panel); border: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 11px; color: var(--ink);
+    display: inline-flex; align-items: center; gap: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .trending-chip:hover { border-color: var(--accent); }
+  .trending-chip .count { color: var(--accent); font-size: 10px; }
+
+  .buzz-filters {
+    padding: 10px 20px; border-bottom: 1px solid var(--rule);
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .buzz-filter {
+    padding: 4px 10px; font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    background: transparent; border: 1px solid var(--rule); color: var(--ink-3);
+    cursor: pointer; border-radius: 3px;
+  }
+  .buzz-filter:hover { color: var(--ink); }
+  .buzz-filter.on { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+
+  .buzz-feed { list-style: none; margin: 0; padding: 0; }
+  .buzz-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px dotted var(--rule);
+    align-items: start;
+  }
+  .buzz-item:last-child { border-bottom: none; }
+  .buzz-item:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+
+  .buzz-src {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 2px 6px; border: 1px solid;
+    border-radius: 3px; align-self: flex-start; min-width: 48px; text-align: center;
+  }
+  .buzz-src-X       { color: #1DA1F2; border-color: #1DA1F2; }
+  .buzz-src-REDDIT  { color: var(--accent); border-color: var(--accent); }
+  .buzz-src-CNBC    { color: var(--risk); border-color: var(--risk); }
+  .buzz-src-YOUTUBE { color: var(--risk); border-color: var(--risk); }
+  .buzz-src-CONGRESS{ color: var(--caution); border-color: var(--caution); }
+  .buzz-src-13F     { color: var(--signal); border-color: var(--signal); }
+  .buzz-src-PODCAST { color: var(--ink-2); border-color: var(--ink-2); }
+  .buzz-src-STOCKTWITS { color: #1DA1F2; border-color: #1DA1F2; }
+
+  .buzz-content { min-width: 0; }
+  .buzz-line1 {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+    margin-bottom: 4px;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .buzz-speaker { color: var(--ink); font-size: 11.5px; letter-spacing: 0.02em; }
+  .buzz-tickers { display: inline-flex; gap: 4px; }
+  .buzz-ticker {
+    padding: 1px 5px; background: var(--ground-2);
+    font-family: var(--mono); font-size: 10.5px; color: var(--ink);
+    border-radius: 2px; cursor: pointer;
+    text-decoration: none; letter-spacing: 0.02em;
+  }
+  .buzz-ticker:hover { background: var(--accent-soft); }
+  .buzz-snippet {
+    font-family: var(--serif); font-size: 13px; line-height: 1.45;
+    color: var(--ink); margin: 4px 0 0;
+  }
+  .buzz-meta {
+    font-family: var(--mono); font-size: 10px; color: var(--ink-3);
+    display: flex; gap: 8px; margin-top: 6px; align-items: center;
+  }
+  .buzz-sent {
+    padding: 1px 6px; border-radius: 3px; font-family: var(--mono);
+    font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .buzz-sent.bull { color: var(--signal); background: color-mix(in srgb, var(--signal) 12%, transparent); }
+  .buzz-sent.bear { color: var(--risk); background: color-mix(in srgb, var(--risk) 12%, transparent); }
+  .buzz-sent.neu  { color: var(--ink-3); background: var(--ground-2); }
+
+  .buzz-time { font-family: var(--mono); font-size: 10px; color: var(--ink-3); align-self: flex-start; white-space: nowrap; }
+
+  .buzz-footer {
+    padding: 12px 20px; border-top: 1px solid var(--glass-border);
+    font-family: var(--mono); font-size: 10px; color: var(--ink-3);
+    text-align: center; letter-spacing: 0.04em;
+    background: var(--ground-2);
+  }
+  .buzz-footer a { color: var(--accent); text-decoration: none; }
+  .buzz-footer a:hover { text-decoration: underline; }
+
+  /* Mentioned-by pill on Stocks pick cards */
+  .mentioned-by {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-3);
+    margin-left: 8px; padding: 1px 6px;
+    background: var(--ground-2); border-radius: 3px;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .mentioned-by:hover { color: var(--accent); }
+  .mentioned-by .dot { width: 5px; height: 5px; background: var(--accent); border-radius: 50%; }
+
   @media (prefers-reduced-motion: reduce) {
-    *, .brand-mark, #live-dot, .spark polyline { transition: none !important; animation: none !important; }
+    *, .brand-mark, #live-dot, .spark polyline, .buzz-btn .live-dot { transition: none !important; animation: none !important; }
   }
 </style>
 
@@ -1553,6 +1754,171 @@
   </div>
 
 </div>
+
+<!-- Trader Buzz side button (fixed, top-right) -->
+<button class="buzz-btn" id="open-buzz" aria-label="Open trader buzz" aria-haspopup="dialog">
+  <span class="live-dot" aria-hidden="true"></span>
+  Buzz
+  <span class="count" id="buzz-count">—</span>
+</button>
+
+<!-- Trader Buzz drawer -->
+<div class="buzz-backdrop" id="buzz-backdrop"></div>
+<aside class="buzz-drawer" id="buzz-drawer" aria-modal="true" role="dialog" aria-labelledby="buzz-title-el">
+  <header class="buzz-header">
+    <span class="buzz-title" id="buzz-title-el">
+      <strong>Trader Buzz</strong> · <span id="buzz-sources-label">connecting…</span>
+    </span>
+    <button class="buzz-close" id="buzz-close" aria-label="Close buzz">Close ✕</button>
+  </header>
+  <div class="buzz-body">
+    <div class="buzz-trending" id="buzz-trending"></div>
+    <div class="buzz-filters" id="buzz-filters"></div>
+    <ul class="buzz-feed" id="buzz-feed"></ul>
+  </div>
+  <div class="buzz-footer">
+    Live: <span style="color: var(--signal);">● StockTwits</span> + <span style="color: var(--signal);">● CNBC RSS</span> · roadmap: Reddit (OAuth), X (paid), 13F (SEC EDGAR), Congress (STOCK Act)
+  </div>
+</aside>
+
+<script>
+// ---- Trader Buzz drawer + sample data ----
+(function () {
+  const btn = document.getElementById('open-buzz');
+  const drawer = document.getElementById('buzz-drawer');
+  const backdrop = document.getElementById('buzz-backdrop');
+  const closeBtn = document.getElementById('buzz-close');
+  const feedEl = document.getElementById('buzz-feed');
+  const trendingEl = document.getElementById('buzz-trending');
+  const filtersEl = document.getElementById('buzz-filters');
+  const countEl = document.getElementById('buzz-count');
+  if (!btn || !drawer) return;
+
+  // Live buzz feed from /api/buzz (StockTwits + CNBC RSS).
+  // Fetched on first drawer open and every 3 minutes while open.
+  let BUZZ = [];
+  window.__buzz = BUZZ;
+  const sourcesLabel = document.getElementById('buzz-sources-label');
+  let buzzLoaded = false;
+  let buzzPollTimer = null;
+  const BUZZ_REFRESH_MS = 3 * 60 * 1000;
+
+  function tickerListForBuzz() {
+    try { return [...new Set([...(window.__pick_tickers || []), 'NVDA','PLTR','CRWD','HOOD','ASML','AMD','META','MSFT','GOOGL','TSLA','AMZN','COIN','LLY'])].join(','); }
+    catch { return 'NVDA,PLTR,CRWD,HOOD,ASML,AMD,META,MSFT,GOOGL,TSLA,AMZN,COIN,LLY'; }
+  }
+
+  async function loadBuzz() {
+    if (sourcesLabel) sourcesLabel.textContent = 'fetching live…';
+    try {
+      const res = await fetch(`/api/buzz?tickers=${encodeURIComponent(tickerListForBuzz())}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      // Keep only items with at least one ticker match (or all StockTwits since they always mention their symbol)
+      BUZZ = (data.items || []).filter(x => x.tickers && x.tickers.length > 0);
+      window.__buzz = BUZZ;
+      countEl.textContent = BUZZ.length;
+      const c = data.counts || {};
+      if (sourcesLabel) sourcesLabel.textContent = `${c.stocktwits ?? 0} StockTwits · ${c.cnbc ?? 0} CNBC · live`;
+      buzzLoaded = true;
+      // Re-render Stocks pick cards so the mentioned-by pill appears
+      document.dispatchEvent(new CustomEvent('buzz-updated'));
+      render();
+    } catch (e) {
+      if (sourcesLabel) sourcesLabel.textContent = 'feed unavailable · ' + e.message;
+    }
+  }
+
+  let filter = 'ALL';
+  const SOURCES = ['ALL', 'STOCKTWITS', 'CNBC'];
+
+  function fmtAgo(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    if (s < 60) return s + 's';
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + 'm';
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + 'h';
+    return Math.floor(h/24) + 'd';
+  }
+
+  function render() {
+    // Trending: ticker → mention count across last 24h
+    const trend = {};
+    for (const b of BUZZ) {
+      for (const t of b.tickers) trend[t] = (trend[t] || 0) + 1;
+    }
+    const trendingList = Object.entries(trend).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    trendingEl.innerHTML = `
+      <div class="lbl">Trending tickers · ${BUZZ.length} mentions live</div>
+      <div class="trending-chips">
+        ${trendingList.map(([t, c]) => `<span class="trending-chip" data-tk="${t}">${t}<span class="count">${c}</span></span>`).join('')}
+      </div>
+    `;
+
+    // Filters
+    filtersEl.innerHTML = SOURCES.map(s => `<button class="buzz-filter ${filter === s ? 'on' : ''}" data-f="${s}">${s}</button>`).join('');
+    filtersEl.querySelectorAll('.buzz-filter').forEach(b => {
+      b.addEventListener('click', () => { filter = b.dataset.f; render(); });
+    });
+
+    // Feed
+    const items = filter === 'ALL' ? BUZZ : BUZZ.filter(b => b.src === filter);
+    const sorted = [...items].sort((a, b) => b.ts - a.ts);
+    feedEl.innerHTML = sorted.map(b => `
+      <li class="buzz-item">
+        <span class="buzz-src buzz-src-${b.src}">${b.src}</span>
+        <div class="buzz-content">
+          <div class="buzz-line1">
+            <span class="buzz-speaker">${b.speaker}</span>
+            <span class="buzz-tickers">${b.tickers.map(t => `<span class="buzz-ticker" data-tk="${t}">$${t}</span>`).join('')}</span>
+          </div>
+          <p class="buzz-snippet">${b.text}</p>
+          <div class="buzz-meta">
+            <span class="buzz-sent ${b.sent === 'bull' ? 'bull' : b.sent === 'bear' ? 'bear' : 'neu'}">${b.sent === 'bull' ? '▲ bullish' : b.sent === 'bear' ? '▼ bearish' : '● neutral'}</span>
+          </div>
+        </div>
+        <span class="buzz-time">${fmtAgo(Date.now() - b.ts)}</span>
+      </li>
+    `).join('');
+
+    // Ticker clicks → close drawer, scroll to that pick if visible
+    feedEl.querySelectorAll('.buzz-ticker, .trending-chip').forEach(el => {
+      el.addEventListener('click', () => {
+        const t = el.dataset.tk;
+        const card = [...document.querySelectorAll('.card')].find(c => c.querySelector('.ticker')?.innerText.startsWith(t));
+        if (card) { close(); card.scrollIntoView({ behavior: 'smooth', block: 'center' }); card.click(); }
+      });
+    });
+  }
+
+  function open() {
+    drawer.classList.add('open'); backdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    if (!buzzLoaded) loadBuzz();
+    if (!buzzPollTimer) buzzPollTimer = setInterval(loadBuzz, BUZZ_REFRESH_MS);
+    render();
+    setTimeout(() => closeBtn.focus(), 100);
+  }
+  function close() {
+    drawer.classList.remove('open'); backdrop.classList.remove('open');
+    document.body.style.overflow = '';
+    if (buzzPollTimer) { clearInterval(buzzPollTimer); buzzPollTimer = null; }
+    btn.focus();
+  }
+
+  // Load buzz once at startup so the "Mentioned by N" pills appear even
+  // before the drawer is opened. Cheap: a single request cached 60s server-side.
+  loadBuzz();
+  btn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  backdrop.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawer.classList.contains('open')) close(); });
+
+  // Notify the main script that buzz data is available so pick cards can render mentions
+  document.dispatchEvent(new CustomEvent('buzz-ready'));
+})();
+</script>
 
 <!-- Handbook slide-over drawer (loads /handbook in iframe; ESC or backdrop to close) -->
 <div class="hb-backdrop" id="hb-backdrop" hidden></div>
@@ -1818,16 +2184,25 @@ import { analyze, regime } from './analyze.js';
     return [...p.sources].sort((a,b) => parseFloat(b.w) - parseFloat(a.w)).slice(0, n);
   }
 
+  function buzzMentionsFor(ticker) {
+    const buzz = window.__buzz || [];
+    return buzz.filter(b => b.tickers.includes(ticker));
+  }
+
   function renderPicks() {
     picksEl.innerHTML = picks.map((p, i) => {
       const tops = topSources(p, 3);
       const badges = tops.map(s => `<span class="origin-badge ${originClass(s.src)}">${s.src} <span class="w">${s.w}</span></span>`).join('');
       const setupChip = p.setup ? `<span class="setup-chip setup-${p.setup}">${p.setup}</span>` : '';
+      const mentions = buzzMentionsFor(p.ticker);
+      const mentionPill = mentions.length
+        ? ` <span class="mentioned-by" data-buzz-open="1" title="${mentions.slice(0,3).map(m => m.speaker).join(' · ')}"><span class="dot"></span>Mentioned by ${mentions.length}</span>`
+        : '';
       return `
       <div class="card ${p.ticker === activeTicker ? 'active' : ''}" data-ticker="${p.ticker}" tabindex="0" role="button" aria-pressed="${p.ticker === activeTicker}">
         <div class="rank">${String(i+1).padStart(2,'0')}</div>
         <div class="card-body">
-          <div class="ticker">${p.ticker} <span data-flash-ticker="${p.ticker}" style="color: var(--ink-3); font-size: 12px; font-weight: 400; letter-spacing: 0; padding: 0 2px;">· $${p.price.toFixed(2)}</span>${p.todayChangePct != null ? ` <span style="font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: 0.02em; color: ${p.todayChangePct >= 0 ? 'var(--signal)' : 'var(--risk)'};">${p.todayChangePct >= 0 ? '+' : ''}${p.todayChangePct.toFixed(2)}%</span>` : ''}</div>
+          <div class="ticker">${p.ticker} <span data-flash-ticker="${p.ticker}" style="color: var(--ink-3); font-size: 12px; font-weight: 400; letter-spacing: 0; padding: 0 2px;">· $${p.price.toFixed(2)}</span>${p.todayChangePct != null ? ` <span style="font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: 0.02em; color: ${p.todayChangePct >= 0 ? 'var(--signal)' : 'var(--risk)'};">${p.todayChangePct >= 0 ? '+' : ''}${p.todayChangePct.toFixed(2)}%</span>` : ''}${mentionPill}</div>
           <div class="name">${p.name}</div>
           ${setupChip}
           <div class="thesis">${p.setup && p.setupReason ? p.setupReason : p.thesis}</div>
@@ -1844,7 +2219,15 @@ import { analyze, regime } from './analyze.js';
       </div>
     `;}).join('');
     picksEl.querySelectorAll('.card').forEach(el => {
-      el.addEventListener('click', () => { activeTicker = el.dataset.ticker; renderPicks(); renderDetail(activeTicker); });
+      el.addEventListener('click', (e) => {
+        // Let the mentioned-by pill open the buzz drawer without also toggling the card
+        if (e.target.closest('[data-buzz-open]')) {
+          e.stopPropagation();
+          document.getElementById('open-buzz')?.click();
+          return;
+        }
+        activeTicker = el.dataset.ticker; renderPicks(); renderDetail(activeTicker);
+      });
       el.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeTicker = el.dataset.ticker; renderPicks(); renderDetail(activeTicker); }
       });
@@ -2550,5 +2933,11 @@ import { analyze, regime } from './analyze.js';
   renderHarness();
   renderScreen();
   renderPolCalendar();
+
+  // Re-render picks when the buzz feed loads so the "Mentioned by N" pills appear
+  document.addEventListener('buzz-updated', () => { renderPicks(); });
+
+  // Publish current pick tickers so the buzz drawer can request them
+  window.__pick_tickers = picks.map(p => p.ticker);
 })();
 </script>

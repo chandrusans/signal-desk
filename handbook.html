@@ -404,7 +404,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v1.6</div>
+      <div class="kicker">Signal Desk · Handbook · v1.7</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -806,6 +806,23 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 14</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v1.7<br/>2026-07-23</div>
+        <div class="what">
+          <h4>Trader Buzz drawer — LIVE data from free sources</h4>
+          <ul>
+            <li>New right-side slide-over drawer showing what people are saying about tickers. Opens via the fixed "Buzz" button on the right edge of the Stocks page (or ESC / backdrop click to close).</li>
+            <li><strong>Live sources wired</strong> (no API keys needed): <strong>StockTwits public streams</strong> per ticker (real user handles, follower counts on high-signal accounts, and platform-tagged sentiment) + <strong>CNBC top-news RSS</strong> (headlines cross-matched to your watchlist tickers).</li>
+            <li>Each item shows: source badge (colour-coded per platform), speaker/outlet, mentioned tickers as clickable chips, sentiment (bullish / bearish / neutral, either platform-tagged or keyword-scored), snippet, and time. Ticker chips scroll to that candidate on the Stocks page and open its detail panel.</li>
+            <li><strong>Trending tickers strip</strong>: most-mentioned tickers across all sources, with counts.</li>
+            <li><strong>Source filter chips</strong>: ALL / STOCKTWITS / CNBC — grows as more feeds come online.</li>
+            <li><strong>"Mentioned by N" pill</strong> on each candidate card on the Stocks page — click it to open the drawer and see the actual mentions.</li>
+            <li>The drawer's footer names the exact live sources plus the roadmap for the auth-gated / paid ones (Reddit OAuth, X paid, 13F via SEC EDGAR, Congress via STOCK Act scrapers).</li>
+            <li>Buzz refreshes every 3 minutes while the drawer is open; a single initial fetch runs at page load so the "Mentioned by N" pills appear before you even open the drawer.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v1.6<br/>2026-07-23</div>
