@@ -129,6 +129,27 @@
     transition: transform 0.18s var(--ease-out);
   }
   .theme-toggle:hover { transform: translateY(-1px); }
+
+  /* Brand logomark on masthead */
+  .brand-mark {
+    display: inline-block;
+    vertical-align: -6px;
+    margin-right: 12px;
+    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 32%, transparent));
+    animation: spin-slow 60s linear infinite;
+  }
+  @keyframes spin-slow { to { transform: rotate(360deg); } }
+
+  /* Refresh button (matches Stocks + Metals meta) */
+  .refresh-btn {
+    background: transparent; border: 1px solid var(--rule); color: var(--ink-3);
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 3px 7px; margin-left: 6px; cursor: pointer; border-radius: 3px;
+    transition: color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+  }
+  .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
   @media (max-width: 900px) { .brand { font-size: 30px; } }
 
   /* Portfolio summary strip */
@@ -466,8 +487,8 @@
 
   <nav class="tabbar" role="tablist" aria-label="Views">
     <div class="tabbar-tabs">
-      <a href="/" class="tab" data-view="stocks">Stocks</a>
       <a href="/dashboard" class="tab on" data-view="dashboard" aria-selected="true">Dashboard</a>
+      <a href="/" class="tab" data-view="stocks">Stocks</a>
       <a href="/metals" class="tab" data-view="metals">Metals</a>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
@@ -479,11 +500,28 @@
   <header class="masthead">
     <div>
       <div class="kicker">The Signal Desk · Dashboard · Personal Portfolio</div>
-      <h1 class="brand">My positions, <em>watched like a book.</em></h1>
+      <h1 class="brand">
+        <svg class="brand-mark" width="42" height="42" viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <radialGradient id="lg-d" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="21" cy="21" r="20" fill="none" stroke="var(--accent)" stroke-width="0.6" opacity="0.4"/>
+          <circle cx="21" cy="21" r="14" fill="none" stroke="var(--accent)" stroke-width="0.8" opacity="0.65"/>
+          <circle cx="21" cy="21" r="8"  fill="none" stroke="var(--accent)" stroke-width="1" opacity="0.9"/>
+          <circle cx="21" cy="21" r="3.5" fill="url(#lg-d)"/>
+          <circle cx="21" cy="21" r="1.6" fill="var(--accent)"/>
+          <line x1="21" y1="1" x2="21" y2="6" stroke="var(--accent)" stroke-width="0.6" opacity="0.4"/>
+          <line x1="21" y1="36" x2="21" y2="41" stroke="var(--accent)" stroke-width="0.6" opacity="0.4"/>
+          <line x1="1" y1="21" x2="6" y2="21" stroke="var(--accent)" stroke-width="0.6" opacity="0.4"/>
+          <line x1="36" y1="21" x2="41" y2="21" stroke="var(--accent)" stroke-width="0.6" opacity="0.4"/>
+        </svg>My positions, <em>watched like a book.</em></h1>
     </div>
     <div class="meta">
       <div class="date" id="run-date">RUN · —</div>
-      <div>FEED · <span id="live-dot">◌</span> <span id="live-label">connecting…</span></div>
+      <div>FEED · <span id="live-dot">◌</span> <span id="live-label">connecting…</span> <button class="refresh-btn" id="refresh-now" title="Force refresh now">↻ Refresh</button></div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
   </header>
@@ -945,5 +983,18 @@ import { analyze, regime } from './analyze.js';
   pull();
   setInterval(pull, REFRESH_MS);
   setInterval(updateLiveLabel, 1000);
+
+  const refreshBtn = document.getElementById('refresh-now');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = '↻ Refreshing…';
+      await pull();
+      setTimeout(() => {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = '↻ Refresh';
+      }, 800);
+    });
+  }
 })();
 </script>
