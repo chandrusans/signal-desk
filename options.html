@@ -1,0 +1,658 @@
+<title>Signal Desk — Options · Robinhood & Schwab</title>
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('sd-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root {
+    --ground: #F4EFE4; --ground-2: #EDE7D8; --ink: #161512; --ink-2: #3A362E; --ink-3: #6B655A;
+    --rule: #D9D2BF; --panel: #FBF8F0; --accent: #B8863A; --accent-soft: #E9D3A3;
+    --signal: #3B8C5A; --caution: #B57F1F; --risk: #B84438;
+    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: ui-sans-serif, -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --neu-hi: rgba(255,255,255,0.9); --neu-lo: rgba(96,84,60,0.14);
+    --neu-inset-hi: rgba(255,255,255,0.7); --neu-inset-lo: rgba(96,84,60,0.16);
+    --glass-bg: rgba(251,248,240,0.72); --glass-border: rgba(22,21,18,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:#0E1116; --ground-2:#141821; --ink:#E7E2D6; --ink-2:#B5AF9F; --ink-3:#7C7767;
+      --rule:#262B36; --panel:#161B24; --accent:#D6A24B; --accent-soft:#4A3820;
+      --signal:#5FBF83; --caution:#D4A040; --risk:#D96355;
+      --neu-hi: rgba(255,255,255,0.045); --neu-lo: rgba(0,0,0,0.55);
+      --neu-inset-hi: rgba(255,255,255,0.03); --neu-inset-lo: rgba(0,0,0,0.5);
+      --glass-bg: rgba(14,17,22,0.65); --glass-border: rgba(214,162,75,0.12);
+    }
+    body { background: radial-gradient(1200px 700px at 15% -10%, rgba(214,162,75,0.06), transparent 60%), var(--ground); }
+  }
+  :root[data-theme="light"] {
+    --ground:#F4EFE4;--ground-2:#EDE7D8;--ink:#161512;--ink-2:#3A362E;--ink-3:#6B655A;
+    --rule:#D9D2BF;--panel:#FBF8F0;--accent:#B8863A;--accent-soft:#E9D3A3;
+    --signal:#3B8C5A;--caution:#B57F1F;--risk:#B84438;
+    --neu-hi:rgba(255,255,255,0.9);--neu-lo:rgba(96,84,60,0.14);
+    --neu-inset-hi:rgba(255,255,255,0.7);--neu-inset-lo:rgba(96,84,60,0.16);
+    --glass-bg:rgba(251,248,240,0.72);--glass-border:rgba(22,21,18,0.10);
+  }
+  :root[data-theme="light"] body { background: var(--ground); }
+  :root[data-theme="dark"] {
+    --ground:#0E1116;--ground-2:#141821;--ink:#E7E2D6;--ink-2:#B5AF9F;--ink-3:#7C7767;
+    --rule:#262B36;--panel:#161B24;--accent:#D6A24B;--accent-soft:#4A3820;
+    --signal:#5FBF83;--caution:#D4A040;--risk:#D96355;
+    --neu-hi:rgba(255,255,255,0.045);--neu-lo:rgba(0,0,0,0.55);
+    --neu-inset-hi:rgba(255,255,255,0.03);--neu-inset-lo:rgba(0,0,0,0.5);
+    --glass-bg:rgba(14,17,22,0.65);--glass-border:rgba(214,162,75,0.12);
+  }
+  :root[data-theme="dark"] body {
+    background: radial-gradient(1200px 700px at 15% -10%, rgba(214,162,75,0.06), transparent 60%), var(--ground);
+  }
+
+  html { color-scheme: light dark; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+  .shell { max-width: 1240px; margin: 0 auto; padding: 32px 28px 80px; }
+
+  /* Tab bar */
+  .tabbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 0 12px; margin-bottom: 20px; border-bottom: 1px solid var(--rule); }
+  .tabbar-tabs { display: flex; gap: 0; }
+  .tab { padding: 10px 22px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); text-decoration: none; border: none; border-bottom: 2px solid transparent; transition: color 0.15s var(--ease-out), background 0.15s var(--ease-out); background: transparent; cursor: pointer; border-radius: 10px 10px 0 0; }
+  .tab:hover:not(.on) { color: var(--ink); background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 6%, transparent)); }
+  .tab.on { color: var(--ink); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent); box-shadow: inset 0 -2px 0 var(--accent); border-bottom-color: transparent; }
+  .handbook-btn {
+    background: var(--panel); border: 1px solid var(--rule); color: var(--ink-2);
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px;
+    box-shadow: 3px 3px 8px var(--neu-lo), -3px -3px 8px var(--neu-hi);
+    transition: transform 0.18s var(--ease-out), color 0.18s;
+  }
+  .handbook-btn:hover { transform: translateY(-1px); color: var(--ink); }
+  .handbook-btn .hb-glyph { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 8px var(--accent); }
+
+  /* Masthead */
+  .masthead { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; padding-bottom: 20px; border-bottom: 1px solid var(--ink); }
+  .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+  .brand { font-family: var(--serif); font-size: 40px; line-height: 1; letter-spacing: -0.015em; font-weight: 500; text-wrap: balance; margin: 0; }
+  .brand em { font-style: italic; color: var(--accent); font-weight: 400; }
+  .brand-mark { display: inline-block; vertical-align: -6px; margin-right: 12px; filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 32%, transparent)); animation: spin-slow 60s linear infinite; }
+  @keyframes spin-slow { to { transform: rotate(360deg); } }
+  .meta { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-2); line-height: 1.7; }
+  .theme-toggle {
+    background: var(--panel); border: none; color: var(--ink-2); font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 10px;
+    margin-top: 8px; cursor: pointer; border-radius: 6px;
+    box-shadow: 2px 2px 6px var(--neu-lo), -2px -2px 6px var(--neu-hi);
+    transition: transform 0.18s var(--ease-out);
+  }
+  .theme-toggle:hover { transform: translateY(-1px); }
+  .refresh-btn {
+    background: transparent; border: 1px solid var(--rule); color: var(--ink-3);
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 3px 7px; margin-left: 6px; cursor: pointer; border-radius: 3px;
+  }
+  .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+  @media (max-width: 900px) { .brand { font-size: 30px; } }
+
+  /* Broker strip */
+  .broker-strip {
+    margin-top: 18px; padding: 12px 18px;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 6px;
+    display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px; color: var(--ink-2);
+  }
+  .broker-strip strong { color: var(--ink); font-weight: 500; }
+  .broker-strip .broker-chip {
+    padding: 4px 10px; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 4px; letter-spacing: 0.06em;
+  }
+  .broker-strip .fee-note { color: var(--ink-3); }
+  .broker-strip .fee-note strong { color: var(--ink-2); }
+
+  /* Filter bar */
+  .filter-bar {
+    display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+    padding: 14px 0; margin-top: 12px;
+  }
+  .filter-group { display: flex; align-items: center; gap: 8px; }
+  .filter-group .lbl { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+  .seg-ctrl { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+  .seg-ctrl button {
+    background: transparent; border: none; border-right: 1px solid var(--rule);
+    padding: 6px 14px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+    color: var(--ink-2); cursor: pointer; transition: background 0.15s, color 0.15s;
+  }
+  .seg-ctrl button:last-child { border-right: none; }
+  .seg-ctrl button:hover { color: var(--ink); }
+  .seg-ctrl button.on { background: var(--ink); color: var(--ground); }
+
+  /* Section head */
+  .section-head { display: flex; justify-content: space-between; align-items: baseline; margin: 24px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+  .section-head h2 { font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: -0.01em; margin: 0; }
+  .section-head .aside { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+
+  /* Option cards */
+  .picks { display: flex; flex-direction: column; gap: 14px; }
+
+  .opt-card {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 18px 22px 16px;
+    position: relative;
+    display: flex; flex-direction: column; gap: 12px;
+    transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+  }
+  .opt-card::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  }
+  .opt-card.dir-CALL::before { background: var(--signal); }
+  .opt-card.dir-PUT::before  { background: var(--risk); }
+  .opt-card:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+
+  .opt-top {
+    display: grid;
+    grid-template-columns: minmax(200px, 1.5fr) minmax(120px, 1fr) minmax(180px, 1fr) auto;
+    gap: 18px; align-items: center;
+  }
+  @media (max-width: 900px) { .opt-top { grid-template-columns: 1fr; } }
+
+  .opt-headline { display: flex; flex-direction: column; gap: 4px; }
+  .opt-ticker-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .opt-underlying { font-family: var(--mono); font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
+  .opt-dir-chip {
+    padding: 3px 10px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; border: 1.5px solid; border-radius: 3px; font-weight: 600;
+  }
+  .opt-dir-chip.CALL { color: var(--signal); border-color: var(--signal); background: color-mix(in srgb, var(--signal) 12%, transparent); }
+  .opt-dir-chip.PUT  { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 12%, transparent); }
+  .opt-contract-line { font-family: var(--mono); font-size: 12.5px; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+  .opt-contract-line .strike { color: var(--accent); font-weight: 500; }
+  .opt-meta { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.04em; }
+  .opt-meta .dot { color: var(--rule); margin: 0 4px; }
+
+  .opt-price { text-align: right; }
+  .opt-price .mid {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 22px; color: var(--ink);
+  }
+  .opt-price .spread { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
+  .opt-price .per-contract { font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-top: 4px; letter-spacing: 0.04em; }
+
+  .opt-verdict { display: flex; flex-direction: column; gap: 4px; text-align: right; }
+  .opt-score {
+    font-family: var(--mono); font-size: 22px; color: var(--accent); font-variant-numeric: tabular-nums;
+    font-weight: 500; line-height: 1;
+  }
+  .opt-score-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+  .opt-liq {
+    display: inline-block; padding: 2px 8px; font-family: var(--mono);
+    font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; border: 1px solid;
+    border-radius: 3px; margin-top: 4px;
+  }
+  .opt-liq.good { color: var(--signal); border-color: var(--signal); }
+  .opt-liq.okay { color: var(--caution); border-color: var(--caution); }
+  .opt-liq.thin { color: var(--risk); border-color: var(--risk); }
+
+  .opt-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  .copy-btn {
+    background: var(--panel); border: 1px solid var(--rule); color: var(--ink-2);
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em;
+    padding: 5px 10px; cursor: pointer; border-radius: 4px;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .copy-btn.copied { color: var(--signal); border-color: var(--signal); }
+  .track-btn {
+    background: transparent; border: 1px dashed var(--rule); color: var(--ink-3);
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 4px 8px; cursor: pointer; border-radius: 3px;
+  }
+  .track-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* Analytics strip */
+  .opt-analytics {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0;
+    padding: 12px 0 0;
+    margin-top: 4px;
+    border-top: 1px dotted var(--rule);
+  }
+  @media (max-width: 1080px) { .opt-analytics { grid-template-columns: repeat(3, 1fr); row-gap: 12px; } }
+  @media (max-width: 600px)  { .opt-analytics { grid-template-columns: repeat(2, 1fr); } }
+  .an-cell {
+    padding: 0 14px;
+    border-right: 1px dotted var(--rule);
+  }
+  .an-cell:last-child { border-right: none; }
+  @media (max-width: 1080px) { .an-cell:nth-child(3n) { border-right: none; } }
+  @media (max-width: 600px) { .an-cell:nth-child(2n) { border-right: none; } }
+  .an-cell .an-label {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px;
+  }
+  .an-cell .an-value {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 12.5px; color: var(--ink); line-height: 1.3;
+  }
+  .an-cell .an-sub {
+    font-family: var(--mono); font-size: 10px; color: var(--ink-3);
+    margin-top: 2px; letter-spacing: 0.04em;
+  }
+  .an-cell .hi { color: var(--signal); }
+  .an-cell .lo { color: var(--risk); }
+  .an-cell .sep { color: var(--ink-3); margin: 0 4px; }
+
+  .empty-state, .loading-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--ink-3); font-family: var(--serif); font-style: italic;
+    font-size: 15px; line-height: 1.6;
+    background: var(--panel); border: 1px dashed var(--rule);
+  }
+  .empty-state strong, .loading-state strong { color: var(--ink); font-style: normal; font-family: var(--sans); font-weight: 500; }
+
+  /* Handbook drawer (same as other pages) */
+  .hb-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(8px) saturate(140%); -webkit-backdrop-filter: blur(8px) saturate(140%); z-index: 900; }
+  .hb-backdrop.open { display: block; }
+  .hb-drawer { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: min(960px, 92vw); z-index: 1000; flex-direction: column; background: var(--glass-bg); backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%); border-left: 1px solid var(--glass-border); box-shadow: -20px 0 60px rgba(0,0,0,0.45), inset 1px 0 0 rgba(255,255,255,0.06); }
+  .hb-drawer.open { display: flex; animation: hb-in 0.24s var(--ease-out); }
+  @keyframes hb-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  .hb-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--glass-border); }
+  .hb-title { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+  .hb-title strong { color: var(--ink); }
+  .hb-close { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 12px; cursor: pointer; border-radius: 4px; }
+  .hb-close:hover { color: var(--ink); border-color: var(--ink); }
+  .hb-frame { flex: 1; border: none; width: 100%; background: var(--ground); }
+
+  #live-dot { display: inline-block; animation: live-pulse 2s var(--ease-out) infinite; }
+  @keyframes live-pulse { 0%,100% { opacity: 1; text-shadow: 0 0 6px currentColor; } 50% { opacity: 0.65; text-shadow: 0 0 0 currentColor; } }
+
+  @keyframes rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .masthead { animation: rise-in 0.5s var(--ease-out) both; }
+  .broker-strip { animation: rise-in 0.5s var(--ease-out) 0.08s both; }
+  .filter-bar { animation: rise-in 0.5s var(--ease-out) 0.16s both; }
+  .picks { animation: rise-in 0.5s var(--ease-out) 0.24s both; }
+
+  .disclosure { margin-top: 36px; padding: 20px 24px; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule); }
+  .disclosure h4 { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--risk); margin: 0 0 8px; font-weight: 500; }
+  .disclosure p { font-family: var(--serif); font-style: italic; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); margin: 0; max-width: 78ch; }
+
+  @media (prefers-reduced-motion: reduce) { *, #live-dot { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="shell">
+  <nav class="tabbar" role="tablist" aria-label="Views">
+    <div class="tabbar-tabs">
+      <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
+      <a href="/" class="tab" data-view="stocks">Stocks</a>
+      <a href="/options" class="tab on" data-view="options" aria-selected="true">Options</a>
+      <a href="/metals" class="tab" data-view="metals">Metals</a>
+    </div>
+    <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
+      <span class="hb-glyph" aria-hidden="true"></span>
+      Handbook
+    </button>
+  </nav>
+
+  <header class="masthead">
+    <div>
+      <div class="kicker">The Signal Desk · Options · Single-leg calls & puts</div>
+      <h1 class="brand">
+        <svg class="brand-mark" width="42" height="42" viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <radialGradient id="lg-o" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="21" cy="21" r="20" fill="none" stroke="var(--accent)" stroke-width="0.6" opacity="0.4"/>
+          <circle cx="21" cy="21" r="14" fill="none" stroke="var(--accent)" stroke-width="0.8" opacity="0.65"/>
+          <circle cx="21" cy="21" r="8"  fill="none" stroke="var(--accent)" stroke-width="1" opacity="0.9"/>
+          <circle cx="21" cy="21" r="3.5" fill="url(#lg-o)"/>
+          <circle cx="21" cy="21" r="1.6" fill="var(--accent)"/>
+        </svg>Contracts, <em>ranked with exit levels.</em></h1>
+    </div>
+    <div class="meta">
+      <div class="date" id="run-date">RUN · —</div>
+      <div>FEED · <span id="live-dot">◌</span> <span id="live-label">connecting…</span> <button class="refresh-btn" id="refresh-now">↻ Refresh</button></div>
+      <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
+    </div>
+  </header>
+
+  <div class="broker-strip">
+    <span class="broker-chip">Robinhood</span>
+    <span class="broker-chip">Charles Schwab</span>
+    <span class="fee-note"><strong>$0.65/contract</strong> regulatory fee applies to both apps</span>
+    <span class="fee-note">· copy the OCC symbol from any card to open the contract directly in either app's search</span>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="lbl">Direction</span>
+      <div class="seg-ctrl" id="seg-direction">
+        <button data-v="ALL" class="on">All</button>
+        <button data-v="CALL">Calls</button>
+        <button data-v="PUT">Puts</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="lbl">Horizon</span>
+      <div class="seg-ctrl" id="seg-horizon">
+        <button data-v="ALL" class="on">All</button>
+        <button data-v="short">Short-term (7–45d)</button>
+        <button data-v="long">Long-term (90–365d)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <h2 id="picks-heading">Recommendations</h2>
+    <span class="aside" id="picks-count">loading…</span>
+  </div>
+
+  <div class="picks" id="picks">
+    <div class="loading-state"><strong>Loading options chain from NASDAQ…</strong><br/>~5 seconds per ticker</div>
+  </div>
+
+  <div class="disclosure">
+    <h4>Not investment advice — read this before trading options</h4>
+    <p>Single-leg long calls and puts can lose 100% of premium if the underlying doesn't move as expected before expiration. The recommendation engine ranks contracts by <strong>underlying setup + strike + expiry + liquidity + bid-ask spread</strong> — it does not know your risk tolerance, account size, or tax situation. Delta is an estimate from moneyness, not Black-Scholes. Exit target underlying-prices assume near-expiry mechanics with no theta modelling. Always verify quotes in your broker before submitting an order, use limit orders (never market orders on options), and size positions so the max loss is one you're prepared to take.</p>
+  </div>
+</div>
+
+<div class="hb-backdrop" id="hb-backdrop" hidden></div>
+<aside class="hb-drawer" id="hb-drawer" hidden aria-modal="true" role="dialog" aria-labelledby="hb-title">
+  <header class="hb-header">
+    <span class="hb-title" id="hb-title"><strong>Handbook</strong> — click any chapter to jump</span>
+    <button class="hb-close" id="hb-close" aria-label="Close handbook">Close ✕</button>
+  </header>
+  <iframe class="hb-frame" id="hb-frame" title="Signal Desk Handbook" src="about:blank" loading="lazy"></iframe>
+</aside>
+
+<script>
+// Handbook drawer
+(function () {
+  const btn = document.getElementById('open-handbook');
+  const drawer = document.getElementById('hb-drawer');
+  const backdrop = document.getElementById('hb-backdrop');
+  const closeBtn = document.getElementById('hb-close');
+  const frame = document.getElementById('hb-frame');
+  let loaded = false;
+  function open() {
+    if (!loaded) { frame.src = '/handbook#options'; loaded = true; }
+    drawer.classList.add('open'); backdrop.classList.add('open');
+    drawer.removeAttribute('hidden'); backdrop.removeAttribute('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  function close() {
+    drawer.classList.remove('open'); backdrop.classList.remove('open');
+    drawer.setAttribute('hidden',''); backdrop.setAttribute('hidden','');
+    document.body.style.overflow = '';
+  }
+  btn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  backdrop.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawer.classList.contains('open')) close(); });
+})();
+</script>
+
+<script type="module">
+import { analyze } from './analyze.js';
+
+(function () {
+  const root = document.documentElement;
+  const mql = window.matchMedia('(prefers-color-scheme: dark)');
+
+  // Theme
+  function applyTheme(next) {
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('sd-theme', next); } catch (e) {}
+    const f = document.getElementById('hb-frame');
+    if (f && f.contentWindow) try { f.contentWindow.postMessage({ type: 'sd-theme', theme: next }, '*'); } catch (_) {}
+  }
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme') || (mql.matches ? 'dark' : 'light');
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'sd-theme' && (e.data.theme === 'dark' || e.data.theme === 'light')) applyTheme(e.data.theme);
+  });
+
+  // Live status
+  const liveDot = document.getElementById('live-dot');
+  const liveLabel = document.getElementById('live-label');
+  const runDateEl = document.getElementById('run-date');
+  function setLive(state, msg) {
+    const colors = { connecting: 'var(--ink-3)', live: 'var(--signal)', stale: 'var(--caution)', error: 'var(--risk)' };
+    liveDot.style.color = colors[state] || 'var(--ink-3)';
+    liveDot.textContent = state === 'live' ? '●' : state === 'error' ? '✕' : '◌';
+    liveLabel.textContent = msg;
+  }
+  function updateRunDate(ms) {
+    const d = new Date(ms || Date.now());
+    const p = (n) => String(n).padStart(2, '0');
+    runDateEl.textContent = `RUN · ${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
+  }
+  setLive('connecting', 'connecting…');
+
+  // Ticker universe (same as Stocks page picks + a few more high-liquidity names)
+  const TICKERS = ['NVDA','PLTR','CRWD','HOOD','ASML','AMD','META','MSFT','GOOGL','TSLA','AMZN','COIN'];
+
+  // Filters
+  let dirFilter = 'ALL', horizonFilter = 'ALL';
+  let currentRecs = [];
+
+  document.querySelectorAll('#seg-direction button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#seg-direction button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      dirFilter = b.dataset.v;
+      renderPicks();
+    });
+  });
+  document.querySelectorAll('#seg-horizon button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#seg-horizon button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      horizonFilter = b.dataset.v;
+      renderPicks();
+    });
+  });
+
+  const picksEl = document.getElementById('picks');
+  const countEl = document.getElementById('picks-count');
+
+  async function pull() {
+    setLive('connecting', 'fetching NASDAQ chains…');
+    picksEl.innerHTML = '<div class="loading-state"><strong>Loading options chain from NASDAQ…</strong><br/>~5 seconds per ticker</div>';
+    try {
+      // Optional: use analyze on underlyings to decide CALL vs PUT direction
+      // For now, we let the API default to CALLs and let the user filter.
+      // Advanced: pull /api/quotes first, run analyze, build directions=... param.
+      let directionsParam = '';
+      try {
+        const qRes = await fetch(`/api/quotes?tickers=${encodeURIComponent(TICKERS.join(','))}&range=1y`);
+        if (qRes.ok) {
+          const qData = await qRes.json();
+          const dirs = [];
+          for (const t of TICKERS) {
+            const bars = qData.quotes?.[t]?.bars;
+            if (!bars || bars.length < 60) continue;
+            const a = analyze(bars);
+            if (a.insufficient) continue;
+            // BROKEN with negative trend → PUT candidate. Everything else → CALL.
+            const dir = a.setup === 'BROKEN' && a.indicators.ret20 != null && a.indicators.ret20 < 0 ? 'PUT' : 'CALL';
+            dirs.push(`${t}:${dir}`);
+          }
+          if (dirs.length) directionsParam = `&directions=${encodeURIComponent(dirs.join(','))}`;
+        }
+      } catch { /* fall back to defaults */ }
+
+      const res = await fetch(`/api/options?tickers=${encodeURIComponent(TICKERS.join(','))}${directionsParam}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      currentRecs = data.recommendations || [];
+      updateRunDate(data.asOf);
+      setLive('live', `live · ${currentRecs.length} contracts scored · ${data.supportedApps.join(' + ')}`);
+      renderPicks();
+    } catch (e) {
+      setLive('error', `feed unavailable · ${e.message}`);
+      picksEl.innerHTML = `<div class="empty-state"><strong>Failed to load options data.</strong><br/>${e.message}</div>`;
+    }
+  }
+
+  function fmt(n, digits = 2) { return n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits }); }
+  function fmtDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function renderPicks() {
+    const filtered = currentRecs.filter(r => {
+      if (dirFilter !== 'ALL' && r.direction !== dirFilter) return false;
+      if (horizonFilter !== 'ALL' && r.horizon !== horizonFilter) return false;
+      return true;
+    });
+    countEl.textContent = `${filtered.length} of ${currentRecs.length} contracts`;
+
+    if (filtered.length === 0) {
+      picksEl.innerHTML = `<div class="empty-state"><strong>No contracts match your filters.</strong><br/>Loosen the direction or horizon filter.</div>`;
+      return;
+    }
+
+    picksEl.innerHTML = filtered.map(r => {
+      const et = r.exitTargets || [];
+      const dteLabel = r.dte < 45 ? `${r.dte}d · short-term` : r.dte >= 90 ? `${r.dte}d · long-term` : `${r.dte}d`;
+      return `
+        <div class="opt-card dir-${r.direction}">
+          <div class="opt-top">
+            <div class="opt-headline">
+              <div class="opt-ticker-row">
+                <span class="opt-underlying">${r.underlying}</span>
+                <span class="opt-dir-chip ${r.direction}">${r.direction}</span>
+                <span style="font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em;">underlying $${fmt(r.underlyingPrice)}</span>
+              </div>
+              <div class="opt-contract-line">
+                <span class="strike">$${fmt(r.strike, 0)}</span> ${r.direction === 'CALL' ? 'C' : 'P'}
+                <span style="color: var(--ink-3);">·</span> exp ${fmtDate(r.expiration)}
+                <span style="color: var(--ink-3);">·</span> ${dteLabel}
+              </div>
+              <div class="opt-meta">
+                OI ${r.openInterest.toLocaleString()}<span class="dot">·</span>
+                Vol ${r.volume.toLocaleString()}<span class="dot">·</span>
+                Δ ${r.deltaEst >= 0 ? '+' : ''}${r.deltaEst.toFixed(2)}<span class="dot">·</span>
+                ${r.moneyness}<span class="dot">·</span>
+                spread ${r.spreadPct.toFixed(1)}%
+              </div>
+            </div>
+            <div class="opt-price">
+              <div class="mid">$${fmt(r.mid)}</div>
+              <div class="spread">bid $${fmt(r.bid)} · ask $${fmt(r.ask)}</div>
+              <div class="per-contract">$${fmt(r.premiumPerContract)}/contract</div>
+            </div>
+            <div class="opt-verdict">
+              <div class="opt-score-label">Score</div>
+              <div class="opt-score">${r.score}</div>
+              <span class="opt-liq ${r.liquidity}">${r.liquidity}</span>
+            </div>
+            <div class="opt-actions">
+              <button class="copy-btn" data-copy="${r.occSymbol}" title="Copy OCC symbol for Robinhood/Schwab lookup">
+                ⧉ ${r.occSymbol}
+              </button>
+              <button class="track-btn" data-track="${r.occSymbol}|${r.underlying}|${r.direction}|${r.strike}|${r.expiration}|${r.mid}" title="Track in Dashboard">+ Track</button>
+            </div>
+          </div>
+
+          <div class="opt-analytics">
+            <div class="an-cell">
+              <div class="an-label">Entry (limit)</div>
+              <div class="an-value">$${fmt(r.mid)}</div>
+              <div class="an-sub">mid of $${fmt(r.bid)}–$${fmt(r.ask)}</div>
+            </div>
+            <div class="an-cell">
+              <div class="an-label">Stop (−50%)</div>
+              <div class="an-value lo">$${fmt(r.stopPremium)}</div>
+              <div class="an-sub">exit if premium halves</div>
+            </div>
+            <div class="an-cell">
+              <div class="an-label">Target +50%</div>
+              <div class="an-value hi">$${fmt(et[0]?.premium || 0)}</div>
+              <div class="an-sub">underlying ≈ $${fmt(et[0]?.underlyingPx || 0)}</div>
+            </div>
+            <div class="an-cell">
+              <div class="an-label">Target +100%</div>
+              <div class="an-value hi">$${fmt(et[1]?.premium || 0)}</div>
+              <div class="an-sub">underlying ≈ $${fmt(et[1]?.underlyingPx || 0)}</div>
+            </div>
+            <div class="an-cell">
+              <div class="an-label">Breakeven at expiry</div>
+              <div class="an-value">$${fmt(r.breakeven)}</div>
+              <div class="an-sub">${r.direction === 'CALL' ? 'strike + premium' : 'strike − premium'}</div>
+            </div>
+            <div class="an-cell">
+              <div class="an-label">Max loss</div>
+              <div class="an-value lo">$${fmt(r.maxLoss)}</div>
+              <div class="an-sub">premium + $0.65 fee</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Wire copy buttons
+    picksEl.querySelectorAll('.copy-btn').forEach(b => {
+      b.addEventListener('click', async () => {
+        const text = b.dataset.copy;
+        try {
+          await navigator.clipboard.writeText(text);
+          const original = b.textContent;
+          b.classList.add('copied');
+          b.textContent = '✓ copied · paste into Robinhood/Schwab';
+          setTimeout(() => { b.classList.remove('copied'); b.textContent = original; }, 2000);
+        } catch (e) {
+          b.textContent = '✗ copy failed';
+        }
+      });
+    });
+    // Wire track buttons — writes to dashboard portfolio in localStorage
+    picksEl.querySelectorAll('.track-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        const [occ, und, dir, strike, exp, mid] = b.dataset.track.split('|');
+        try {
+          const key = 'sd-portfolio-v1';
+          const cur = JSON.parse(localStorage.getItem(key) || '[]');
+          const qtyStr = prompt(`Track ${occ}\n\nHow many contracts?`, '1');
+          const qty = parseFloat(qtyStr);
+          if (!qty || qty <= 0) return;
+          const pos = {
+            id: `${occ}-${Date.now()}`,
+            ticker: occ,                          // full OCC symbol as the "ticker"
+            underlying: und,
+            optionType: dir,
+            strike: parseFloat(strike),
+            expiration: exp,
+            qty,
+            buyPrice: parseFloat(mid),            // per-share premium
+            buyDate: new Date().toISOString().slice(0, 10),
+            isOption: true,
+            multiplier: 100,
+          };
+          cur.push(pos);
+          localStorage.setItem(key, JSON.stringify(cur));
+          const orig = b.textContent;
+          b.textContent = '✓ added to dashboard';
+          b.style.color = 'var(--signal)';
+          setTimeout(() => { b.textContent = orig; b.style.color = ''; }, 2000);
+        } catch (e) { alert('Failed: ' + e.message); }
+      });
+    });
+  }
+
+  document.getElementById('refresh-now').addEventListener('click', pull);
+  pull();
+})();
+</script>

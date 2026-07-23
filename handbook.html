@@ -404,7 +404,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v1.8</div>
+      <div class="kicker">Signal Desk · Handbook · v1.9</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -454,6 +454,13 @@
       <div class="toc-sub">Portfolio</div>
       <ul>
         <li><a href="#dashboard">Dashboard · your positions</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-sub">Options</div>
+      <ul>
+        <li><a href="#options">Options · calls & puts for Robinhood + Schwab</a></li>
       </ul>
     </div>
 
@@ -759,8 +766,60 @@
       </div>
     </section>
 
+    <section id="options">
+      <h2><span class="chnum">Chapter 13</span>Options · Robinhood &amp; Schwab</h2>
+      <p>The <a href="/options">Options</a> tab surfaces up to 10 single-leg call or put contracts ranked for the two brokers you actually use: <strong>Robinhood</strong> and <strong>Charles Schwab</strong>. Contract details, entry, exits, stop, breakeven, and max loss are all pre-computed. The scored contracts are the ones a discretionary trader would spend time inspecting.</p>
+
+      <h3>Data source</h3>
+      <p>NASDAQ's public options-chain JSON endpoint (no API key). Refreshed on button click. For each ticker, ~2000 raw contracts get scored, filtered, and the single best short-term and long-term contract per direction is returned.</p>
+
+      <h3>Scoring model</h3>
+      <p>Each contract is scored from 0–100 across five factors. Contracts that fail any hard filter (e.g. under 50 open interest, spread wider than 20%) are excluded entirely — not shown at any score:</p>
+      <ul>
+        <li><strong>DTE fit (30 pts)</strong> — short-term sweet spot is 21–35 days to expiration; long-term is 120–270. Farther from the sweet spot loses points.</li>
+        <li><strong>Moneyness (25 pts)</strong> — slightly OTM (strike/spot 1.00–1.10 for calls, inverse for puts) is the sweet spot for R-multiple efficiency.</li>
+        <li><strong>Open Interest (20 pts)</strong> — <code>≥1000</code> is a clean market, <code>≥200</code> is fine, under 50 is filtered out.</li>
+        <li><strong>Spread (15 pts)</strong> — bid-ask under 5% is tight; over 20% is filtered out (you'll get sliced on the fill).</li>
+        <li><strong>Volume today (10 pts)</strong> — trailing activity confirms real liquidity right now.</li>
+      </ul>
+
+      <h3>What each card shows</h3>
+      <ul>
+        <li><strong>Direction chip</strong> — CALL (green) or PUT (red) with a matching left rail.</li>
+        <li><strong>Contract line</strong> — strike, expiry date, DTE, short-term vs long-term tag.</li>
+        <li><strong>Bid / ask / mid</strong> — the mid is your limit-order price. Do not use market orders on options.</li>
+        <li><strong>Per-contract premium</strong> — mid × 100. This is what you pay for one contract.</li>
+        <li><strong>Estimated delta</strong> — from moneyness (not Black-Scholes). Ballpark for choosing between contracts.</li>
+        <li><strong>Liquidity rating</strong> — good / okay / thin. Prefer good.</li>
+        <li><strong>Copy OCC symbol</strong> — one click copies e.g. <code>NVDA260814C00215000</code>. Paste that into Robinhood's or Schwab's search bar and the contract opens directly, no clicking through the chain.</li>
+        <li><strong>+ Track</strong> — writes the contract to the Dashboard as an option position with strike / expiry / direction / multiplier=100 so it shows up next to your stock positions with P&amp;L on premium.</li>
+      </ul>
+
+      <h3>The analytics strip · six cells you actually trade off</h3>
+      <ul>
+        <li><strong>Entry (limit)</strong> — the mid price. Submit as a limit order.</li>
+        <li><strong>Stop (−50%)</strong> — exit if premium halves. This is the mechanical stop for long options; most books use −50% because premium can decay fast.</li>
+        <li><strong>Target +50%</strong> — premium goes to 1.5× entry. Underlying price required is estimated using delta.</li>
+        <li><strong>Target +100%</strong> — premium doubles. Same estimation caveat.</li>
+        <li><strong>Breakeven at expiry</strong> — the underlying price where you break even if held to expiration. For calls: <code>strike + premium</code>. For puts: <code>strike − premium</code>.</li>
+        <li><strong>Max loss</strong> — premium per contract + <code>$0.65 regulatory fee</code> (both Robinhood and Schwab). This is the whole ballgame if you're wrong.</li>
+      </ul>
+
+      <h3>Broker realities</h3>
+      <ul>
+        <li>Both apps charge <code>$0.65/contract</code> as a regulatory pass-through. Commission itself is <code>$0</code> on Robinhood and <code>$0</code> base on Schwab.</li>
+        <li>Both accept the OCC symbol format used on every card.</li>
+        <li>Both are American-style — assignment risk if in-the-money at expiry. This framework's positions are long-only single-leg, so assignment isn't a concern unless you're the seller (not our recommendation).</li>
+      </ul>
+
+      <div class="callout warn">
+        <span class="callout-label">Long options can lose 100%</span>
+        <p>Unlike stocks, a long option can decay to zero even if you're eventually right — theta and time-to-expiry are unforgiving. Never size a position where the max loss is more than you're prepared to lose. Delta on these cards is an estimate; verify greeks in your broker before entering.</p>
+      </div>
+    </section>
+
     <section id="metals">
-      <h2><span class="chnum">Chapter 13</span>Metals page · XAU/USD &amp; XAG/USD</h2>
+      <h2><span class="chnum">Chapter 14</span>Metals page · XAU/USD &amp; XAG/USD</h2>
       <p>The <a href="/metals">metals page</a> is a dedicated view for gold and silver. Metals trade on different drivers than equities — Fed rates, dollar strength, real yields, geopolitical risk — so they get their own dashboard rather than sitting inside the equity screener.</p>
 
       <h3>Live pricing source</h3>
@@ -804,8 +863,26 @@
     </section>
 
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 14</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 15</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v1.9<br/>2026-07-23</div>
+        <div class="what">
+          <h4>Options tab — Robinhood + Charles Schwab-friendly recommendations</h4>
+          <ul>
+            <li>New <strong>Options</strong> tab between Stocks and Metals showing up to 10 single-leg call/put recommendations pulled from NASDAQ's live options chains (no API key needed).</li>
+            <li>Every recommendation is scored by five factors — <strong>days-to-expiration fit</strong>, <strong>moneyness</strong>, <strong>open interest</strong>, <strong>bid-ask spread</strong>, and <strong>daily volume</strong> — with contracts outside sensible windows filtered out entirely.</li>
+            <li><strong>Two horizons</strong>: short-term (7–45 DTE, sweet spot 21–35) and long-term (90–365 DTE, sweet spot 120–270).</li>
+            <li>Direction inferred from the underlying's technical setup: <code>BROKEN + negative 20d return → PUT</code>; anything else → <code>CALL</code>. Filter chips override to Calls-only / Puts-only.</li>
+            <li>Every card shows: underlying + current price + direction chip, strike + expiry + DTE, bid/ask/mid, per-contract premium, open interest + volume + spread%, estimated delta from moneyness, liquidity rating, entry (limit at mid), stop at −50% premium, +50% and +100% profit targets with the underlying price required for each, breakeven at expiry, and max loss including the $0.65/contract regulatory fee.</li>
+            <li><strong>Copy OCC symbol</strong> button on each card — one click copies e.g. <code>NVDA260814C00215000</code> which pastes directly into Robinhood or Schwab search to open the contract.</li>
+            <li><strong>+ Track</strong> button writes the contract to the Dashboard as an option position (with strike, expiration, direction, multiplier=100) so P&L flows through to the same portfolio view as your stocks.</li>
+            <li>Broker strip at top calls out the shared $0.65/contract fee and lists the two supported apps explicitly.</li>
+            <li><strong>Honesty notes</strong>: delta is an estimate from moneyness (not Black-Scholes); exit target underlying prices assume near-expiry mechanics without theta modelling; single-leg longs can lose 100% of premium — the disclosure at the bottom of the page spells this out.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v1.8<br/>2026-07-23</div>
