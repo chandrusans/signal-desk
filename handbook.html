@@ -404,7 +404,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v1.7</div>
+      <div class="kicker">Signal Desk · Handbook · v1.8</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -806,6 +806,28 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 14</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v1.8<br/>2026-07-23</div>
+        <div class="what">
+          <h4>Trader Buzz — modular paid + free source wiring</h4>
+          <ul>
+            <li><strong>Paid API paths preserved as first-class citizens.</strong> Refactored <code>/api/buzz</code> so each source is a self-contained function that activates the moment its environment variable is set — no code changes, just a redeploy.</li>
+            <li>Six sources now wired in the code (public sources always on, paid sources dormant until you add credentials):
+              <ul>
+                <li><strong>StockTwits</strong> · public JSON feed · <em>always on</em></li>
+                <li><strong>CNBC RSS</strong> · public top-news feed · <em>always on</em></li>
+                <li><strong>X (Twitter) v2</strong> · set <code>X_BEARER_TOKEN</code> · ~$100/mo Basic tier</li>
+                <li><strong>Reddit</strong> · set <code>REDDIT_CLIENT_ID</code> + <code>REDDIT_CLIENT_SECRET</code> + <code>REDDIT_USER_AGENT</code> · free after OAuth app registration</li>
+                <li><strong>QuiverQuant</strong> (Congress trades) · set <code>QUIVER_API_KEY</code> · from $10/mo</li>
+                <li><strong>Finnhub</strong> (news + analyst grades) · set <code>FINNHUB_API_KEY</code> · free tier available</li>
+              </ul>
+            </li>
+            <li>The response JSON exposes an <code>active</code> map so the frontend knows which paid sources are live without extra config. The drawer's filter chips add / remove automatically as sources come online, and the footer shows each source in green (live) or amber (setup hint).</li>
+            <li>README updated with a per-source setup table including env var names, pricing, and where to register.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v1.7<br/>2026-07-23</div>

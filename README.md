@@ -91,16 +91,36 @@ Returns:
 - Insider / options-flow / analyst-rating narratives in the intel feed still hardcoded
 - Screener market cap and P/E values still hardcoded (need Finnhub free tier)
 
-## Reddit — future add-on (requires OAuth)
+## Trader Buzz — activating paid / auth-gated sources
 
-Reddit blocked anonymous JSON reads in 2023, so pulling mention counts requires registering an app:
+The `/api/buzz` endpoint is modular: each source is a self-contained function that returns `[]` when its env var is missing, and starts returning data the moment you set it. Nothing else needs to change — the drawer's filter chips and footer auto-detect what's active.
 
-1. Go to https://www.reddit.com/prefs/apps → **Create app** → type **script**
-2. Note the `client_id` (under the app name) and `client_secret`
-3. In Vercel project settings → **Environment Variables**, add:
-   - `REDDIT_CLIENT_ID`
-   - `REDDIT_CLIENT_SECRET`
-   - `REDDIT_USER_AGENT` (e.g. `signal-desk/1.0 by chandrusans`)
-4. Redeploy — an `api/reddit.js` handler can then use the client-credentials OAuth flow (60 req/min) to search r/wallstreetbets, r/stocks, r/investing per ticker.
+### Vercel setup for each source
 
-That endpoint isn't shipped yet — say the word and it's ~1 hour of work once you have the credentials.
+Open your Vercel project → **Settings** → **Environment Variables** and add the ones you want, then trigger a redeploy.
+
+| Source | Env vars | Pricing | Setup |
+|---|---|---|---|
+| **StockTwits** | *(none — always on)* | Free | Nothing to do |
+| **CNBC RSS** | *(none — always on)* | Free | Nothing to do |
+| **X (Twitter) v2** | `X_BEARER_TOKEN` | ~$100/mo Basic tier | Register at [developer.x.com](https://developer.x.com), create app, copy Bearer Token |
+| **Reddit** | `REDDIT_CLIENT_ID`<br/>`REDDIT_CLIENT_SECRET`<br/>`REDDIT_USER_AGENT` | Free | 1) [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps) → Create app → type **script**<br/>2) Copy client_id (under app name) and secret<br/>3) `REDDIT_USER_AGENT` example: `signal-desk/1.0 by yourhandle` |
+| **QuiverQuant** (Congress trades) | `QUIVER_API_KEY` | from $10/mo | [api.quiverquant.com/docs](https://api.quiverquant.com/docs/) — sign up, get key |
+| **Finnhub** (news + analyst grades) | `FINNHUB_API_KEY` | Free tier (60 req/min) | [finnhub.io](https://finnhub.io/) — register, copy API key |
+
+**Verifying activation:**
+- Open `/api/buzz?tickers=NVDA` — the JSON response includes an `active` map showing which env-var sources are wired
+- The drawer footer shows live sources in green (`●`) and dormant ones with their env var setup hint
+- Filter chips (ALL / STOCKTWITS / CNBC / X / REDDIT / …) appear automatically as sources come online
+
+**Adding a new source:**
+Drop another `fetchXyz(tickers)` function into `api/buzz.js` following the same pattern:
+```js
+async function fetchXyz(tickers) {
+  const key = process.env.XYZ_API_KEY;
+  if (!key) return [];              // silent skip when unconfigured
+  // …fetch…
+  return items;                     // each: { src, speaker, tickers, sent, text, ts, link }
+}
+```
+Add it to the `Promise.all` in the handler and the `active` map. Done.

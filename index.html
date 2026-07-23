@@ -1776,8 +1776,8 @@
     <div class="buzz-filters" id="buzz-filters"></div>
     <ul class="buzz-feed" id="buzz-feed"></ul>
   </div>
-  <div class="buzz-footer">
-    Live: <span style="color: var(--signal);">● StockTwits</span> + <span style="color: var(--signal);">● CNBC RSS</span> · roadmap: Reddit (OAuth), X (paid), 13F (SEC EDGAR), Congress (STOCK Act)
+  <div class="buzz-footer" id="buzz-footer">
+    Loading source status…
   </div>
 </aside>
 
@@ -1818,8 +1818,33 @@
       BUZZ = (data.items || []).filter(x => x.tickers && x.tickers.length > 0);
       window.__buzz = BUZZ;
       countEl.textContent = BUZZ.length;
+      activeSources = data.active || {};
       const c = data.counts || {};
-      if (sourcesLabel) sourcesLabel.textContent = `${c.stocktwits ?? 0} StockTwits · ${c.cnbc ?? 0} CNBC · live`;
+      // Build live source label from whatever's returning data
+      const parts = [];
+      if (c.stocktwits) parts.push(`${c.stocktwits} StockTwits`);
+      if (c.cnbc)       parts.push(`${c.cnbc} CNBC`);
+      if (c.x)          parts.push(`${c.x} X`);
+      if (c.reddit)     parts.push(`${c.reddit} Reddit`);
+      if (c.congress)   parts.push(`${c.congress} Congress`);
+      if (c.finnhub)    parts.push(`${c.finnhub} Finnhub`);
+      if (sourcesLabel) sourcesLabel.textContent = (parts.join(' · ') || '0 items') + ' · live';
+
+      // Footer: color-code live vs dormant paid sources
+      const footerEl = document.getElementById('buzz-footer');
+      if (footerEl) {
+        const live = ['<span style="color: var(--signal);">● StockTwits</span>', '<span style="color: var(--signal);">● CNBC RSS</span>'];
+        if (activeSources.x)        live.push('<span style="color: var(--signal);">● X</span>');
+        if (activeSources.reddit)   live.push('<span style="color: var(--signal);">● Reddit</span>');
+        if (activeSources.congress) live.push('<span style="color: var(--signal);">● Congress</span>');
+        if (activeSources.finnhub)  live.push('<span style="color: var(--signal);">● Finnhub</span>');
+        const dormant = [];
+        if (!activeSources.x)        dormant.push('X ($100/mo)');
+        if (!activeSources.reddit)   dormant.push('Reddit (free OAuth)');
+        if (!activeSources.congress) dormant.push('Congress ($10/mo Quiver)');
+        if (!activeSources.finnhub)  dormant.push('Finnhub (free tier)');
+        footerEl.innerHTML = `Live: ${live.join(' + ')}${dormant.length ? '<br/><span style="color: var(--ink-3);">Add env vars to activate: ' + dormant.join(', ') + '</span>' : ''}`;
+      }
       buzzLoaded = true;
       // Re-render Stocks pick cards so the mentioned-by pill appears
       document.dispatchEvent(new CustomEvent('buzz-updated'));
@@ -1830,7 +1855,11 @@
   }
 
   let filter = 'ALL';
-  const SOURCES = ['ALL', 'STOCKTWITS', 'CNBC'];
+  // Sources that ALWAYS render (public feeds). Others appear dynamically only
+  // when the /api/buzz `active` map indicates they're wired via env vars.
+  const ALWAYS_ON = ['ALL', 'STOCKTWITS', 'CNBC'];
+  const PAID_SOURCES = ['X', 'REDDIT', 'CONGRESS', 'FINNHUB'];
+  let activeSources = {}; // filled from /api/buzz response
 
   function fmtAgo(ms) {
     const s = Math.max(0, Math.floor(ms / 1000));
@@ -1856,8 +1885,12 @@
       </div>
     `;
 
-    // Filters
-    filtersEl.innerHTML = SOURCES.map(s => `<button class="buzz-filter ${filter === s ? 'on' : ''}" data-f="${s}">${s}</button>`).join('');
+    // Filters — always show public sources, add paid ones if activated via env vars
+    const dynamicSources = [
+      ...ALWAYS_ON,
+      ...PAID_SOURCES.filter(s => activeSources[s.toLowerCase()]),
+    ];
+    filtersEl.innerHTML = dynamicSources.map(s => `<button class="buzz-filter ${filter === s ? 'on' : ''}" data-f="${s}">${s}</button>`).join('');
     filtersEl.querySelectorAll('.buzz-filter').forEach(b => {
       b.addEventListener('click', () => { filter = b.dataset.f; render(); });
     });
