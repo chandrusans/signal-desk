@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     .split(',')
     .map((s) => s.trim().toUpperCase())
     .filter(Boolean)
-    .slice(0, 30);
+    .slice(0, 60);
 
   if (tickers.length === 0) {
     res.status(400).json({ error: 'Pass ?tickers=NVDA,PLTR,...' });

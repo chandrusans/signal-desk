@@ -1612,8 +1612,16 @@
   <div class="pulse" id="pulse"></div>
 
   <div class="section-head">
-    <h2>Top candidates · 30-day window</h2>
-    <span class="aside">Click a card to expand</span>
+    <h2>Top candidates · ranked by live composite score</h2>
+    <span class="aside">
+      <span style="margin-right: 10px;">Show</span>
+      <span class="seg" id="seg-show" style="display: inline-flex; vertical-align: middle;">
+        <button data-v="5" class="on">5</button>
+        <button data-v="10">10</button>
+        <button data-v="25">25</button>
+        <button data-v="999">All</button>
+      </span>
+    </span>
   </div>
 
   <div class="desk">
@@ -2252,8 +2260,10 @@ import { analyze, regime } from './analyze.js';
     return 'HOLD';
   }
 
+  let showCount = 5;
   function renderPicks() {
-    picksEl.innerHTML = picks.map((p, i) => {
+    const visible = picks.slice(0, showCount);
+    picksEl.innerHTML = visible.map((p, i) => {
       const tops = topSources(p, 3);
       const badges = tops.map(s => `<span class="origin-badge ${originClass(s.src)}">${s.src} <span class="w">${s.w}</span></span>`).join('');
       const setupChip = p.setup ? `<span class="setup-chip setup-${p.setup}">${p.setup}</span>` : '';
@@ -2698,6 +2708,39 @@ import { analyze, regime } from './analyze.js';
   let inFlight = false;
   let lastGoodAt = 0;
 
+  // Broader universe of high-liquidity US names for the dynamic candidate list.
+  // The 5 curated picks stay in `picks[]` above with hand-authored thesis/sources.
+  // These extras get auto-populated cards on demand (Show > 5) so the roster
+  // can expand to a real market scan without losing the curated top of the list.
+  const EXTRA_NAMES = {
+    AAPL: 'Apple Inc',
+    AMZN: 'Amazon.com Inc',
+    GOOGL: 'Alphabet Inc',
+    META: 'Meta Platforms',
+    MSFT: 'Microsoft Corp',
+    AVGO: 'Broadcom Inc',
+    MU:   'Micron Technology',
+    MRVL: 'Marvell Technology',
+    AMD:  'Advanced Micro Devices',
+    SNOW: 'Snowflake Inc',
+    NET:  'Cloudflare Inc',
+    PANW: 'Palo Alto Networks',
+    ORCL: 'Oracle Corp',
+    NFLX: 'Netflix Inc',
+    COIN: 'Coinbase Global',
+    PYPL: 'PayPal Holdings',
+    SQ:   'Block Inc',
+    SHOP: 'Shopify Inc',
+    SOFI: 'SoFi Technologies',
+    RIVN: 'Rivian Automotive',
+    SMCI: 'Super Micro Computer',
+    LLY:  'Eli Lilly',
+    JPM:  'JPMorgan Chase',
+    BAC:  'Bank of America',
+    TSLA: 'Tesla Inc',
+  };
+  const DEFAULT_RISK = { stopPct: 6, targetPct: 20, entryBandPct: 1.5, horizon: '4 wks', sizePct: 3 };
+
   // Political-exposure sector map — governs how political headlines are scored per ticker.
   // Reflects each name's regulatory / geopolitical exposure, not GICS sector.
   const POL_SECTORS = {
@@ -2715,7 +2758,12 @@ import { analyze, regime } from './analyze.js';
   }
 
   function tickerList() {
-    return [...new Set([...picks.map(p => p.ticker), ...universe.map(u => u.ticker), '^VIX'])];
+    return [...new Set([
+      ...picks.map(p => p.ticker),
+      ...universe.map(u => u.ticker),
+      ...Object.keys(EXTRA_NAMES),
+      '^VIX',
+    ])];
   }
   function sectorsParam() {
     return tickerList()
@@ -2839,6 +2887,38 @@ import { analyze, regime } from './analyze.js';
       currentRegime = regime(vixQ.price);
       currentRegime.vix = vixQ.price;
       renderPulseRegime();
+    }
+
+    // Auto-populate extras into picks[] once their quotes are analyzed.
+    // Runs on every applyQuotes so newly-loaded extras get slotted in.
+    for (const [ticker, name] of Object.entries(EXTRA_NAMES)) {
+      if (picks.some(p => p.ticker === ticker)) continue;   // already there
+      const q = quotes[ticker];
+      if (!q || q.price == null || !q.bars || q.bars.length < 60) continue;
+      const a = analyze(q.bars, { news: news[ticker] });
+      if (a.insufficient) continue;
+      picks.push({
+        ticker,
+        name,
+        polSector: polSectorFor(ticker),
+        risk: DEFAULT_RISK,
+        // No hand-authored thesis/rationale/sources — falls back to computed setupReason
+        thesis: '',
+        rationale: [],
+        signals: {},
+        sources: [],
+        // Populated by the same block below
+        price: q.price,
+        todayChange: q.change,
+        todayChangePct: q.changePct,
+        volume: q.volume,
+        analysis: a,
+        score: a.score,
+        setup: a.setup,
+        setupReason: a.setupReason,
+        spark: q.bars.slice(-14).map(b => b.c),
+        auto: true,
+      });
     }
 
     // Sort picks by computed score, descending — highest quality setups float to top
@@ -3000,6 +3080,16 @@ import { analyze, regime } from './analyze.js';
 
   // Re-render picks when the buzz feed loads so the "Mentioned by N" pills appear
   document.addEventListener('buzz-updated', () => { renderPicks(); });
+
+  // Show N candidates seg-ctrl
+  document.querySelectorAll('#seg-show button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#seg-show button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      showCount = parseInt(b.dataset.v, 10);
+      renderPicks();
+    });
+  });
 
   // Publish current pick tickers so the buzz drawer can request them
   window.__pick_tickers = picks.map(p => p.ticker);

@@ -404,7 +404,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v2.0</div>
+      <div class="kicker">Signal Desk · Handbook · v2.1</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -865,6 +865,20 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 15</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v2.1<br/>2026-07-23</div>
+        <div class="what">
+          <h4>Stocks — dynamic candidate list</h4>
+          <ul>
+            <li><strong>Show 5 / 10 / 25 / All</strong> segmented control on the Stocks page's Top Candidates section. Same interaction as the Options page.</li>
+            <li>Roster expanded from 5 curated picks to <strong>30 candidates</strong>: the 5 curated (with hand-authored thesis + source badges) stay first when they earn it by score, plus 25 auto-populated names — AAPL, AMZN, GOOGL, META, MSFT, AVGO, MU, MRVL, AMD, SNOW, NET, PANW, ORCL, NFLX, COIN, PYPL, SQ, SHOP, SOFI, RIVN, SMCI, LLY, JPM, BAC, TSLA.</li>
+            <li>Auto-populated candidates use the same rich card format — live price, intraday change, setup chip, BUY/HOLD/SELL verdict, composite score, sparkline, click-to-expand detail panel with full trade plan. They inherit their thesis from the computed setup reason instead of a hand-authored line.</li>
+            <li>Every candidate — curated or auto — is sorted by live composite score, so the top of the list is genuinely the best-ranked names right now, not a fixed order.</li>
+            <li>Quotes API cap lifted from 30 to 60 tickers to accommodate the expanded universe plus VIX and screener names.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v2.0<br/>2026-07-23</div>
