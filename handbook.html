@@ -404,7 +404,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v2.1</div>
+      <div class="kicker">Signal Desk · Handbook · v2.2</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -865,6 +865,21 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 15</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v2.2<br/>2026-07-23</div>
+        <div class="what">
+          <h4>Option position P&amp;L fix + Track button on Stocks picks</h4>
+          <ul>
+            <li><strong>Option positions now use the 100× multiplier</strong> in every P&amp;L calculation on the Dashboard. Previously the cost of a $7.08 NVDA call showed as $7.08 instead of $708 for one contract. Fixed everywhere: portfolio value, unrealized P&amp;L, per-position gain/loss, position weight %. Stocks unchanged (multiplier=1).</li>
+            <li><strong>Option-aware position card</strong>: shows <code>NVDA $215C · 1 × 100 sh</code> with an OPT chip instead of the OCC symbol as ticker; "premium $7.08" instead of "price $7.08"; days-to-expiry (colour-coded red under 7, amber under 30); contract cost with 100× applied.</li>
+            <li><strong>Option-specific analytics strip</strong> replaces the stock-oriented Tomorrow/Week/Support-Resistance cells: <strong>Underlying live price</strong>, <strong>Breakeven at expiry</strong> (strike ± premium), <strong>Breakeven distance</strong> (dollars + % move needed, or "already ITM by X%"), <strong>Days to expiry</strong>, <strong>Max loss</strong> (100% of premium), <strong>Contract count · portfolio weight</strong>.</li>
+            <li><strong>Underlying live-tracked</strong>: dashboard now fetches the underlying ticker's quote for each option position (not the OCC symbol, which Yahoo doesn't accept), so you see the current stock price and distance to breakeven update every 15s.</li>
+            <li><strong>+ Track button on Stocks pick cards</strong>. One click on any Stocks candidate → prompts for share count → writes to Dashboard portfolio with today's price as buy price. Same one-click flow the Options page already had.</li>
+            <li>Known limitation: option premium itself isn't live-tracked yet (that requires a per-contract chain lookup). Cost basis is correct; current premium stays at entry until you edit or a future update wires live per-contract pricing.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v2.1<br/>2026-07-23</div>

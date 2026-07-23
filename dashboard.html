@@ -1013,7 +1013,10 @@ import { analyze, regime } from './analyze.js';
   // ---- Live quotes ----
   const pendingFlashes = {};
   function tickerList() {
-    return [...new Set([...portfolio.map(p => p.ticker), '^VIX'])];
+    // For option positions, use the underlying ticker so /api/quotes returns
+    // real prices (Yahoo doesn't accept OCC symbols).
+    const symbols = portfolio.map(p => p.isOption ? p.underlying : p.ticker);
+    return [...new Set([...symbols.filter(Boolean), '^VIX'])];
   }
   async function pull() {
     if (!portfolio.length) {
@@ -1070,25 +1073,32 @@ import { analyze, regime } from './analyze.js';
 
     // Compute per-position analytics
     const rows = portfolio.map(pos => {
-      const q = latestQuotes[pos.ticker];
-      const price = q?.price ?? pos.buyPrice;
-      const analysis = q?.bars && q.bars.length >= 60 ? analyze(q.bars) : null;
+      // For options, look up the underlying's quote to show live stock price and
+      // compute breakeven distance. The option premium itself isn't live-tracked
+      // (would require a per-contract chain lookup) — so premium = entry premium.
+      const q = latestQuotes[pos.isOption ? pos.underlying : pos.ticker];
+      const underlyingLive = pos.isOption ? (q?.price ?? null) : null;
+      const price = pos.isOption ? pos.buyPrice : (q?.price ?? pos.buyPrice);
+      const analysis = !pos.isOption && q?.bars && q.bars.length >= 60 ? analyze(q.bars) : null;
       const rg = vixPrice != null ? Object.assign(regime(vixPrice), { vix: vixPrice }) : null;
       const v = verdictFor(pos, (analysis && !analysis.insufficient ? analysis : null), price, rg);
       const buy = pos.buyPrice;
-      const stop = pos.stop || buy * 0.95;
+      const stop = pos.stop || (pos.isOption ? buy * 0.5 : buy * 0.95); // -50% stop for options premium
       const R = Math.max(0.01, buy - stop);
       const gain = price - buy;
-      const gainDollars = gain * pos.qty;
+      // Options: 1 contract = 100 shares → multiply everything by multiplier (100).
+      // Stocks: multiplier defaults to 1 so behavior is unchanged.
+      const mult = pos.multiplier || 1;
+      const gainDollars = gain * pos.qty * mult;
       const gainPct = (gain / buy) * 100;
       const gainR = gain / R;
       const daysHeld = Math.floor((Date.now() - Date.parse(pos.buyDate)) / (24 * 3600 * 1000));
-      return { pos, q, price, analysis, verdict: v, buy, stop, R, gain, gainDollars, gainPct, gainR, daysHeld };
+      return { pos, q, price, analysis, verdict: v, buy, stop, R, gain, gainDollars, gainPct, gainR, daysHeld, mult };
     });
 
     // Portfolio summary
-    const totalCost = rows.reduce((s, r) => s + (r.buy * r.pos.qty), 0);
-    const totalNow = rows.reduce((s, r) => s + (r.price * r.pos.qty), 0);
+    const totalCost = rows.reduce((s, r) => s + (r.buy * r.pos.qty * r.mult), 0);
+    const totalNow = rows.reduce((s, r) => s + (r.price * r.pos.qty * r.mult), 0);
     const totalPL = totalNow - totalCost;
     const totalPct = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
     const sellCount = rows.filter(r => r.verdict.action === 'SELL').length;
@@ -1126,9 +1136,11 @@ import { analyze, regime } from './analyze.js';
         sup = Math.min(...recent.map(b => b.l));
         res = Math.max(...recent.map(b => b.h));
       }
-      const costBasis = r.buy * r.pos.qty;
+      const costBasis = r.buy * r.pos.qty * r.mult;
       const portValueForRow = totalNow || 0;
-      const posSharePct = portValueForRow > 0 ? (r.price * r.pos.qty / portValueForRow) * 100 : 0;
+      const posSharePct = portValueForRow > 0 ? (r.price * r.pos.qty * r.mult / portValueForRow) * 100 : 0;
+      const isOpt = !!r.pos.isOption;
+      const dteOpt = isOpt && r.pos.expiration ? Math.floor((Date.parse(r.pos.expiration) - Date.now()) / (24*3600*1000)) : null;
       const ret20 = r.analysis?.indicators?.ret20;
       const ret60 = r.analysis?.indicators?.ret60;
       const rsi = r.analysis?.indicators?.rsi14;
@@ -1139,9 +1151,24 @@ import { analyze, regime } from './analyze.js';
       <div class="pos-card action-${r.verdict.action}" data-id="${r.pos.id}">
         <div class="pos-primary">
           <div class="pos-ident">
-            <div class="pos-ticker">${r.pos.ticker} <span style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.06em;">${r.pos.qty} sh</span>${r.analysis?.setup ? ` <span class="setup-chip setup-${r.analysis.setup}" style="font-size: 9px; padding: 1px 6px;">${r.analysis.setup}</span>` : ''}</div>
-            <div class="pos-meta">Bought ${r.pos.buyDate} @ $${r.buy.toFixed(2)} · ${r.daysHeld}d held</div>
-            <div class="pos-meta">Stop $${r.stop.toFixed(2)} · Target $${target.toFixed(2)} (+2.5R)</div>
+            <div class="pos-ticker">
+              ${isOpt
+                ? `${r.pos.underlying} <span style="color: var(--accent);">$${r.pos.strike.toFixed(0)}${r.pos.optionType === 'CALL' ? 'C' : 'P'}</span> <span style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.06em;">${r.pos.qty} × 100 sh</span> <span class="setup-chip" style="font-size: 9px; padding: 1px 6px; color: var(--accent); border-color: var(--accent);">OPT</span>`
+                : `${r.pos.ticker} <span style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.06em;">${r.pos.qty} sh</span>${r.analysis?.setup ? ` <span class="setup-chip setup-${r.analysis.setup}" style="font-size: 9px; padding: 1px 6px;">${r.analysis.setup}</span>` : ''}`
+              }
+            </div>
+            <div class="pos-meta">
+              ${isOpt
+                ? `Bought ${r.pos.buyDate} · premium $${r.buy.toFixed(2)} · ${r.daysHeld}d held${dteOpt != null ? ` · <span style="color: ${dteOpt < 7 ? 'var(--risk)' : dteOpt < 30 ? 'var(--caution)' : 'var(--ink-2)'};">${dteOpt}d to expiry</span>` : ''}`
+                : `Bought ${r.pos.buyDate} @ $${r.buy.toFixed(2)} · ${r.daysHeld}d held`
+              }
+            </div>
+            <div class="pos-meta">
+              ${isOpt
+                ? `Contract cost $${fmt(costBasis)} · exp ${r.pos.expiration}`
+                : `Stop $${r.stop.toFixed(2)} · Target $${target.toFixed(2)} (+2.5R)`
+              }
+            </div>
             ${r.pos.notes ? `<div class="pos-notes">${escapeHtml(r.pos.notes)}</div>` : ''}
           </div>
           <div class="pos-price">
@@ -1163,6 +1190,56 @@ import { analyze, regime } from './analyze.js';
           </div>
         </div>
 
+        ${isOpt ? `
+        <div class="pos-analytics">
+          <div class="an-cell">
+            <div class="an-label">Underlying · live</div>
+            <div class="an-value">${r.q?.price != null ? '$' + fmt(r.q.price) : '—'}</div>
+            <div class="an-sub">${r.q?.changePct != null ? (r.q.changePct >= 0 ? '+' : '') + r.q.changePct.toFixed(2) + '% today' : ''}</div>
+          </div>
+          <div class="an-cell">
+            <div class="an-label">Breakeven at expiry</div>
+            <div class="an-value">${(() => {
+              const be = r.pos.optionType === 'CALL' ? r.pos.strike + r.buy : r.pos.strike - r.buy;
+              return '$' + fmt(be);
+            })()}</div>
+            <div class="an-sub">${r.pos.optionType === 'CALL' ? 'strike + premium' : 'strike − premium'}</div>
+          </div>
+          <div class="an-cell">
+            <div class="an-label">Breakeven distance</div>
+            <div class="an-value">${(() => {
+              if (r.q?.price == null) return '—';
+              const be = r.pos.optionType === 'CALL' ? r.pos.strike + r.buy : r.pos.strike - r.buy;
+              const dist = r.pos.optionType === 'CALL' ? be - r.q.price : r.q.price - be;
+              const pct = (dist / r.q.price) * 100;
+              const cls = dist <= 0 ? 'hi' : 'lo';
+              return `<span class="${cls}">${dist >= 0 ? '' : '+'}${fmt(Math.abs(dist))}</span>`;
+            })()}</div>
+            <div class="an-sub">${(() => {
+              if (r.q?.price == null) return '';
+              const be = r.pos.optionType === 'CALL' ? r.pos.strike + r.buy : r.pos.strike - r.buy;
+              const dist = r.pos.optionType === 'CALL' ? be - r.q.price : r.q.price - be;
+              const pct = Math.abs(dist / r.q.price * 100);
+              return dist <= 0 ? `already ITM by ${pct.toFixed(1)}%` : `${pct.toFixed(1)}% move needed`;
+            })()}</div>
+          </div>
+          <div class="an-cell">
+            <div class="an-label">Days to expiry</div>
+            <div class="an-value" style="color: ${dteOpt != null && dteOpt < 7 ? 'var(--risk)' : dteOpt != null && dteOpt < 30 ? 'var(--caution)' : 'var(--ink)'};">${dteOpt != null ? dteOpt + 'd' : '—'}</div>
+            <div class="an-sub">${r.pos.expiration || ''}</div>
+          </div>
+          <div class="an-cell">
+            <div class="an-label">Max loss</div>
+            <div class="an-value lo">$${fmt(costBasis)}</div>
+            <div class="an-sub">100% of premium</div>
+          </div>
+          <div class="an-cell">
+            <div class="an-label">Contract · portfolio weight</div>
+            <div class="an-value">${r.pos.qty} × 100 sh</div>
+            <div class="an-sub">${posSharePct.toFixed(1)}% of book</div>
+          </div>
+        </div>
+        ` : `
         <div class="pos-analytics">
           <div class="an-cell">
             <div class="an-label">Tomorrow · projected</div>
@@ -1195,6 +1272,7 @@ import { analyze, regime } from './analyze.js';
             <div class="an-sub">${posSharePct.toFixed(1)}% of book</div>
           </div>
         </div>
+        `}
       </div>
     `;}).join('');
 
