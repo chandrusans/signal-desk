@@ -196,6 +196,19 @@
   .opt-liq.okay { color: var(--caution); border-color: var(--caution); }
   .opt-liq.thin { color: var(--risk); border-color: var(--risk); }
 
+  /* BUY / HOLD / AVOID verdict badge */
+  .verdict-pill {
+    display: inline-block; padding: 3px 10px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; font-weight: 600;
+    border: 1.5px solid; border-radius: 4px;
+    margin-top: 4px;
+  }
+  .verdict-BUY   { color: var(--signal); border-color: var(--signal); background: color-mix(in srgb, var(--signal) 14%, transparent); }
+  .verdict-HOLD  { color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 12%, transparent); }
+  .verdict-AVOID { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 12%, transparent); }
+  .verdict-SELL  { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 18%, transparent); }
+
   .opt-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
   .copy-btn {
     background: var(--panel); border: 1px solid var(--rule); color: var(--ink-2);
@@ -347,6 +360,15 @@
         <button data-v="long">Long-term (90–365d)</button>
       </div>
     </div>
+    <div class="filter-group">
+      <span class="lbl">Show</span>
+      <div class="seg-ctrl" id="seg-limit">
+        <button data-v="10">10</button>
+        <button data-v="25" class="on">25</button>
+        <button data-v="50">50</button>
+        <button data-v="100">100</button>
+      </div>
+    </div>
   </div>
 
   <div class="section-head">
@@ -439,12 +461,28 @@ import { analyze } from './analyze.js';
   }
   setLive('connecting', 'connecting…');
 
-  // Ticker universe (same as Stocks page picks + a few more high-liquidity names)
-  const TICKERS = ['NVDA','PLTR','CRWD','HOOD','ASML','AMD','META','MSFT','GOOGL','TSLA','AMZN','COIN'];
+  // Expanded ticker universe — high-liquidity US names with active options
+  const TICKERS = [
+    'NVDA','PLTR','CRWD','HOOD','ASML','AMD','META','MSFT','GOOGL','TSLA',
+    'AAPL','AMZN','NFLX','COIN','ORCL','AVGO','MU','MRVL','SNOW','NET',
+    'PANW','PYPL','SQ','SHOP','SOFI','RIVN','SMCI','LLY','JPM','BAC',
+  ];
 
   // Filters
-  let dirFilter = 'ALL', horizonFilter = 'ALL';
+  let dirFilter = 'ALL', horizonFilter = 'ALL', showLimit = 25;
   let currentRecs = [];
+
+  // Verdict from score + liquidity + moneyness + horizon
+  // BUY   : strong contract, execute
+  // HOLD  : passes filters but not urgent; watch
+  // AVOID : contract passed screener but has red flags (thin liquidity, wide spread)
+  function verdictFor(r) {
+    if (r.liquidity === 'thin' || r.spreadPct > 15) return 'AVOID';
+    if (r.dte < 7) return 'AVOID';
+    if (r.score >= 85 && r.liquidity === 'good') return 'BUY';
+    if (r.score >= 70) return 'HOLD';
+    return 'HOLD';
+  }
 
   document.querySelectorAll('#seg-direction button').forEach(b => {
     b.addEventListener('click', () => {
@@ -460,6 +498,14 @@ import { analyze } from './analyze.js';
       b.classList.add('on');
       horizonFilter = b.dataset.v;
       renderPicks();
+    });
+  });
+  document.querySelectorAll('#seg-limit button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#seg-limit button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      showLimit = parseInt(b.dataset.v, 10);
+      pull();  // re-fetch since server-side limit changed
     });
   });
 
@@ -492,12 +538,13 @@ import { analyze } from './analyze.js';
         }
       } catch { /* fall back to defaults */ }
 
-      const res = await fetch(`/api/options?tickers=${encodeURIComponent(TICKERS.join(','))}${directionsParam}`);
+      const res = await fetch(`/api/options?tickers=${encodeURIComponent(TICKERS.join(','))}${directionsParam}&limit=${showLimit}&perTicker=3`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       currentRecs = data.recommendations || [];
       updateRunDate(data.asOf);
-      setLive('live', `live · ${currentRecs.length} contracts scored · ${data.supportedApps.join(' + ')}`);
+      const scanned = data.scannedContracts != null ? ` of ${data.scannedContracts} scored` : '';
+      setLive('live', `live · ${currentRecs.length}${scanned} · ${data.universeSize || 0} tickers scanned`);
       renderPicks();
     } catch (e) {
       setLive('error', `feed unavailable · ${e.message}`);
@@ -555,7 +602,8 @@ import { analyze } from './analyze.js';
               <div class="per-contract">$${fmt(r.premiumPerContract)}/contract</div>
             </div>
             <div class="opt-verdict">
-              <div class="opt-score-label">Score</div>
+              <span class="verdict-pill verdict-${verdictFor(r)}">${verdictFor(r)}</span>
+              <div class="opt-score-label" style="margin-top: 6px;">Score</div>
               <div class="opt-score">${r.score}</div>
               <span class="opt-liq ${r.liquidity}">${r.liquidity}</span>
             </div>

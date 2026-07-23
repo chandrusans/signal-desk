@@ -243,21 +243,22 @@ function buildRecommendation(c, horizon, direction, underlyingCtx) {
   };
 }
 
-// Given a parsed chain, produce best short-term + long-term recommendations for
-// the given direction. Returns up to `n` per horizon.
-function recommendationsForTicker(chain, sym, direction, n = 1) {
+// Return TOP N scored contracts per ticker per horizon (per direction).
+// Previously returned just the single best per (horizon, direction) — that gave
+// at most 2 recs per ticker. Now we surface a ranked shortlist.
+function recommendationsForTicker(chain, sym, direction, perHorizon = 3) {
   const recs = [];
   for (const horizon of ['short', 'long']) {
-    let best = null;
-    let bestScore = -1;
+    const scored = [];
     for (const c of chain.contracts) {
       if (c.direction !== direction) continue;
       const s = scoreContract(c, horizon, direction);
-      if (s > bestScore) { bestScore = s; best = c; }
+      if (s > 0) scored.push({ c, s });
     }
-    if (best && bestScore > 0) {
-      const r = buildRecommendation(best, horizon, direction);
-      r.score = Math.min(100, bestScore);
+    scored.sort((a, b) => b.s - a.s);
+    for (const { c, s } of scored.slice(0, perHorizon)) {
+      const r = buildRecommendation(c, horizon, direction);
+      r.score = Math.min(100, s);
       recs.push(r);
     }
   }
@@ -265,20 +266,22 @@ function recommendationsForTicker(chain, sym, direction, n = 1) {
 }
 
 export default async function handler(req, res) {
-  const raw = (req.query && req.query.tickers) || 'NVDA,PLTR,CRWD,HOOD,ASML,AMD,META,MSFT,GOOGL,TSLA';
-  // Optional: 'directions' param: bull tickers get calls, bear tickers get puts. Format: NVDA:call,PLTR:put
+  const raw = (req.query && req.query.tickers) || 'NVDA,PLTR,CRWD,HOOD,ASML,AMD,META,MSFT,GOOGL,TSLA,AAPL,AMZN,NFLX,COIN,ORCL,AVGO,MU,MRVL,SNOW,NET,PANW,PYPL,SQ,SHOP,SOFI,RIVN,SMCI,LLY,JPM,BAC';
   const dirRaw = (req.query && req.query.directions) || '';
   const dirMap = {};
   for (const p of String(dirRaw).split(',')) {
     const [t, d] = p.split(':');
     if (t && d) dirMap[t.trim().toUpperCase()] = d.trim().toUpperCase();
   }
+  // Query params: limit (max recs returned), perTicker (max recs per horizon per ticker)
+  const limit = Math.max(1, Math.min(200, parseInt(req.query?.limit, 10) || 25));
+  const perTicker = Math.max(1, Math.min(10, parseInt(req.query?.perTicker, 10) || 3));
   const tickers = String(raw)
     .split(',')
     .map((s) => s.trim().toUpperCase())
     .filter(Boolean)
     .filter((t) => !t.startsWith('^') && !t.includes('='))
-    .slice(0, 10);
+    .slice(0, 30);
 
   const chains = await Promise.all(tickers.map(async (t) => {
     const raw = await fetchChain(t);
@@ -288,15 +291,12 @@ export default async function handler(req, res) {
   const recommendations = [];
   for (const { ticker, chain } of chains) {
     if (!chain) continue;
-    // Default direction: CALL. Frontend can override via directions=... based on
-    // its own analyze() output.
     const dir = dirMap[ticker] === 'PUT' ? 'PUT' : 'CALL';
-    recommendations.push(...recommendationsForTicker(chain, ticker, dir));
+    recommendations.push(...recommendationsForTicker(chain, ticker, dir, perTicker));
   }
 
-  // Sort by score desc, cap 10
   recommendations.sort((a, b) => b.score - a.score);
-  const capped = recommendations.slice(0, 10);
+  const capped = recommendations.slice(0, limit);
 
   res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=300');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -304,6 +304,8 @@ export default async function handler(req, res) {
     asOf: Date.now(),
     feePerContract: FEE_PER_CONTRACT,
     supportedApps: ['Robinhood', 'Charles Schwab'],
+    universeSize: tickers.length,
+    scannedContracts: recommendations.length,
     recommendations: capped,
   });
 }

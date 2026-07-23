@@ -902,6 +902,19 @@
   .setup-BROKEN   { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 8%, transparent); }
   .setup-AVOID    { color: var(--risk); border-color: var(--risk); }
 
+  /* BUY / HOLD / AVOID / SELL verdict pill (large, prominent) */
+  .verdict-pill {
+    display: inline-block; padding: 3px 10px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; font-weight: 600;
+    border: 1.5px solid; border-radius: 4px;
+    margin-top: 6px;
+  }
+  .verdict-BUY   { color: var(--signal); border-color: var(--signal); background: color-mix(in srgb, var(--signal) 14%, transparent); }
+  .verdict-HOLD  { color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 12%, transparent); }
+  .verdict-AVOID { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 12%, transparent); }
+  .verdict-SELL  { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 18%, transparent); }
+
   /* Score breakdown bars */
   .score-parts {
     display: grid;
@@ -2223,6 +2236,22 @@ import { analyze, regime } from './analyze.js';
     return buzz.filter(b => b.tickers.includes(ticker));
   }
 
+  // BUY / HOLD / AVOID / SELL — derived from setup + score. Big prominent call.
+  function verdictForStock(p) {
+    const s = p.score || 0;
+    const setup = p.setup;
+    const regimeBad = currentRegime?.level === 'stress' || currentRegime?.level === 'crisis';
+    if (regimeBad) return 'AVOID';                                  // regime override
+    if (setup === 'BROKEN' && s < 30) return 'SELL';                // trend gone, take exit
+    if (setup === 'BROKEN' || setup === 'AVOID') return 'AVOID';    // no trade
+    if (setup === 'EXTENDED') return 'HOLD';                        // wait for pullback
+    if (setup === 'BREAKOUT' && s >= 65) return 'BUY';              // A+ momentum
+    if (setup === 'PULLBACK' && s >= 60) return 'BUY';              // buy the dip
+    if (setup === 'EARLY' && s >= 50) return 'HOLD';                // watchlist
+    if (s >= 70) return 'BUY';                                       // strong score, any setup
+    return 'HOLD';
+  }
+
   function renderPicks() {
     picksEl.innerHTML = picks.map((p, i) => {
       const tops = topSources(p, 3);
@@ -2246,7 +2275,8 @@ import { analyze, regime } from './analyze.js';
           </div>
         </div>
         <div class="card-right">
-          <div class="score-label">Composite</div>
+          <span class="verdict-pill verdict-${verdictForStock(p)}">${verdictForStock(p)}</span>
+          <div class="score-label" style="margin-top: 8px;">Composite</div>
           <div class="score">${p.score}</div>
           ${sparkline(p.spark)}
         </div>

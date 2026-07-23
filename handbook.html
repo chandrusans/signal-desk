@@ -404,7 +404,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v1.9</div>
+      <div class="kicker">Signal Desk · Handbook · v2.0</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -865,6 +865,26 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 15</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v2.0<br/>2026-07-23</div>
+        <div class="what">
+          <h4>Dynamic option list + BUY/HOLD/AVOID verdicts</h4>
+          <ul>
+            <li><strong>Options list is now dynamic.</strong> New "Show" control on the Options page: <code>10 / 25 / 50 / 100</code>. The API accepts <code>limit</code> (max 200) and <code>perTicker</code> (max 10 per horizon per direction) so a single response can carry hundreds of ranked contracts.</li>
+            <li><strong>Universe expanded from 12 → 30 tickers</strong> with the most-liquid US options names: adds AAPL, AMZN, NFLX, ORCL, AVGO, MU, MRVL, SNOW, NET, PANW, PYPL, SQ, SHOP, SOFI, RIVN, SMCI, LLY, JPM, BAC on top of the existing set.</li>
+            <li><strong>Multiple contracts per ticker.</strong> Previously returned only the single best short-term + best long-term per ticker (max 2 recs/ticker). Now returns the top N by score per horizon per ticker — so you see e.g. NVDA $215C, $220C, and $225C side-by-side and pick the strike that matches your view.</li>
+            <li><strong>BUY / HOLD / AVOID / SELL verdict pill</strong> on every card, on both Stocks and Options. This is the immediate call — no need to interpret setup and score separately. Derived from setup + score + regime + liquidity:
+              <ul>
+                <li><strong>Stocks</strong>: BREAKOUT + score≥65 → BUY · PULLBACK + score≥60 → BUY (buy the dip) · EXTENDED → HOLD · EARLY → HOLD (watchlist) · BROKEN + score&lt;30 → SELL · BROKEN → AVOID · regime stress/crisis → AVOID (override).</li>
+                <li><strong>Options</strong>: score≥85 with good liquidity → BUY · score≥70 → HOLD · thin liquidity, spread &gt;15%, or DTE&lt;7 → AVOID.</li>
+              </ul>
+            </li>
+            <li>Verdict pill is colour-coded (green BUY / amber HOLD / red AVOID/SELL) and sits above the composite score on each card for maximum visibility.</li>
+            <li>Options response now includes <code>universeSize</code> and <code>scannedContracts</code> counts, surfaced in the feed status line for transparency.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v1.9<br/>2026-07-23</div>
