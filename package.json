@@ -1,0 +1,14 @@
+{
+  "name": "signal-desk",
+  "version": "2.4.0",
+  "description": "Multi-user momentum-swing signals platform — Stocks, Options, Metals, Personal Dashboard",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@clerk/backend": "^1.14.0",
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
