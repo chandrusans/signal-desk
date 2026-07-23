@@ -2124,20 +2124,18 @@ import { analyze, regime } from './analyze.js';
   updateRunDate();
 
   // ------- Pulse strip -------
-  const pulse = [
-    { label: 'S&P 500',   value: '5,847.12', delta: '+0.42%',  cls: 'up' },
-    { label: 'Nasdaq',    value: '19,204.8', delta: '+0.81%',  cls: 'up' },
-    { label: 'VIX',       value: '14.7',     delta: '−3.1%',   cls: 'down' },
-    { label: 'DXY',       value: '99.14',    delta: '+0.11%',  cls: 'up' },
-    { label: 'US 10Y',    value: '4.28%',    delta: '−2bp',    cls: 'down' },
-    { label: 'Breadth',   value: '58% ↑',    delta: 'expanding', cls: 'up' },
+  // Pulse strip is fully rebuilt from live quotes by renderPulseLive() on every
+  // poll. Show a placeholder skeleton until the first fetch completes.
+  const pulseSeed = [
+    { label: 'S&P 500 · SPY' }, { label: 'Nasdaq · QQQ' }, { label: 'VIX' },
+    { label: 'DXY' }, { label: 'US 10Y' }, { label: 'Regime' },
   ];
   const pulseEl = document.getElementById('pulse');
-  pulseEl.innerHTML = pulse.map(p => `
+  pulseEl.innerHTML = pulseSeed.map(p => `
     <div class="pulse-cell">
       <div class="label">${p.label}</div>
-      <div class="value">${p.value}</div>
-      <div class="delta ${p.cls}">${p.delta}</div>
+      <div class="value" style="color: var(--ink-3);">—</div>
+      <div class="delta flat">loading…</div>
     </div>
   `).join('');
 
@@ -2145,7 +2143,7 @@ import { analyze, regime } from './analyze.js';
   const picks = [
     {
       ticker: 'NVDA', name: 'NVIDIA Corp · Semiconductors', polSector: 'semis',
-      score: 87, price: 148.20,
+      score: null, price: null,
       spark: [130,131,129,133,135,134,136,140,138,142,145,146,148],
       thesis: 'AI-infra capex cycle re-accelerating into Q3 earnings; hyperscaler orders leaked positive.',
       signals: { news: 82, social: 91, technical: 88, flow: 79, institutional: 84 },
@@ -2166,7 +2164,7 @@ import { analyze, regime } from './analyze.js';
     },
     {
       ticker: 'PLTR', name: 'Palantir Technologies · Data & AI', polSector: 'defense',
-      score: 79, price: 42.80,
+      score: null, price: null,
       spark: [36,37,36,38,39,38,40,41,40,42,41,43,42],
       thesis: 'Government AI contract vertical accelerating; earnings catalyst inside 30-day window.',
       signals: { news: 74, social: 88, technical: 76, flow: 82, institutional: 65 },
@@ -2187,7 +2185,7 @@ import { analyze, regime } from './analyze.js';
     },
     {
       ticker: 'CRWD', name: 'CrowdStrike Holdings · Cybersecurity', polSector: 'tech-mega',
-      score: 73, price: 268.40,
+      score: null, price: null,
       spark: [255,258,257,260,262,261,263,265,264,266,267,266,268],
       thesis: 'Post-outage recovery arc thesis playing out; institutional re-accumulation visible.',
       signals: { news: 68, social: 62, technical: 78, flow: 71, institutional: 84 },
@@ -2208,7 +2206,7 @@ import { analyze, regime } from './analyze.js';
     },
     {
       ticker: 'HOOD', name: 'Robinhood Markets · Fin services', polSector: 'crypto',
-      score: 71, price: 32.10,
+      score: null, price: null,
       spark: [28,29,28,30,31,30,31,32,31,32,31,32,32],
       thesis: 'Reddit-driven momentum play — retail chatter leading price by 5–8 days; crypto revenue tailwind confirmed after.',
       signals: { news: 65, social: 88, technical: 72, flow: 68, institutional: 62 },
@@ -2229,7 +2227,7 @@ import { analyze, regime } from './analyze.js';
     },
     {
       ticker: 'ASML', name: 'ASML Holding · Semi equipment', polSector: 'semis',
-      score: 68, price: 748.20,
+      score: null, price: null,
       spark: [710,715,720,718,725,730,728,735,738,742,745,747,748],
       thesis: 'EUV order-book visibility strong into 2027; Chinese demand normalization thesis.',
       signals: { news: 71, social: 48, technical: 74, flow: 62, institutional: 85 },
@@ -2344,7 +2342,7 @@ import { analyze, regime } from './analyze.js';
       <div class="card ${p.ticker === activeTicker ? 'active' : ''}" data-ticker="${p.ticker}" tabindex="0" role="button" aria-pressed="${p.ticker === activeTicker}">
         <div class="rank">${String(i+1).padStart(2,'0')}</div>
         <div class="card-body">
-          <div class="ticker">${p.ticker} <span data-flash-ticker="${p.ticker}" style="color: var(--ink-3); font-size: 12px; font-weight: 400; letter-spacing: 0; padding: 0 2px;">· $${p.price.toFixed(2)}</span>${p.todayChangePct != null ? ` <span style="font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: 0.02em; color: ${p.todayChangePct >= 0 ? 'var(--signal)' : 'var(--risk)'};">${p.todayChangePct >= 0 ? '+' : ''}${p.todayChangePct.toFixed(2)}%</span>` : ''}${mentionPill}</div>
+          <div class="ticker">${p.ticker} <span data-flash-ticker="${p.ticker}" style="color: var(--ink-3); font-size: 12px; font-weight: 400; letter-spacing: 0; padding: 0 2px;">· ${p.price != null ? '$' + p.price.toFixed(2) : '—'}</span>${p.todayChangePct != null ? ` <span style="font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: 0.02em; color: ${p.todayChangePct >= 0 ? 'var(--signal)' : 'var(--risk)'};">${p.todayChangePct >= 0 ? '+' : ''}${p.todayChangePct.toFixed(2)}%</span>` : ''}${mentionPill}</div>
           <div class="name">${p.name}</div>
           ${setupChip}
           <div class="thesis">${p.setup && p.setupReason ? p.setupReason : p.thesis}</div>
@@ -2356,7 +2354,7 @@ import { analyze, regime } from './analyze.js';
         <div class="card-right">
           <span class="verdict-pill verdict-${verdictForStock(p)}">${verdictForStock(p)}</span>
           <div class="score-label" style="margin-top: 8px;">Composite</div>
-          <div class="score">${p.score}</div>
+          <div class="score">${p.score != null ? p.score : '—'}</div>
           ${sparkline(p.spark)}
           <button class="track-btn" data-track="${p.ticker}|${p.price}|${p.name}" title="Add to Dashboard portfolio">+ Track</button>
         </div>
@@ -2439,7 +2437,7 @@ import { analyze, regime } from './analyze.js';
     detailEl.innerHTML = `
       <div class="detail-head">
         <div class="t">${p.ticker}</div>
-        <div class="p"><span data-flash-ticker="${p.ticker}" style="padding: 0 3px;">$${p.price.toFixed(2)}</span>${p.todayChangePct != null ? ` <span style="color: ${p.todayChangePct >= 0 ? 'var(--signal)' : 'var(--risk)'};">${p.todayChangePct >= 0 ? '+' : ''}${p.todayChangePct.toFixed(2)}%</span>` : ''} · score ${p.score}</div>
+        <div class="p"><span data-flash-ticker="${p.ticker}" style="padding: 0 3px;">${p.price != null ? '$' + p.price.toFixed(2) : '—'}</span>${p.todayChangePct != null ? ` <span style="color: ${p.todayChangePct >= 0 ? 'var(--signal)' : 'var(--risk)'};">${p.todayChangePct >= 0 ? '+' : ''}${p.todayChangePct.toFixed(2)}%</span>` : ''} · score ${p.score != null ? p.score : '—'}</div>
       </div>
 
       ${setupCallout}
@@ -2857,7 +2855,8 @@ import { analyze, regime } from './analyze.js';
       ...picks.map(p => p.ticker),
       ...universe.map(u => u.ticker),
       ...Object.keys(EXTRA_NAMES),
-      '^VIX',
+      // Macro tickers for the pulse strip — S&P 500, Nasdaq 100, DXY, US 10Y, VIX
+      'SPY', 'QQQ', 'DX-Y.NYB', '^TNX', '^VIX',
     ])];
   }
   function sectorsParam() {
@@ -2981,8 +2980,10 @@ import { analyze, regime } from './analyze.js';
     if (vixQ && vixQ.price != null) {
       currentRegime = regime(vixQ.price);
       currentRegime.vix = vixQ.price;
-      renderPulseRegime();
     }
+
+    // Live pulse strip — overwrite the hardcoded seed values with real quotes
+    renderPulseLive(quotes);
 
     // Auto-populate extras into picks[] once their quotes are analyzed.
     // Runs on every applyQuotes so newly-loaded extras get slotted in.
@@ -3024,17 +3025,56 @@ import { analyze, regime } from './analyze.js';
     renderScreen();
   }
 
-  function renderPulseRegime() {
-    // Replace the "Breadth" cell (last cell) with a real regime cell
-    const cells = document.querySelectorAll('#pulse .pulse-cell');
-    const last = cells[cells.length - 1];
-    if (!last) return;
-    last.classList.add('regime-cell');
-    last.innerHTML = `
-      <div class="label">Regime · VIX ${currentRegime.vix?.toFixed(1) ?? '—'}</div>
-      <div class="value ${currentRegime.level}">${currentRegime.level.toUpperCase()}</div>
-      <div class="delta flat" style="max-width: 22ch;">${currentRegime.note}</div>
-    `;
+  function renderPulseLive(quotes) {
+    // Rebuild the pulse strip from real quotes on every poll.
+    // Replaces the hardcoded seed values that used to sit here forever.
+    const pulseEl = document.getElementById('pulse');
+    if (!pulseEl) return;
+    const spy = quotes['SPY'];
+    const qqq = quotes['QQQ'];
+    const dxy = quotes['DX-Y.NYB'];
+    const tnx = quotes['^TNX'];
+    const vix = quotes['^VIX'];
+    // Approximate S&P 500 index level = SPY × 10; Nasdaq 100 = QQQ × 40 (rough scale)
+    // Not exact but gives the user an index-level number that moves with reality.
+    // Better: show the ETF price directly with the index name — that's honest.
+    function cell(label, value, delta, cls) {
+      return `
+        <div class="pulse-cell">
+          <div class="label">${label}</div>
+          <div class="value">${value}</div>
+          <div class="delta ${cls}">${delta}</div>
+        </div>
+      `;
+    }
+    function fmtPct(x) { return x == null ? '—' : `${x >= 0 ? '+' : ''}${x.toFixed(2)}%`; }
+    function dir(x) { return x == null ? 'flat' : x > 0.05 ? 'up' : x < -0.05 ? 'down' : 'flat'; }
+
+    const cells = [
+      cell('S&P 500 · SPY',
+           spy?.price != null ? `$${spy.price.toFixed(2)}` : '—',
+           fmtPct(spy?.changePct), dir(spy?.changePct)),
+      cell('Nasdaq · QQQ',
+           qqq?.price != null ? `$${qqq.price.toFixed(2)}` : '—',
+           fmtPct(qqq?.changePct), dir(qqq?.changePct)),
+      cell('VIX',
+           vix?.price != null ? vix.price.toFixed(2) : '—',
+           fmtPct(vix?.changePct), dir(vix?.changePct)),
+      cell('DXY',
+           dxy?.price != null ? dxy.price.toFixed(2) : '—',
+           fmtPct(dxy?.changePct), dir(dxy?.changePct)),
+      cell('US 10Y',
+           tnx?.price != null ? tnx.price.toFixed(2) + '%' : '—',
+           fmtPct(tnx?.changePct), dir(tnx?.changePct)),
+      `
+        <div class="pulse-cell regime-cell">
+          <div class="label">Regime · VIX ${currentRegime.vix?.toFixed(1) ?? '—'}</div>
+          <div class="value ${currentRegime.level}">${currentRegime.level.toUpperCase()}</div>
+          <div class="delta flat" style="max-width: 22ch;">${currentRegime.note}</div>
+        </div>
+      `,
+    ];
+    pulseEl.innerHTML = cells.join('');
   }
 
   function renderIntelLive() {

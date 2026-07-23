@@ -404,7 +404,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v2.3</div>
+      <div class="kicker">Signal Desk · Handbook · v2.4</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -865,6 +865,38 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 15</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v2.4<br/>2026-07-23</div>
+        <div class="what">
+          <h4>Full audit pass — data integrity fixes</h4>
+          <p>Systematic audit across all four pages and four APIs, wearing product-owner, tester, business-analyst, and senior-developer hats. Findings, prioritized, fixed same commit.</p>
+
+          <h4 style="margin-top: 16px;">P0 — data integrity (fixed)</h4>
+          <ul>
+            <li><strong>Stocks pulse strip was 5-of-6 cells hardcoded.</strong> S&amp;P at 5847.12, Nasdaq at 19204.8, VIX at 14.7, DXY at 99.14, 10Y at 4.28% — all fake seed values that never updated. Meanwhile the regime cell (cell 6) showed a real VIX of 16.6 — internal contradiction. <strong>Fix:</strong> new <code>renderPulseLive()</code> reads real quotes for SPY (S&amp;P proxy), QQQ (Nasdaq proxy), VIX, DXY, and ^TNX (10Y) on every poll. Labels updated to name the proxies honestly ("S&amp;P 500 · SPY", "Nasdaq · QQQ"). Placeholder shows "—" until first fetch.</li>
+            <li><strong>Curated pick cards showed hardcoded seed prices.</strong> NVDA at $148.20 (real ~$212), PLTR at $42.80 (real ~$124), CRWD at $268.40, HOOD at $32.10, ASML at $748.20. These displayed until first quote poll completed — could mislead if the fetch was slow or failed. <strong>Fix:</strong> initialize <code>price: null</code> and <code>score: null</code> on all curated seeds; render sites now guard for null and show "—" until live data arrives.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">Audited healthy (no changes needed)</h4>
+          <ul>
+            <li>All four APIs return 200 with fresh data — quotes, news, buzz, options.</li>
+            <li>Options recommendations: real NASDAQ chain data (NVDA $215C mid $7.08, OI 3344).</li>
+            <li>Buzz: real StockTwits + CNBC posts, most recent under 2 minutes old.</li>
+            <li>News: fresh Yahoo Finance headlines with keyword sentiment.</li>
+            <li>VIX regime, sparklines, composite scores, and per-position analytics — all computed from live OHLC bars.</li>
+            <li>30-ticker Stocks universe expansion working — BAC (84), NET (83), AAPL (77) surfaced as top-ranked by real live score.</li>
+            <li>Theme persistence, portfolio persistence, tab navigation, drawer open/close — all functional.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">Deferred (documented, not blocking)</h4>
+          <ul>
+            <li>Live option premium tracking — needs per-contract chain lookup per poll. Documented in v2.2 changelog. Cost basis is correct; current premium stays at entry until manual edit.</li>
+            <li>Backtest chart uses seeded (not-real-historical) equity curves for illustration. Called out in the disclosure below the chart.</li>
+            <li>Reddit / X / Congress buzz feeds — wired in code, dormant until env vars set. Documented in v1.8 and README.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v2.3<br/>2026-07-23</div>
