@@ -92,6 +92,11 @@ export function analyze(bars, extras = {}) {
     return { insufficient: true, reason: 'need ≥60 bars of history' };
   }
   const news = extras.news;
+  // extras.benchBars  — SPY (or sector ETF) bars for relative-strength scoring
+  // extras.earnings   — { date: 'YYYY-MM-DD' } next earnings date
+  // extras.breadth    — { pctAbove50: 0..100 } market breadth for regime context
+  const benchBars = extras.benchBars;
+  const earnings = extras.earnings;
   const closes = bars.map((b) => b.c);
   const price = closes[closes.length - 1];
 
@@ -102,11 +107,27 @@ export function analyze(bars, extras = {}) {
   const ma20Slope = slope(smaSeries(closes, 20), 5);
 
   const rsi14 = rsi(closes, 14);
+  // RSI(2) — the Connors short-term mean-reversion oscillator. RSI(14) almost
+  // never reads below 35 inside a confirmed uptrend, which is why a RSI(14)
+  // -based pullback filter generates no trades. RSI(2) is the correct tool.
+  const rsi2 = rsi(closes, 2);
   const atr14 = atr(bars, 14);
   const atrPct = atr14 != null ? (atr14 / price) * 100 : null;
 
   const ret20 = pctReturn(closes, 20);
   const ret60 = pctReturn(closes, 60);
+
+  // ---- Relative strength vs benchmark (SPY) ----
+  // A stock up 5% while SPY is up 9% is a LAGGARD, not a leader. Absolute
+  // momentum alone systematically buys underperformers in a strong tape.
+  let rs20 = null, rs60 = null, benchRet20 = null, benchRet60 = null;
+  if (benchBars && benchBars.length >= 61) {
+    const bCloses = benchBars.map(b => b.c);
+    benchRet20 = pctReturn(bCloses, 20);
+    benchRet60 = pctReturn(bCloses, 60);
+    if (ret20 != null && benchRet20 != null) rs20 = ret20 - benchRet20;
+    if (ret60 != null && benchRet60 != null) rs60 = ret60 - benchRet60;
+  }
 
   const high52w = highest(closes, Math.min(252, closes.length));
   const distFrom52w = high52w ? ((price - high52w) / high52w) * 100 : null;
@@ -133,11 +154,35 @@ export function analyze(bars, extras = {}) {
   if (ma20Slope > 0.01) { parts.trend += 5; notes.push(`MA20 sloping up (+${(ma20Slope*100).toFixed(1)}% / 5d)`); }
   else if (ma20Slope < -0.01) { notes.push(`MA20 sloping down (${(ma20Slope*100).toFixed(1)}% / 5d)`); }
 
-  // Momentum (25 pts) — 20d return with RSI overbought penalty
+  // Momentum (25 pts) — RELATIVE strength preferred over absolute return.
+  // When a benchmark is supplied we score outperformance vs SPY; a stock up
+  // 5% while SPY is up 9% scores as the laggard it is. Falls back to absolute
+  // 20d return only when no benchmark is available.
   const r20 = ret20 || 0;
-  if (r20 <= 0) { parts.momentum = 0; notes.push(`20d return ${r20.toFixed(1)}% — no momentum`); }
-  else if (r20 >= 15) { parts.momentum = 25; notes.push(`20d return +${r20.toFixed(1)}% — strong momentum`); }
-  else { parts.momentum = Math.round((r20 / 15) * 25); notes.push(`20d return +${r20.toFixed(1)}%`); }
+  if (rs20 != null) {
+    // RS sweet spot: +8% or better vs SPY over 20 days = full marks
+    if (rs20 <= 0) {
+      parts.momentum = 0;
+      notes.push(`Relative strength ${rs20.toFixed(1)}% vs SPY — underperforming, laggard`);
+    } else if (rs20 >= 8) {
+      parts.momentum = 25;
+      notes.push(`Relative strength +${rs20.toFixed(1)}% vs SPY — clear leader`);
+    } else {
+      parts.momentum = Math.round((rs20 / 8) * 25);
+      notes.push(`Relative strength +${rs20.toFixed(1)}% vs SPY (abs ${r20 >= 0 ? '+' : ''}${r20.toFixed(1)}%)`);
+    }
+    // Confirm with the 60-day RS — persistence matters more than a single spike
+    if (rs60 != null && rs60 > 0 && rs20 > 0) {
+      notes.push(`60d RS +${rs60.toFixed(1)}% — outperformance is persistent`);
+    } else if (rs60 != null && rs60 < -5 && rs20 > 0) {
+      parts.momentum = Math.max(0, parts.momentum - 6);
+      notes.push(`60d RS ${rs60.toFixed(1)}% — recent strength is a bounce, not a trend`);
+    }
+  } else {
+    if (r20 <= 0) { parts.momentum = 0; notes.push(`20d return ${r20.toFixed(1)}% — no momentum`); }
+    else if (r20 >= 15) { parts.momentum = 25; notes.push(`20d return +${r20.toFixed(1)}% — strong momentum`); }
+    else { parts.momentum = Math.round((r20 / 15) * 25); notes.push(`20d return +${r20.toFixed(1)}%`); }
+  }
   if (rsi14 != null) {
     if (rsi14 > 75) { parts.momentum = Math.max(0, parts.momentum - 8); notes.push(`RSI ${rsi14.toFixed(0)} — overbought penalty`); }
     else if (rsi14 < 30) { parts.momentum = Math.max(0, parts.momentum - 5); notes.push(`RSI ${rsi14.toFixed(0)} — oversold, momentum negative`); }
@@ -190,11 +235,67 @@ export function analyze(bars, extras = {}) {
   }
   parts.political = political;
 
+  // ---- Earnings-in-window risk (the #1 killer of ATR-based stops) ----
+  // A 15-trading-day swing routinely straddles an earnings print. Gaps don't
+  // respect stops — a stock that opens −12% fills your stop at −12%, not −1R.
+  // We surface this loudly and haircut the score rather than pretend it away.
+  let earningsRisk = null;
+  if (earnings && earnings.date) {
+    const eTs = Date.parse(earnings.date + 'T00:00:00Z');
+    if (!isNaN(eTs)) {
+      const calDays = Math.round((eTs - Date.now()) / 86400000);
+      // 15 trading days ≈ 21 calendar days
+      const inWindow = calDays >= 0 && calDays <= 21;
+      earningsRisk = {
+        date: earnings.date,
+        calendarDays: calDays,
+        inHoldingWindow: inWindow,
+        severity: calDays < 0 ? 'past' : calDays <= 5 ? 'imminent' : inWindow ? 'in-window' : 'clear',
+      };
+      if (earningsRisk.severity === 'imminent') {
+        notes.push(`⚠ Earnings in ${calDays}d — gap risk defeats the stop. Halve size or wait for the print.`);
+      } else if (inWindow) {
+        notes.push(`⚠ Earnings ${calDays}d out — inside the 15-day holding window. Plan to exit before the print.`);
+      }
+    }
+  }
+
+  // Gap-through-stop history: how often has this name opened beyond 1.5×ATR
+  // from the prior close? High-beta names do this far more than the ATR model
+  // assumes, and it turns a nominal −1R into a −2R or worse.
+  let gapRisk = null;
+  if (atr14 > 0 && bars.length > 60) {
+    let gaps = 0, checked = 0, worst = 0;
+    for (let i = Math.max(1, bars.length - 252); i < bars.length; i++) {
+      const prevClose = bars[i - 1].c;
+      const gapPct = (bars[i].o - prevClose) / prevClose;
+      const atrPctLocal = atr14 / price;
+      checked++;
+      if (Math.abs(gapPct) > 1.5 * atrPctLocal) {
+        gaps++;
+        if (gapPct < worst) worst = gapPct;
+      }
+    }
+    gapRisk = {
+      frequency: checked ? gaps / checked : 0,
+      count: gaps,
+      worstGapPct: worst * 100,
+    };
+    if (gapRisk.frequency > 0.04) {
+      notes.push(`Gap risk elevated: opened beyond 1.5×ATR on ${(gapRisk.frequency*100).toFixed(1)}% of days (worst ${(worst*100).toFixed(1)}%) — stops may slip.`);
+    }
+  }
+
   const score = Math.max(0, Math.min(100, parts.trend + parts.momentum + parts.location + parts.volume + parts.volatility + catalyst + political));
 
   // ---- Setup classifier ----
   let setup = 'AVOID', setupReason = '';
-  if (!alignedShort || (ma50 && price < ma50)) {
+  // Earnings inside 5 days overrides everything: no new entry, regardless of
+  // how good the technical setup looks. You cannot risk-manage a gap.
+  if (earningsRisk && earningsRisk.severity === 'imminent') {
+    setup = 'EARNINGS';
+    setupReason = `Earnings in ${earningsRisk.calendarDays}d (${earningsRisk.date}). No new entry — a gap through your stop is unmanageable. Revisit after the print.`;
+  } else if (!alignedShort || (ma50 && price < ma50)) {
     setup = 'BROKEN';
     setupReason = 'Price below key MAs — trend broken; wait for base and reclaim';
   } else if (rsi14 != null && (rsi14 > 78 || (distFrom52w != null && distFrom52w > 0 && r20 > 25))) {
@@ -228,7 +329,12 @@ export function analyze(bars, extras = {}) {
 
   return {
     price,
-    indicators: { ma10, ma20, ma50, ma200, ma20Slope, rsi14, atr14, atrPct, ret20, ret60, high52w, distFrom52w, distFrom20, vol5, vol20, volRatio },
+    indicators: {
+      ma10, ma20, ma50, ma200, ma20Slope, rsi14, rsi2, atr14, atrPct,
+      ret20, ret60, high52w, distFrom52w, distFrom20, vol5, vol20, volRatio,
+      // Relative strength — the review's highest-value signal upgrade
+      rs20, rs60, benchRet20, benchRet60,
+    },
     trendState: { alignedFull, alignedMid, alignedShort },
     parts,
     score,
@@ -236,6 +342,8 @@ export function analyze(bars, extras = {}) {
     setup,
     setupReason,
     plan,
+    earningsRisk,
+    gapRisk,
   };
 }
 
@@ -277,11 +385,106 @@ function tradePlan({ price, atr14, atrPct, setup, ma10, ma20 }) {
 
 // ------- Regime -------
 
-export function regime(vixPrice) {
-  if (vixPrice == null) return { level: 'unknown', sizeMult: 1, allow: ['BREAKOUT','PULLBACK','EARLY'], note: 'VIX unavailable' };
-  if (vixPrice < 15) return { level: 'calm',    sizeMult: 1.0, allow: ['BREAKOUT','PULLBACK','EARLY'], note: 'Low-vol regime — full sizing' };
-  if (vixPrice < 20) return { level: 'normal',  sizeMult: 1.0, allow: ['BREAKOUT','PULLBACK'],         note: 'Normal — trade A+ setups only' };
-  if (vixPrice < 25) return { level: 'elevated',sizeMult: 0.5, allow: ['PULLBACK'],                    note: 'Half size — pullbacks only, no chasing' };
-  if (vixPrice < 35) return { level: 'stress',  sizeMult: 0.25,allow: [],                              note: 'No new longs — manage existing risk' };
-  return                    { level: 'crisis', sizeMult: 0,   allow: [],                              note: 'Risk-off — exit weakest, hedge book' };
+export function regime(vixPrice, breadth = null) {
+  let base;
+  if (vixPrice == null) base = { level: 'unknown', sizeMult: 1, allow: ['BREAKOUT','PULLBACK','EARLY'], note: 'VIX unavailable' };
+  else if (vixPrice < 15) base = { level: 'calm',    sizeMult: 1.0, allow: ['BREAKOUT','PULLBACK','EARLY'], note: 'Low-vol regime — full sizing' };
+  else if (vixPrice < 20) base = { level: 'normal',  sizeMult: 1.0, allow: ['BREAKOUT','PULLBACK'],         note: 'Normal — trade A+ setups only' };
+  else if (vixPrice < 25) base = { level: 'elevated',sizeMult: 0.5, allow: ['PULLBACK'],                    note: 'Half size — pullbacks only, no chasing' };
+  else if (vixPrice < 35) base = { level: 'stress',  sizeMult: 0.25,allow: [],                              note: 'No new longs — manage existing risk' };
+  else base =                    { level: 'crisis', sizeMult: 0,   allow: [],                              note: 'Risk-off — exit weakest, hedge book' };
+
+  // ---- Breadth as a SECOND regime input ----
+  // VIX alone lags. Low VIX with collapsing breadth (2007, Jan 2020) is exactly
+  // when momentum entries stop working — the index is held up by a handful of
+  // names while the average stock is already rolling over.
+  if (breadth && breadth.pctAbove50 != null) {
+    const b = breadth.pctAbove50;
+    base.breadth = b;
+    if (b < 30) {
+      base.sizeMult = Math.min(base.sizeMult, 0.25);
+      base.allow = [];
+      base.level = base.level === 'calm' || base.level === 'normal' ? 'divergent' : base.level;
+      base.note = `Breadth collapsed — only ${b.toFixed(0)}% of universe above its 50d MA. Index calm but internals broken. No new longs.`;
+    } else if (b < 45) {
+      base.sizeMult = Math.min(base.sizeMult, 0.5);
+      base.allow = base.allow.filter(s => s === 'PULLBACK');
+      base.note = `Narrow tape — ${b.toFixed(0)}% above 50d MA. Half size, pullbacks only. ${base.note}`;
+    } else if (b > 65) {
+      base.note = `${base.note} · Breadth healthy (${b.toFixed(0)}% above 50d MA).`;
+    }
+  }
+  return base;
+}
+
+/**
+ * Market breadth from a set of ticker bar-series: the % trading above their
+ * own 50-day moving average. A real, computable breadth proxy from data we
+ * already fetch — no extra vendor needed.
+ */
+export function computeBreadth(barsByTicker) {
+  let above = 0, total = 0;
+  for (const bars of Object.values(barsByTicker || {})) {
+    if (!bars || bars.length < 50) continue;
+    const closes = bars.map(b => b.c);
+    const ma50 = sma(closes, 50);
+    if (ma50 == null) continue;
+    total++;
+    if (closes[closes.length - 1] > ma50) above++;
+  }
+  if (!total) return null;
+  return { pctAbove50: (above / total) * 100, above, total };
+}
+
+/**
+ * Portfolio heat: total open risk expressed in R. The review is right that the
+ * Handbook implies this but nothing computed it. Cap around 4–6R.
+ * @param positions [{ price, stop, qty, multiplier }]
+ * @param equity     account size in dollars
+ */
+export function portfolioHeat(positions, equity) {
+  if (!equity || equity <= 0) return null;
+  let openRiskDollars = 0;
+  const perPosition = [];
+  for (const p of positions || []) {
+    const mult = p.multiplier || 1;
+    const stop = p.stop != null ? p.stop : p.buyPrice * 0.95;
+    // Risk remaining = current price − stop (never negative; a trade above its
+    // trailed stop has locked in gains and carries no further downside to stop)
+    const riskPerShare = Math.max(0, (p.price ?? p.buyPrice) - stop);
+    const dollars = riskPerShare * (p.qty || 0) * mult;
+    openRiskDollars += dollars;
+    perPosition.push({ ticker: p.ticker, riskDollars: dollars, riskPct: (dollars / equity) * 100 });
+  }
+  const heatPct = (openRiskDollars / equity) * 100;
+  return {
+    openRiskDollars,
+    heatPct,
+    heatR: heatPct,                  // with 1% risk per trade, 1R ≈ 1% of equity
+    perPosition,
+    status: heatPct > 6 ? 'over' : heatPct > 4 ? 'warm' : 'ok',
+    note: heatPct > 6
+      ? `Portfolio heat ${heatPct.toFixed(1)}% — over the 6% ceiling. Close or tighten something before adding.`
+      : heatPct > 4
+        ? `Portfolio heat ${heatPct.toFixed(1)}% — approaching the 6% ceiling. One more full-size entry maximum.`
+        : `Portfolio heat ${heatPct.toFixed(1)}% — room to add.`,
+  };
+}
+
+/**
+ * Position size from risk-parity: shares such that (entry − stop) × shares
+ * equals riskPct of equity. This is the formula the Handbook describes.
+ */
+export function positionSize(entry, stop, equity, riskPct = 1.0, sizeMult = 1) {
+  const riskPerShare = entry - stop;
+  if (!(riskPerShare > 0) || !(equity > 0)) return null;
+  const riskDollars = equity * (riskPct / 100) * sizeMult;
+  const shares = Math.floor(riskDollars / riskPerShare);
+  return {
+    shares,
+    riskDollars,
+    notional: shares * entry,
+    notionalPct: ((shares * entry) / equity) * 100,
+    riskPerShare,
+  };
 }

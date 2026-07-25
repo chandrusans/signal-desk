@@ -901,6 +901,8 @@
   .setup-EXTENDED { color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 8%, transparent); }
   .setup-BROKEN   { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 8%, transparent); }
   .setup-AVOID    { color: var(--risk); border-color: var(--risk); }
+  /* Earnings inside the holding window — a gap defeats the stop entirely */
+  .setup-EARNINGS { color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 16%, transparent); }
 
   /* BUY / HOLD / AVOID / SELL verdict pill (large, prominent) */
   .verdict-pill {
@@ -914,6 +916,71 @@
   .verdict-HOLD  { color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 12%, transparent); }
   .verdict-AVOID { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 12%, transparent); }
   .verdict-SELL  { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 18%, transparent); }
+
+  /* Backtest UI */
+  .qa-run-btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 9px 18px; background: var(--accent); color: var(--ground);
+    border: none; border-radius: 6px; cursor: pointer; font-weight: 600;
+    transition: transform 0.15s var(--ease-out), opacity 0.15s;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  .qa-run-btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .qa-run-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+  .bt-headline {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+    border-top: 1px solid var(--rule);
+  }
+  @media (max-width: 900px) { .bt-headline { grid-template-columns: repeat(2, 1fr); } }
+  .bt-hl-cell { padding: 18px 22px; border-right: 1px solid var(--rule); }
+  .bt-hl-cell:last-child { border-right: none; }
+  .bt-hl-cell .k {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px;
+  }
+  .bt-hl-cell .v {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 26px; line-height: 1; color: var(--ink);
+  }
+  .bt-hl-cell .v.pos { color: var(--signal); }
+  .bt-hl-cell .v.neg { color: var(--risk); }
+  .bt-hl-cell .sub {
+    font-family: var(--mono); font-size: 10px; color: var(--ink-3);
+    margin-top: 6px; letter-spacing: 0.04em; line-height: 1.4;
+  }
+
+  .bt-dist-row {
+    display: grid; grid-template-columns: 150px 1fr 60px;
+    gap: 12px; align-items: center; margin-bottom: 6px;
+  }
+  .bt-dist-row .lbl {
+    font-family: var(--mono); font-size: 10.5px; color: var(--ink-2); letter-spacing: 0.04em;
+  }
+  .bt-dist-bar { height: 14px; background: var(--ground-2); position: relative; border-radius: 2px; overflow: hidden; }
+  .bt-dist-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; }
+  .bt-dist-row .n {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 11px; color: var(--ink-2); text-align: right;
+  }
+
+  .bt-wf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 900px) { .bt-wf-grid { grid-template-columns: 1fr; } }
+  .bt-wf-cell {
+    border: 1px solid var(--rule); border-radius: 4px; padding: 12px 14px;
+    background: var(--ground-2);
+  }
+  .bt-wf-cell .win {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px;
+  }
+  .bt-wf-cell .exp {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 18px; line-height: 1;
+  }
+  .bt-wf-cell .det {
+    font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-top: 4px;
+  }
 
   /* Filter bar (Setup / Verdict / Show) */
   .filter-bar {
@@ -1654,6 +1721,7 @@
         <button data-v="EARLY">Early</button>
         <button data-v="EXTENDED">Extended</button>
         <button data-v="BROKEN">Broken</button>
+        <button data-v="EARNINGS">Earnings</button>
       </div>
     </div>
     <div class="filter-group">
@@ -1702,8 +1770,8 @@
   </div>
 
   <div class="section-head">
-    <h2>Backtest harness</h2>
-    <span class="aside">Pick a strategy · run it against history · see where it breaks</span>
+    <h2>Backtest · real historical simulation</h2>
+    <span class="aside" id="bt-status">Point-in-time · next-bar fills · costs modeled</span>
   </div>
 
   <div style="background: var(--panel); border: 1px solid var(--rule);">
@@ -1711,38 +1779,64 @@
       <div class="ctrl-group">
         <span class="lbl">Strategy</span>
         <div class="seg" id="seg-strategy">
-          <button data-v="composite" class="on">Composite v3.2</button>
-          <button data-v="momentum">Momentum</button>
-          <button data-v="mean-rev">Mean-reversion</button>
-          <button data-v="sentiment">Sentiment-driven</button>
+          <button data-v="composite" class="on">Composite (score ≥70)</button>
+          <button data-v="momentum">Momentum (breakout+pullback)</button>
+          <button data-v="mean-reversion">Mean-reversion (RSI2)</button>
         </div>
       </div>
       <div class="ctrl-group">
-        <span class="lbl">Universe</span>
-        <div class="seg" id="seg-universe">
-          <button data-v="sp500" class="on">S&amp;P 500</button>
-          <button data-v="ndx">Nasdaq 100</button>
-          <button data-v="r2k">Russell 2000</button>
+        <span class="lbl">Risk / trade</span>
+        <div class="seg" id="seg-risk">
+          <button data-v="0.5">0.5%</button>
+          <button data-v="1" class="on">1%</button>
+          <button data-v="2">2%</button>
         </div>
       </div>
       <div class="ctrl-group">
-        <span class="lbl">Window</span>
-        <div class="seg" id="seg-window">
-          <button data-v="1y">1Y</button>
-          <button data-v="3y">3Y</button>
-          <button data-v="5y" class="on">5Y</button>
-        </div>
+        <button class="qa-run-btn" id="run-backtest">▶ Run backtest</button>
       </div>
     </div>
-    <div class="back-grid" style="border: none;">
-      <div class="back-chart">
-        <svg viewBox="0 0 600 220" preserveAspectRatio="none" id="backtest-svg"></svg>
-        <div class="back-legend">
-          <span><span class="legend-swatch" style="background: var(--accent)"></span>Strategy</span>
-          <span><span class="legend-swatch" style="background: var(--ink-3)"></span>S&amp;P 500</span>
+
+    <div id="bt-empty" style="padding: 40px 24px; text-align: center; font-family: var(--serif); font-style: italic; color: var(--ink-3); font-size: 15px;">
+      <strong style="font-family: var(--sans); font-style: normal; color: var(--ink);">No results yet.</strong><br/>
+      Click <em>Run backtest</em> to simulate this strategy against 2 years of real daily bars for the full universe.<br/>
+      <span style="font-size: 12.5px;">Takes ~3–8 seconds — it re-runs the full scoring engine on every bar of every ticker.</span>
+    </div>
+
+    <div id="bt-results" hidden>
+      <!-- Headline: expectancy is THE number -->
+      <div class="bt-headline" id="bt-headline"></div>
+
+      <div class="back-grid" style="border: none; border-top: 1px solid var(--rule);">
+        <div class="back-chart">
+          <div style="font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px;">Equity curve · compounded at chosen risk</div>
+          <svg viewBox="0 0 600 200" preserveAspectRatio="none" id="backtest-svg"></svg>
+          <div class="back-legend">
+            <span><span class="legend-swatch" style="background: var(--accent)"></span>Strategy</span>
+            <span><span class="legend-swatch" style="background: var(--ink-3)"></span>Buy &amp; hold SPY</span>
+          </div>
         </div>
+        <div class="back-stats" id="back-stats"></div>
       </div>
-      <div class="back-stats" id="back-stats"></div>
+
+      <div style="padding: 18px 24px; border-top: 1px solid var(--rule);">
+        <div style="font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 12px;">R-multiple distribution · where the money actually came from</div>
+        <div id="bt-distribution"></div>
+      </div>
+
+      <div style="padding: 18px 24px; border-top: 1px solid var(--rule);">
+        <div style="font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 12px;">Walk-forward · out-of-sample consistency</div>
+        <div id="bt-walkforward"></div>
+      </div>
+
+      <div style="padding: 16px 24px; border-top: 1px solid var(--rule); font-family: var(--serif); font-style: italic; font-size: 12.5px; color: var(--ink-3); line-height: 1.55;">
+        <strong style="font-style: normal; color: var(--ink-2);">How this is computed:</strong>
+        the scoring engine is re-run on every bar using only data available up to that bar (no look-ahead).
+        Entries fill at the <em>next</em> bar's open, not the signal bar's close. Slippage of 7bps is applied on both sides.
+        Stops are checked before targets within a bar (conservative). If a bar opens below the stop, the fill is at the
+        open — a worse-than-1R loss — which is what actually happens and is why most retail backtests overstate results.
+        Positions still open at the end of the window are discarded rather than marked to market.
+      </div>
     </div>
   </div>
 
@@ -2073,7 +2167,8 @@
 </script>
 
 <script type="module">
-import { analyze, regime } from './analyze.js';
+import { analyze, regime, computeBreadth } from './analyze.js';
+import { runBacktest, walkForward } from './backtest.js';
 (function () {
   // ------- Theme toggle -------
   const root = document.documentElement;
@@ -2299,7 +2394,12 @@ import { analyze, regime } from './analyze.js';
   function verdictForStock(p) {
     const s = p.score || 0;
     const setup = p.setup;
-    const regimeBad = currentRegime?.level === 'stress' || currentRegime?.level === 'crisis';
+    const regimeBad = currentRegime?.level === 'stress'
+                   || currentRegime?.level === 'crisis'
+                   || currentRegime?.level === 'divergent';         // breadth collapse
+    // Earnings inside 5 days: no new entry regardless of technicals. You cannot
+    // risk-manage an overnight gap — the stop simply doesn't exist at the open.
+    if (setup === 'EARNINGS') return 'AVOID';
     if (regimeBad) return 'AVOID';                                  // regime override
     if (setup === 'BROKEN' && s < 30) return 'SELL';                // trend gone, take exit
     if (setup === 'BROKEN' || setup === 'AVOID') return 'AVOID';    // no trade
@@ -2570,121 +2670,222 @@ import { analyze, regime } from './analyze.js';
     }).join('');
   }
 
-  // ------- Backtest harness state -------
-  const backState = { strategy: 'composite', universe: 'sp500', window: '5y' };
+  // ------- Backtest — REAL historical simulation -------
+  // Replaces the previous seeded/illustrative equity curves. Runs the actual
+  // scoring engine bar-by-bar over 2 years of real daily data, point-in-time,
+  // with next-bar fills and modeled costs. See backtest.js for the mechanics.
+  const backState = { strategy: 'composite', riskPct: 1 };
+  let btBars = null;   // cached 2y bar set so re-runs are instant
 
-  const stratProfiles = {
-    'composite':  { avgM: 9.4,  best: 27.1, worst: -18.3, win: 61, dd: -34.7, sharpe: 1.42, hit: 28, vol: 1.0,  drift: 1.4 },
-    'momentum':   { avgM: 7.2,  best: 32.4, worst: -22.6, win: 54, dd: -41.2, sharpe: 0.98, hit: 22, vol: 1.35, drift: 1.1 },
-    'mean-rev':   { avgM: 3.8,  best: 18.9, worst: -12.4, win: 63, dd: -19.8, sharpe: 1.11, hit: 11, vol: 0.75, drift: 0.7 },
-    'sentiment':  { avgM: 5.6,  best: 41.7, worst: -28.9, win: 48, dd: -47.3, sharpe: 0.72, hit: 34, vol: 1.6,  drift: 0.9 },
-  };
-  const univAdj = { sp500: 1.0, ndx: 1.15, r2k: 1.35 };
-  const winMonths = { '1y': 12, '3y': 36, '5y': 54 };
+  function pct(x, d = 1) { return `${x >= 0 ? '' : ''}${(x * 100).toFixed(d)}%`; }
 
-  function seededSeries(months, profile, univFactor, seedStr) {
-    let seed = 0;
-    for (let i = 0; i < seedStr.length; i++) seed = (seed*31 + seedStr.charCodeAt(i)) >>> 0;
-    const rand = () => { seed = (seed*1664525 + 1013904223) >>> 0; return (seed >>> 0) / 0xFFFFFFFF; };
-    const arr = [];
-    for (let i = 0; i < months; i++) {
-      const noise = (rand() - 0.5) * profile.vol * 18;
-      arr.push(profile.drift + noise);
+  async function fetchBacktestBars() {
+    if (btBars) return btBars;
+    const universe = [...new Set([...Object.keys(EXTRA_NAMES), ...picks.map(p => p.ticker)])]
+      .filter(t => !t.startsWith('^'));
+    const withMacro = [...universe, 'SPY', '^VIX'].join(',');
+    const res = await fetch(`/api/quotes?tickers=${encodeURIComponent(withMacro)}&range=2y`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`quotes HTTP ${res.status}`);
+    const data = await res.json();
+    const barsByTicker = {};
+    let spy = null, vix = null;
+    for (const [t, q] of Object.entries(data.quotes || {})) {
+      if (!q.bars || q.bars.length < 250) continue;
+      if (t === '^VIX') { vix = q.bars; continue; }
+      barsByTicker[t] = q.bars;
+      if (t === 'SPY') spy = q.bars;
     }
-    return arr.map(v => v * univFactor);
+    btBars = { barsByTicker, spy, vix };
+    return btBars;
   }
 
-  function renderHarness() {
-    const p = stratProfiles[backState.strategy];
-    const uf = univAdj[backState.universe];
-    const months = winMonths[backState.window];
-    const seedStr = backState.strategy + backState.universe + backState.window;
-    const stratRet = seededSeries(months, p, uf, seedStr);
-    const spxRet   = seededSeries(months, { drift: 0.9, vol: 0.4 }, 1.0, 'spx' + backState.window);
+  async function runRealBacktest() {
+    const btn = document.getElementById('run-backtest');
+    const statusEl = document.getElementById('bt-status');
+    const emptyEl = document.getElementById('bt-empty');
+    const resultsEl = document.getElementById('bt-results');
+    btn.disabled = true;
+    btn.textContent = '⋯ Fetching 2y bars';
+    statusEl.textContent = 'fetching history…';
+    try {
+      const { barsByTicker, spy, vix } = await fetchBacktestBars();
+      const n = Object.keys(barsByTicker).length;
+      if (!n) throw new Error('no usable history returned');
+      btn.textContent = `⋯ Simulating ${n} tickers`;
+      statusEl.textContent = `simulating ${n} tickers × ~500 bars…`;
+      // Yield to the browser so the button text paints before the heavy loop
+      await new Promise(r => setTimeout(r, 30));
 
-    let strat = 100, spx = 100;
-    const stratArr = [100], spxArr = [100];
-    let peak = 100, dd = 0, wins = 0;
-    const scaled = stratRet.map(r => r * (p.avgM / (stratRet.reduce((a,b)=>a+b,0) / months || 1)) );
-    for (let i = 0; i < months; i++) {
-      const r = scaled[i];
-      strat *= (1 + r/100);
-      spx *= (1 + spxRet[i]/100);
-      stratArr.push(strat); spxArr.push(spx);
-      if (strat > peak) peak = strat;
-      const cur = (strat - peak) / peak * 100;
-      if (cur < dd) dd = cur;
-      if (r > 0) wins++;
+      const opts = { strategy: backState.strategy, riskPctPerTrade: backState.riskPct };
+      const { trades, metrics } = runBacktest(barsByTicker, opts, vix, spy);
+      if (!metrics || metrics.note) {
+        emptyEl.hidden = false;
+        resultsEl.hidden = true;
+        emptyEl.innerHTML = `<strong style="font-family: var(--sans); font-style: normal; color: var(--ink);">No trades generated.</strong><br/>${metrics?.note || 'The strategy found no qualifying setups in this window.'}`;
+        statusEl.textContent = '0 trades';
+        return;
+      }
+      const wf = walkForward(barsByTicker, opts, vix, 3);
+      renderBacktestResults(metrics, wf, spy);
+      emptyEl.hidden = true;
+      resultsEl.hidden = false;
+      statusEl.textContent = `${metrics.trades} trades · ${metrics.years.toFixed(1)}y · ${Object.keys(barsByTicker).length} tickers`;
+    } catch (e) {
+      emptyEl.hidden = false;
+      resultsEl.hidden = true;
+      emptyEl.innerHTML = `<strong style="font-family: var(--sans); font-style: normal; color: var(--risk);">Backtest failed.</strong><br/>${e.message}`;
+      statusEl.textContent = 'failed';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '▶ Run backtest';
     }
-    const actualAvg = scaled.reduce((a,b) => a+b, 0) / months;
-    const bestActual = Math.max(...scaled);
-    const worstActual = Math.min(...scaled);
-    const winRate = Math.round(wins/months*100);
-    const stats = document.getElementById('back-stats');
-    stats.innerHTML = `
-      <div class="stat-row"><span class="lbl">Avg monthly return</span><span class="val ${actualAvg>=0?'pos':'neg'}">${actualAvg>=0?'+':''}${actualAvg.toFixed(1)}%</span></div>
-      <div class="stat-row"><span class="lbl">Best month</span><span class="val pos">+${bestActual.toFixed(1)}%</span></div>
-      <div class="stat-row"><span class="lbl">Worst month</span><span class="val neg">${worstActual.toFixed(1)}%</span></div>
-      <div class="stat-row"><span class="lbl">Win rate</span><span class="val">${winRate}%</span></div>
-      <div class="stat-row"><span class="lbl">Max drawdown</span><span class="val neg">${dd.toFixed(1)}%</span></div>
-      <div class="stat-row"><span class="lbl">Sharpe (annualized)</span><span class="val">${p.sharpe.toFixed(2)}</span></div>
-      <div class="stat-row"><span class="lbl">Hit rate on 15%+ monthly</span><span class="val">${p.hit}%</span></div>
-      <div class="stat-row"><span class="lbl">Terminal value ($100 → )</span><span class="val ${strat>=100?'pos':'neg'}">$${strat.toFixed(0)}</span></div>
+  }
+
+  function renderBacktestResults(m, wf, spyBars) {
+    // ---- Headline: expectancy is THE number that matters ----
+    const expGood = m.expectancy > 0.1;
+    const beatBench = m.benchReturn != null && m.totalReturn > m.benchReturn;
+    document.getElementById('bt-headline').innerHTML = `
+      <div class="bt-hl-cell">
+        <div class="k">Expectancy / trade</div>
+        <div class="v ${m.expectancy >= 0 ? 'pos' : 'neg'}">${m.expectancy >= 0 ? '+' : ''}${m.expectancy.toFixed(3)}R</div>
+        <div class="sub">${expGood ? 'positive edge' : m.expectancy > 0 ? 'thin edge — costs could erase it' : 'negative — do not trade this'}<br/>${m.trades} trades over ${m.years.toFixed(1)}y</div>
+      </div>
+      <div class="bt-hl-cell">
+        <div class="k">Win rate · avg W / L</div>
+        <div class="v">${(m.winRate * 100).toFixed(1)}%</div>
+        <div class="sub">+${m.avgWinR.toFixed(2)}R avg win<br/>${m.avgLossR.toFixed(2)}R avg loss</div>
+      </div>
+      <div class="bt-hl-cell">
+        <div class="k">Return · vs SPY</div>
+        <div class="v ${m.totalReturn >= 0 ? 'pos' : 'neg'}">${m.totalReturn >= 0 ? '+' : ''}${pct(m.totalReturn)}</div>
+        <div class="sub">CAGR ${pct(m.cagr)}${m.benchReturn != null ? `<br/>SPY buy&hold ${pct(m.benchReturn)} ${beatBench ? '✓ beat' : '✗ lagged'}` : ''}</div>
+      </div>
+      <div class="bt-hl-cell">
+        <div class="k">Max drawdown</div>
+        <div class="v neg">${pct(m.maxDrawdown)}</div>
+        <div class="sub">Sharpe ${m.sharpe.toFixed(2)} · Sortino ${m.sortino.toFixed(2)}<br/>Profit factor ${m.profitFactor === Infinity ? '∞' : m.profitFactor.toFixed(2)}</div>
+      </div>
     `;
-    drawBacktestChart(stratArr, spxArr, months);
+
+    // ---- Secondary stats ----
+    const reasons = Object.entries(m.exitReasons).map(([k, v]) => `${k.replace(/_/g, ' ')} ${v}`).join(' · ');
+    document.getElementById('back-stats').innerHTML = `
+      <div class="stat-row"><span class="lbl">Trades / year</span><span class="val">${m.tradesPerYear.toFixed(0)}</span></div>
+      <div class="stat-row"><span class="lbl">Avg hold</span><span class="val">${m.avgDaysHeld.toFixed(1)}d</span></div>
+      <div class="stat-row"><span class="lbl">Wins / losses</span><span class="val">${m.wins} / ${m.losses}</span></div>
+      <div class="stat-row"><span class="lbl">Gapped past stop</span><span class="val ${m.gapThroughStopRate > 0.05 ? 'neg' : ''}">${(m.gapThroughStopRate * 100).toFixed(1)}%</span></div>
+      <div class="stat-row"><span class="lbl">Worst gap loss</span><span class="val neg">${m.worstGapR.toFixed(2)}R</span></div>
+      <div class="stat-row"><span class="lbl">Final equity ($10k)</span><span class="val ${m.finalEquity >= 10000 ? 'pos' : 'neg'}">$${m.finalEquity.toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+      <div class="stat-row" style="border-bottom: none;"><span class="lbl">Exits</span><span class="val" style="font-size: 10px; text-align: right; max-width: 140px;">${reasons}</span></div>
+    `;
+
+    // ---- R-distribution histogram ----
+    const maxN = Math.max(...m.distribution.map(b => b.n), 1);
+    document.getElementById('bt-distribution').innerHTML = m.distribution.map(b => {
+      const isWin = b.lo >= 0;
+      const isGap = b.label.includes('gapped');
+      const color = isGap ? 'var(--risk)' : isWin ? 'var(--signal)' : 'var(--caution)';
+      return `
+        <div class="bt-dist-row">
+          <span class="lbl">${b.label}</span>
+          <div class="bt-dist-bar"><div class="bt-dist-fill" style="width: ${(b.n / maxN) * 100}%; background: ${color}; opacity: ${b.n ? 0.75 : 0};"></div></div>
+          <span class="n">${b.n}</span>
+        </div>
+      `;
+    }).join('');
+
+    // ---- Walk-forward ----
+    document.getElementById('bt-walkforward').innerHTML = `
+      <div class="bt-wf-grid">
+        ${wf.map(w => {
+          const wm = w.metrics;
+          if (!wm || wm.note) {
+            return `<div class="bt-wf-cell"><div class="win">Window ${w.window}</div><div class="exp" style="color: var(--ink-3); font-size: 13px;">no trades</div></div>`;
+          }
+          const good = wm.expectancy > 0;
+          return `
+            <div class="bt-wf-cell">
+              <div class="win">Window ${w.window} · ${w.from ? new Date(w.from).toISOString().slice(0,7) : ''} → ${w.to ? new Date(w.to).toISOString().slice(0,7) : ''}</div>
+              <div class="exp" style="color: ${good ? 'var(--signal)' : 'var(--risk)'};">${wm.expectancy >= 0 ? '+' : ''}${wm.expectancy.toFixed(3)}R</div>
+              <div class="det">${wm.trades} trades · ${(wm.winRate*100).toFixed(0)}% win · PF ${wm.profitFactor === Infinity ? '∞' : wm.profitFactor.toFixed(2)}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div style="font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--ink-3); margin-top: 10px; line-height: 1.5;">
+        Consistency across windows matters more than any single number. An edge that only appears in one window is noise, not a strategy.
+      </div>
+    `;
+
+    drawEquityCurve(m, spyBars);
   }
 
-  function drawBacktestChart(stratArr, spxArr, months) {
+  function drawEquityCurve(m, spyBars) {
     const svg = document.getElementById('backtest-svg');
-    const W = 600, H = 220, pad = { l: 40, r: 12, t: 12, b: 24 };
-    const all = [...stratArr, ...spxArr];
+    if (!svg || !m.curve || m.curve.length < 2) return;
+    const W = 600, H = 200, pad = { l: 46, r: 10, t: 10, b: 22 };
+    const curve = m.curve;
+    const startTs = curve[0].t, endTs = curve[curve.length - 1].t;
+    const span = Math.max(1, endTs - startTs);
+
+    // Normalize both to 100 so they're comparable
+    const stratNorm = curve.map(p => ({ t: p.t, v: (p.equity / curve[0].equity) * 100 }));
+    let benchNorm = [];
+    if (spyBars) {
+      const inRange = spyBars.filter(b => b.t >= startTs && b.t <= endTs);
+      if (inRange.length > 1) {
+        const base = inRange[0].c;
+        benchNorm = inRange.map(b => ({ t: b.t, v: (b.c / base) * 100 }));
+      }
+    }
+    const all = [...stratNorm.map(p => p.v), ...benchNorm.map(p => p.v)];
     const min = Math.min(...all), max = Math.max(...all);
     const xw = W - pad.l - pad.r, yh = H - pad.t - pad.b;
-    const xStep = xw / months;
-    const toXY = (v, i) => [pad.l + i*xStep, pad.t + yh - ((v-min)/(max-min || 1))*yh];
-    const stratPts = stratArr.map((v,i) => toXY(v,i).map(n => n.toFixed(1)).join(',')).join(' ');
-    const spxPts = spxArr.map((v,i) => toXY(v,i).map(n => n.toFixed(1)).join(',')).join(' ');
+    const toXY = (p) => [
+      pad.l + ((p.t - startTs) / span) * xw,
+      pad.t + yh - ((p.v - min) / (max - min || 1)) * yh,
+    ];
+    const pts = (arr) => arr.map(p => toXY(p).map(n => n.toFixed(1)).join(',')).join(' ');
     const accent = getComputedStyle(root).getPropertyValue('--accent').trim();
     const ink3 = getComputedStyle(root).getPropertyValue('--ink-3').trim();
     const grid = getComputedStyle(root).getPropertyValue('--grid').trim();
+
     let gridLines = '';
     for (let g = 0; g <= 4; g++) {
-      const y = pad.t + (yh/4)*g;
-      const val = max - (max-min)*(g/4);
-      gridLines += `<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="${grid}" stroke-width="1"/>`;
-      gridLines += `<text x="${pad.l - 6}" y="${y+3}" font-size="9" font-family="ui-monospace, monospace" fill="${ink3}" text-anchor="end">${Math.round(val)}</text>`;
+      const y = pad.t + (yh / 4) * g;
+      const val = max - (max - min) * (g / 4);
+      gridLines += `<line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}" stroke="${grid}" stroke-width="1"/>`;
+      gridLines += `<text x="${pad.l - 6}" y="${y + 3}" font-size="9" font-family="ui-monospace, monospace" fill="${ink3}" text-anchor="end">${val.toFixed(0)}</text>`;
     }
-    const startYear = 2026 - Math.ceil(months / 12);
-    const yearCount = Math.ceil(months / 12) + 1;
-    let xTicks = '';
-    for (let y = 0; y < yearCount; y++) {
-      const monthIdx = y * 12;
-      if (monthIdx > months) break;
-      const x = pad.l + monthIdx * xStep;
-      xTicks += `<text x="${x}" y="${H - 6}" font-size="9" font-family="ui-monospace, monospace" fill="${ink3}" text-anchor="middle">${startYear + y}</text>`;
-    }
+    // Baseline at 100 (starting equity)
+    const y100 = pad.t + yh - ((100 - min) / (max - min || 1)) * yh;
+    const dateLabel = (ts) => new Date(ts).toISOString().slice(0, 7);
     svg.innerHTML = `
       ${gridLines}
-      ${xTicks}
-      <polyline points="${spxPts}" fill="none" stroke="${ink3}" stroke-width="1.2" stroke-dasharray="3 3"/>
-      <polyline points="${stratPts}" fill="none" stroke="${accent}" stroke-width="1.8"/>
+      <line x1="${pad.l}" y1="${y100}" x2="${W - pad.r}" y2="${y100}" stroke="${ink3}" stroke-width="0.8" stroke-dasharray="2 3" opacity="0.5"/>
+      <text x="${pad.l}" y="${H - 6}" font-size="9" font-family="ui-monospace, monospace" fill="${ink3}">${dateLabel(startTs)}</text>
+      <text x="${W - pad.r}" y="${H - 6}" font-size="9" font-family="ui-monospace, monospace" fill="${ink3}" text-anchor="end">${dateLabel(endTs)}</text>
+      ${benchNorm.length ? `<polyline points="${pts(benchNorm)}" fill="none" stroke="${ink3}" stroke-width="1.2" stroke-dasharray="3 3"/>` : ''}
+      <polyline points="${pts(stratNorm)}" fill="none" stroke="${accent}" stroke-width="1.8"/>
     `;
   }
 
-  // Wire harness segmented controls
-  function wireSeg(id, key) {
-    document.getElementById(id).querySelectorAll('button').forEach(b => {
+  // Wire backtest controls
+  function wireBtSeg(id, key, parse) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.querySelectorAll('button').forEach(b => {
       b.addEventListener('click', () => {
-        document.getElementById(id).querySelectorAll('button').forEach(x => x.classList.remove('on'));
+        el.querySelectorAll('button').forEach(x => x.classList.remove('on'));
         b.classList.add('on');
-        backState[key] = b.dataset.v;
-        renderHarness();
+        backState[key] = parse ? parse(b.dataset.v) : b.dataset.v;
       });
     });
   }
-  wireSeg('seg-strategy', 'strategy');
-  wireSeg('seg-universe', 'universe');
-  wireSeg('seg-window', 'window');
+  wireBtSeg('seg-strategy', 'strategy');
+  wireBtSeg('seg-risk', 'riskPct', v => parseFloat(v));
+  document.getElementById('run-backtest')?.addEventListener('click', runRealBacktest);
 
   // ------- Screener -------
   const universe = [
@@ -2867,6 +3068,9 @@ import { analyze, regime } from './analyze.js';
   }
 
   let latestNews = {};
+  let latestFundamentals = {};   // market cap, P/E, earnings dates from /api/fundamentals
+  let currentBreadth = null;     // { pctAbove50 } — second regime input
+  let fundamentalsLoaded = false;
 
   // Snapshot per-ticker prices before applyQuotes so we can compute deltas → flash after render.
   const pendingFlashes = {}; // ticker -> 'up'|'down'
@@ -2907,6 +3111,24 @@ import { analyze, regime } from './analyze.js';
       const qData = await qRes.json();
       const nData = nRes && nRes.ok ? await nRes.json() : null;
       if (nData && nData.news) latestNews = nData.news;
+
+      // Fundamentals (market cap, P/E, earnings dates) change slowly — fetch once.
+      // This is what makes the earnings-in-window warnings and real screener
+      // market caps possible.
+      if (!fundamentalsLoaded) {
+        fundamentalsLoaded = true;   // set before await so we don't double-fire
+        fetch(`/api/fundamentals?tickers=${encodeURIComponent(newsTickers)}`, { cache: 'no-store' })
+          .then(r => r.ok ? r.json() : null)
+          .then(d => {
+            if (d && d.fundamentals) {
+              latestFundamentals = d.fundamentals;
+              // Re-render with earnings warnings + real market caps now available
+              applyQuotes(qData.quotes || {}, latestNews);
+              renderScreen();
+            }
+          })
+          .catch(() => { /* non-fatal — earnings warnings simply won't show */ });
+      }
       recordPriceChanges(qData.quotes || {});
       applyQuotes(qData.quotes || {}, latestNews);
       renderIntelLive();
@@ -2940,6 +3162,18 @@ import { analyze, regime } from './analyze.js';
   let currentRegime = { level: 'unknown', sizeMult: 1, allow: [], note: 'connecting…' };
 
   function applyQuotes(quotes, news = {}) {
+    // Benchmark bars for relative-strength scoring — a stock up 5% while SPY is
+    // up 9% is a laggard, and absolute momentum alone can't see that.
+    const benchBars = quotes['SPY']?.bars || null;
+    // Market breadth: % of the universe above its own 50d MA. VIX alone lags;
+    // low VIX with collapsing breadth is when momentum entries stop working.
+    const breadthInput = {};
+    for (const [t, q] of Object.entries(quotes)) {
+      if (t.startsWith('^') || !q.bars || q.bars.length < 50) continue;
+      breadthInput[t] = q.bars;
+    }
+    currentBreadth = computeBreadth(breadthInput);
+
     // Picks: derive live price, analytics (with news catalyst), computed score, ATR-based plan
     picks.forEach(p => {
       const q = quotes[p.ticker];
@@ -2949,7 +3183,11 @@ import { analyze, regime } from './analyze.js';
       p.todayChangePct = q.changePct;
       p.volume = q.volume;
       if (q.bars && q.bars.length >= 60) {
-        const a = analyze(q.bars, { news: news[p.ticker] });
+        const a = analyze(q.bars, {
+          news: news[p.ticker],
+          benchBars,
+          earnings: latestFundamentals[p.ticker]?.earnings,
+        });
         if (!a.insufficient) {
           p.analysis = a;
           p.score = a.score;
@@ -2964,7 +3202,11 @@ import { analyze, regime } from './analyze.js';
       if (!q || q.price == null) return;
       u.price = q.price;
       if (q.bars && q.bars.length >= 60) {
-        const a = analyze(q.bars, { news: news[u.ticker] });
+        const a = analyze(q.bars, {
+          news: news[u.ticker],
+          benchBars,
+          earnings: latestFundamentals[u.ticker]?.earnings,
+        });
         if (!a.insufficient) {
           u.analysis = a;
           u.score = a.score;
@@ -2972,13 +3214,19 @@ import { analyze, regime } from './analyze.js';
           u.setup = a.setup;
         }
       }
+      // Real market cap / P/E — no longer mocked
+      const f = latestFundamentals[u.ticker];
+      if (f) {
+        if (f.marketCap != null) u.mcap = f.marketCap;
+        if (f.peRatio != null) u.pe = f.peRatio;
+      }
       u.live = true;
     });
 
-    // Regime from VIX
+    // Regime from VIX + breadth (breadth catches the divergence VIX misses)
     const vixQ = quotes['^VIX'];
     if (vixQ && vixQ.price != null) {
-      currentRegime = regime(vixQ.price);
+      currentRegime = regime(vixQ.price, currentBreadth);
       currentRegime.vix = vixQ.price;
     }
 
@@ -3063,9 +3311,10 @@ import { analyze, regime } from './analyze.js';
       cell('DXY',
            dxy?.price != null ? dxy.price.toFixed(2) : '—',
            fmtPct(dxy?.changePct), dir(dxy?.changePct)),
-      cell('US 10Y',
-           tnx?.price != null ? tnx.price.toFixed(2) + '%' : '—',
-           fmtPct(tnx?.changePct), dir(tnx?.changePct)),
+      cell('Breadth · >50d MA',
+           currentBreadth ? `${currentBreadth.pctAbove50.toFixed(0)}%` : '—',
+           currentBreadth ? `${currentBreadth.above}/${currentBreadth.total} names` : '—',
+           currentBreadth ? (currentBreadth.pctAbove50 > 55 ? 'up' : currentBreadth.pctAbove50 < 40 ? 'down' : 'flat') : 'flat'),
       `
         <div class="pulse-cell regime-cell">
           <div class="label">Regime · VIX ${currentRegime.vix?.toFixed(1) ?? '—'}</div>

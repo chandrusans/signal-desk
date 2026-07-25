@@ -404,7 +404,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v2.4</div>
+      <div class="kicker">Signal Desk · Handbook · v3.0</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -532,8 +532,8 @@
             <td class="max">30 pts</td>
           </tr>
           <tr>
-            <td><strong>Momentum</strong></td>
-            <td>20-day price return, adjusted for RSI. Strong 20d gains score high; overbought RSI (&gt;75) or oversold (&lt;30) applies a penalty.</td>
+            <td><strong>Momentum<br/><span style="font-weight: 400; font-size: 12px; color: var(--accent);">(relative strength)</span></strong></td>
+            <td><strong>Scores outperformance versus SPY, not absolute return.</strong> A stock up 5% while SPY is up 9% is a laggard — absolute momentum alone can't see that and systematically buys underperformers in a strong tape. Full marks at +8% or better relative strength over 20 days. The 60-day RS confirms persistence: recent strength with negative 60d RS is a bounce, not a trend, and gets marked down. RSI still applies its overbought/oversold penalty. Falls back to absolute 20d return only when no benchmark is available.</td>
             <td class="max">25 pts</td>
           </tr>
           <tr>
@@ -595,6 +595,13 @@
 
       <p><span class="setup-chip setup-AVOID">AVOID</span> Nothing clean. No entry criteria met. Do nothing.</p>
 
+      <p><span class="setup-chip" style="color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 16%, transparent);">EARNINGS</span> <strong>Earnings within 5 days.</strong> This state overrides every other classification, no matter how good the technicals look. A stock that opens −12% on a miss fills your stop at −12%, not at −1R. You cannot risk-manage an overnight gap — the stop price simply doesn't exist at the open. Wait for the print.</p>
+
+      <div class="callout warn">
+        <span class="callout-label">Why earnings gets its own state</span>
+        <p>A 15-trading-day swing routinely straddles an earnings date. This is the single most common way an ATR-based stop fails in practice: the model assumes you can exit at your stop, and a gap makes that assumption false. Positions already open when earnings approach get an in-window warning so you can exit before the print or deliberately size down and accept the gamble.</p>
+      </div>
+
       <p>Most days, the majority of tickers show EARLY, BROKEN, or AVOID. That's normal — clean setups are rare. The system rejecting a trade is doing its job.</p>
     </section>
 
@@ -639,6 +646,16 @@
         <li><strong>VIX &gt; 35 · Crisis.</strong> No new positions. Exit weakest holdings. Hedge the book.</li>
       </ul>
       <p>The regime cell in the pulse strip shows the current VIX and what the framework will let you do. The detail panel also shows an explicit "Regime blocks new entry on this setup" line when a candidate's setup isn't allowed under the current regime.</p>
+
+      <h3>Breadth — the second regime input</h3>
+      <p><strong>VIX alone lags.</strong> A calm VIX with collapsing market breadth (2007, January 2020) is precisely when momentum entries stop working: the index is being held up by a handful of mega-caps while the average stock has already rolled over. VIX won't tell you that. Breadth will.</p>
+      <p>The desk computes breadth as <strong>the percentage of the tracked universe trading above its own 50-day moving average</strong> — a real, computable measure from data already being fetched, no extra vendor required. It appears in the pulse strip and overrides the VIX-derived regime:</p>
+      <ul>
+        <li><strong>Below 30%</strong> — regime forced to <code>DIVERGENT</code>. No new longs regardless of VIX. The tape is broken underneath a calm surface.</li>
+        <li><strong>30–45%</strong> — sizing halved, pullbacks only. Narrow tape.</li>
+        <li><strong>Above 65%</strong> — breadth confirms the regime; normal sizing applies.</li>
+      </ul>
+      <p>When breadth and VIX disagree, breadth wins. The more conservative of the two signals always governs.</p>
     </section>
 
     <section id="political">
@@ -865,6 +882,51 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 15</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.0<br/>2026-07-25</div>
+        <div class="what">
+          <h4>External review response — real backtest, relative strength, earnings risk</h4>
+          <p>An independent product/trading review identified two existential gaps: <strong>proof</strong> (the backtest was illustrative, so the core claim was unverified) and <strong>plumbing</strong> (no earnings awareness, mocked fundamentals, absolute-only momentum). This release closes the proof gap entirely and most of the plumbing gap.</p>
+
+          <h4 style="margin-top: 16px;">The backtest is now real</h4>
+          <ul>
+            <li>Seeded/illustrative equity curves are <strong>gone</strong>. The harness now runs the actual scoring engine bar-by-bar over <strong>2 years of real daily OHLC</strong> across the full 30-ticker universe.</li>
+            <li><strong>Point-in-time</strong>: <code>analyze()</code> only ever sees bars up to the current index. No look-ahead.</li>
+            <li><strong>Next-bar fills</strong>: entries execute at the following bar's open, never the signal bar's close.</li>
+            <li><strong>Costs modeled</strong>: 7bps slippage applied on both entry and exit.</li>
+            <li><strong>Gap-aware stops</strong>: if a bar opens below the stop, the fill is at the open — a worse-than-1R loss. This is what actually happens and is the main reason naive backtests overstate results. The report shows gap-through-stop frequency and the worst gap explicitly.</li>
+            <li><strong>Conservative intrabar ordering</strong>: stop is checked before target within the same bar.</li>
+            <li><strong>Open positions discarded</strong> at window end rather than marked to market — no unrealized-gain inflation.</li>
+            <li><strong>Expectancy is the headline number</strong>, not total return. Reported alongside win rate, avg win/loss R, profit factor, max drawdown, Sharpe, Sortino, CAGR, and a full R-multiple distribution.</li>
+            <li><strong>Walk-forward validation</strong>: the window is split into three and out-of-sample expectancy is reported per window. An edge that only appears in one window is noise.</li>
+            <li>Benchmark comparison against buy-and-hold SPY over the identical span — including when the strategy <em>loses</em> to it.</li>
+            <li>R-distribution buckets separate "stop worked as designed" (−1R) from "gapped past the stop" — binning a clean stop-out as a blowout was misleading.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">Signal quality</h4>
+          <ul>
+            <li><strong>Relative strength replaces absolute momentum.</strong> The momentum component now scores outperformance vs SPY. A stock up 5% while SPY is up 9% is a laggard — the old scoring couldn't see that and systematically favored underperformers in a strong tape. 60-day RS confirms persistence; recent strength on negative 60d RS is marked down as a bounce.</li>
+            <li><strong>Market breadth added as a second regime input.</strong> Percentage of the universe above its own 50d MA. Below 30% forces a <code>DIVERGENT</code> regime with no new longs regardless of how calm VIX is — this is the 2007 / early-2020 failure mode that VIX alone misses.</li>
+            <li><strong>RSI(2) added.</strong> The mean-reversion strategy previously generated <em>zero</em> trades because RSI(14) essentially never prints below 35 inside a confirmed uptrend. RSI(2) is the correct oscillator for short-term pullbacks; the strategy now trades and reports honest metrics.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">Risk awareness</h4>
+          <ul>
+            <li><strong>Earnings-date awareness</strong> via a new <code>/api/fundamentals</code> endpoint. Earnings within 5 days forces a new <code>EARNINGS</code> setup state that overrides all technicals and returns an AVOID verdict. Earnings inside the 15-day holding window raises a warning on the card.</li>
+            <li><strong>Gap-risk statistics per ticker</strong>: how often the name has opened beyond 1.5×ATR from the prior close over the last year, and the worst such gap. High-beta names gap through stops far more often than an ATR model assumes.</li>
+            <li><strong>Portfolio heat</strong> and <strong>risk-parity position sizing</strong> helpers added to the analyzer — total open risk in R with a 4%/6% warning ceiling.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">Data</h4>
+          <ul>
+            <li><strong>Market cap and P/E are no longer mocked</strong> — pulled live from NASDAQ alongside 52-week range, average volume, beta, and yield.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">On the "100% win rate" question</h4>
+          <p>The review made the point directly and it belongs in the permanent record: <strong>a 100% win rate is not achievable and designing toward it destroys accounts.</strong> Strategies that appear to win nearly always share one anatomy — many small wins followed by one catastrophic loss. High win rate, negative expectancy. The correct objective, which this framework was already built around, is <strong>positive expectancy with controlled drawdown</strong>: lose small, win big, survive every regime. At a 2.5R target against a 1R stop, a 40–45% win rate is an excellent system. That is the number the backtest now reports honestly, including when it is unflattering.</p>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v2.4<br/>2026-07-23</div>
