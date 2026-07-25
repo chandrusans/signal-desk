@@ -1,3 +1,4 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Signal Desk — Metals · Gold & Silver</title>
 <script>
   (function () {
@@ -583,6 +584,74 @@
 
   @media (prefers-reduced-motion: reduce) {
     *, #live-dot { transition: none !important; animation: none !important; }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+   * MOBILE — phones (≤ 640px)
+   * ══════════════════════════════════════════════════════════════════════ */
+  @media (max-width: 640px) {
+    body { font-size: 15px; }
+    .shell { padding: 14px 14px 60px; }
+
+    .tabbar { flex-direction: column; align-items: stretch; gap: 10px; padding: 0 0 10px; margin-bottom: 14px; }
+    .tabbar-tabs {
+      overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+      margin: 0 -14px; padding: 0 14px;
+    }
+    .tabbar-tabs::-webkit-scrollbar { display: none; }
+    .tab { padding: 12px 16px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
+
+    .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
+    .brand { font-size: 25px; }
+    .brand-mark { width: 30px; height: 30px; margin-right: 8px; vertical-align: -4px; }
+    .meta { text-align: left; font-size: 10.5px; line-height: 1.9; }
+    .theme-toggle, .refresh-btn { min-height: 36px; padding: 8px 12px; }
+
+    /* Drivers strip 2-up */
+    .drivers { grid-template-columns: 1fr 1fr; }
+    .drv-cell { padding: 11px 12px; border-bottom: 1px solid var(--rule); }
+    .drv-cell:nth-child(2n) { border-right: none; }
+    .drv-cell .value { font-size: 14px; }
+
+    .section-head { flex-direction: column; align-items: flex-start; gap: 6px; margin: 24px 0 12px; }
+    .section-head h2 { font-size: 19px; }
+
+    /* Metal panels */
+    .panels { gap: 14px; }
+    .metal-panel { padding: 16px; }
+    .mp-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .mp-ticker { font-size: 18px; }
+    .mp-price { font-size: 24px; text-align: left; }
+    .mp-change { text-align: left; }
+    .coin-ill { width: 24px; height: 24px; margin-right: 8px; }
+    .range-cell { padding: 11px 12px; }
+    .range-cell .hi, .range-cell .lo { font-size: 14px; }
+    .ind-grid { grid-template-columns: 96px 1fr auto; gap: 8px; }
+    .plan { grid-template-columns: 1fr 1fr; }
+    .plan-cell { border-bottom: 1px solid var(--rule); }
+    .plan-cell:nth-child(2n) { border-right: none; }
+
+    .rules { grid-template-columns: 1fr; }
+    .rule-cell { border-right: none; padding: 14px 16px; }
+
+    .feed li { grid-template-columns: 46px 52px 1fr; gap: 8px; padding: 11px 14px; }
+    .feed .tk, .feed .sent { display: none; }
+    .feed .hd { font-size: 13px; }
+
+    .hb-drawer { width: 100vw; }
+    .hb-header { padding: 12px 14px; }
+    .hb-close { min-height: 40px; }
+    .disclosure { padding: 16px 14px; }
+  }
+
+  @media (max-width: 380px) {
+    .brand { font-size: 22px; }
+    .drivers { grid-template-columns: 1fr; }
+    .drv-cell { border-right: none; }
+    .plan { grid-template-columns: 1fr; }
+    .plan-cell { border-right: none; }
   }
 </style>
 

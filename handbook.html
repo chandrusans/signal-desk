@@ -1,3 +1,4 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Signal Desk — Handbook</title>
 <script>
   (function () {
@@ -398,6 +399,61 @@
 
   @media (prefers-reduced-motion: reduce) {
     *, .toc li.active::before { transition: none !important; animation: none !important; }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+   * MOBILE — phones (≤ 640px)
+   * The handbook is long-form reading, so the priority here is comfortable
+   * line length and type size rather than density.
+   * ══════════════════════════════════════════════════════════════════════ */
+  @media (max-width: 640px) {
+    body { font-size: 16px; }                 /* reading page — keep it generous */
+    .shell { padding: 16px 16px 60px; gap: 20px; }
+
+    .masthead { grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px; padding-bottom: 14px; }
+    .brand { font-size: 25px; }
+    .meta { text-align: left; font-size: 10.5px; }
+    .theme-toggle { min-height: 38px; }
+
+    /* TOC becomes a collapsible-feeling block above the content rather than
+       a sticky sidebar (sticky sidebars are useless on a phone) */
+    .toc {
+      position: static; border-right: none; border-bottom: 1px solid var(--rule);
+      padding: 0 0 16px; margin-bottom: 4px;
+    }
+    .toc-group { margin-bottom: 14px; }
+    .toc li { font-size: 14px; padding-left: 16px; }
+    .toc li a { display: inline-block; padding: 4px 0; }   /* bigger tap target */
+
+    .content { max-width: none; }
+    .content section { margin-bottom: 40px; scroll-margin-top: 12px; }
+    .content h2 { font-size: 23px; }
+    .content h3 { font-size: 18px; margin: 24px 0 8px; }
+    .content p, .content li { font-size: 15.5px; }
+    .content ul, .content ol { padding-left: 20px; }
+
+    /* Tables scroll rather than crush */
+    .pt-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: normal; }
+    .pt-table th, .pt-table td { padding: 9px 11px; font-size: 13px; }
+
+    .callout { padding: 14px 16px; }
+    .callout p { font-size: 14.5px; }
+
+    .log-entry { grid-template-columns: 1fr; gap: 8px; padding: 14px 0; }
+    .log-entry .when {
+      font-size: 10.5px; letter-spacing: 0.1em;
+      padding-bottom: 4px; border-bottom: 1px dotted var(--rule);
+    }
+    .log-entry .what h4 { font-size: 15px; }
+    .log-entry .what ul { font-size: 14px; }
+
+    .disclosure { padding: 16px; }
+    .setup-chip { margin-bottom: 4px; }
+  }
+
+  @media (max-width: 380px) {
+    .brand { font-size: 22px; }
+    .content h2 { font-size: 21px; }
   }
 </style>
 
