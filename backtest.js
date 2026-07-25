@@ -43,17 +43,18 @@ export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars =
   const vixByTs = {};
   if (vixBars) for (const b of vixBars) vixByTs[dayKey(b.t)] = b.c;
 
-  const trades = [];
-  const openByTicker = {};
-
   // Collect every ticker's usable bar range
   const tickers = Object.keys(barsByTicker).filter(t => (barsByTicker[t] || []).length > cfg.warmupBars + 20);
   if (tickers.length === 0) {
     return { error: 'insufficient history', trades: [], metrics: null };
   }
 
-  // Walk each ticker independently (positions are independent; portfolio-level
-  // concurrency cap applied afterwards in chronological order).
+  // ── PASS 1 ─────────────────────────────────────────────────────────────
+  // Generate every candidate trade per ticker, with its full lifecycle
+  // resolved. These are hypotheticals — pass 2 decides which we could
+  // actually have taken given the portfolio's concurrent-position limit.
+  const candidates = [];
+
   for (const ticker of tickers) {
     const bars = barsByTicker[ticker];
     let open = null;
@@ -88,13 +89,15 @@ export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars =
         if (exit) {
           const exitFill = exit.price * (1 - cfg.slippageBps / 10000);
           const rMultiple = (exitFill - open.entryFill) / open.R;
-          trades.push({
+          candidates.push({
             ticker,
+            entryIdx: open.entryIdx,
+            exitIdx: t,
             entryDate: bars[open.entryIdx + 1].t,
             exitDate: bar.t,
             entry: open.entryFill,
             exit: exitFill,
-            stop: open.stop,
+            stop: open.initialStop,
             target: open.target,
             R: open.R,
             rMultiple,
@@ -158,21 +161,45 @@ export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars =
         entryIdx: t,
         entryFill,
         stop,
+        initialStop: stop,      // preserved for reporting; `stop` gets trailed
         target,
         R: stopDist,
         setup: a.setup,
         score: a.score,
       };
     }
-    // Any still-open position at the end of data is discarded (not counted as a
-    // win or loss — reporting unrealized results would inflate the record).
-    openByTicker[ticker] = open ? 1 : 0;
+    // Any still-open position at the end of data is discarded — reporting an
+    // unrealized paper gain would inflate the record.
   }
 
-  // Sort trades chronologically for the equity curve
-  trades.sort((a, b) => a.entryDate - b.entryDate);
+  // ── PASS 2 ─────────────────────────────────────────────────────────────
+  // Portfolio-level simulation. Walk candidates in chronological order and
+  // accept a trade only when a slot is free. Without this the backtest would
+  // silently assume you could hold every signal simultaneously (30+ positions),
+  // which is far more permissive than the live rules and materially inflates
+  // returns. Skipped signals are counted so the omission is visible.
+  candidates.sort((a, b) => a.entryDate - b.entryDate);
+  const trades = [];
+  let skippedForCapacity = 0;
+  const openUntil = [];   // exitDate timestamps of currently-open positions
+
+  for (const c of candidates) {
+    // Free any slots whose position closed before this candidate's entry
+    for (let i = openUntil.length - 1; i >= 0; i--) {
+      if (openUntil[i] <= c.entryDate) openUntil.splice(i, 1);
+    }
+    if (openUntil.length >= cfg.maxConcurrent) { skippedForCapacity++; continue; }
+    openUntil.push(c.exitDate);
+    trades.push(c);
+  }
+
   const metrics = computeMetrics(trades, cfg, benchBars);
-  return { trades, metrics, config: cfg, openAtEnd: Object.values(openByTicker).reduce((s, x) => s + x, 0) };
+  if (metrics && !metrics.note) {
+    metrics.candidatesGenerated = candidates.length;
+    metrics.skippedForCapacity = skippedForCapacity;
+    metrics.maxConcurrent = cfg.maxConcurrent;
+  }
+  return { trades, metrics, config: cfg, candidates: candidates.length, skippedForCapacity };
 }
 
 function dayKey(ts) {
@@ -307,21 +334,43 @@ export function walkForward(barsByTicker, opts = {}, vixBars = null, splits = 3)
   const results = [];
   const tickers = Object.keys(barsByTicker);
   if (!tickers.length) return results;
+  const cfg = { ...DEFAULTS, ...opts };
   const len = Math.min(...tickers.map(t => barsByTicker[t].length));
-  const windowSize = Math.floor(len / splits);
+
+  // Each window must carry its full warmup history, otherwise the indicators
+  // are never valid and the window trades nothing. Naively slicing the bar
+  // array into N equal pieces (the obvious implementation) silently produces
+  // zero trades whenever len/splits < warmupBars — which looked like "the
+  // strategy has no edge out of sample" when really it just never ran.
+  const tradableLen = len - cfg.warmupBars;
+  if (tradableLen < splits * 25) {
+    return [{
+      window: 1,
+      note: `need ≥${cfg.warmupBars + splits * 25} bars for ${splits}-way walk-forward; have ${len}`,
+      metrics: null,
+    }];
+  }
+  const windowSize = Math.floor(tradableLen / splits);
 
   for (let i = 0; i < splits; i++) {
-    const start = i * windowSize;
-    const end = (i + 1) * windowSize;
+    const testStart = cfg.warmupBars + i * windowSize;
+    const testEnd = i === splits - 1 ? len : cfg.warmupBars + (i + 1) * windowSize;
+    // Give the window ALL preceding bars so indicators are valid, then only
+    // count trades whose entry falls inside the out-of-sample slice.
     const sliced = {};
-    for (const t of tickers) sliced[t] = barsByTicker[t].slice(start, end);
-    const vixSlice = vixBars ? vixBars.slice(start, end) : null;
+    for (const t of tickers) sliced[t] = barsByTicker[t].slice(0, testEnd);
+    const vixSlice = vixBars ? vixBars.slice(0, testEnd) : null;
     const r = runBacktest(sliced, opts, vixSlice);
+
+    const anyTicker = barsByTicker[tickers[0]];
+    const fromTs = anyTicker[testStart]?.t;
+    const toTs = anyTicker[testEnd - 1]?.t;
+    const windowTrades = (r.trades || []).filter(tr => tr.entryDate >= fromTs);
     results.push({
       window: i + 1,
-      from: sliced[tickers[0]]?.[0]?.t,
-      to: sliced[tickers[0]]?.[sliced[tickers[0]].length - 1]?.t,
-      metrics: r.metrics,
+      from: fromTs,
+      to: toTs,
+      metrics: windowTrades.length ? computeMetrics(windowTrades, cfg, null) : { note: 'no trades in window' },
     });
   }
   return results;

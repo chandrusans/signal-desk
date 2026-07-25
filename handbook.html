@@ -902,7 +902,14 @@
             <li><strong>Walk-forward validation</strong>: the window is split into three and out-of-sample expectancy is reported per window. An edge that only appears in one window is noise.</li>
             <li>Benchmark comparison against buy-and-hold SPY over the identical span — including when the strategy <em>loses</em> to it.</li>
             <li>R-distribution buckets separate "stop worked as designed" (−1R) from "gapped past the stop" — binning a clean stop-out as a blowout was misleading.</li>
+            <li><strong>Portfolio concurrency is enforced (max 5 open positions).</strong> The first implementation let every ticker trade independently, silently assuming you could hold 30+ positions at once. Enforcing the real cap cut the composite strategy's reported return from <strong>+96% to +23%</strong> over the same window. Signals that fired while the book was full are skipped and counted so the omission is visible rather than hidden.</li>
+            <li><strong>Walk-forward windows now carry their full warmup history.</strong> The naive implementation sliced the bar array into equal pieces; since each piece was shorter than the 200-bar warmup, no window ever traded and the output read "no trades" — which looks identical to "no edge." Each window now gets all preceding bars for indicator validity, and only trades entered inside the window are scored.</li>
           </ul>
+
+          <div class="callout warn" style="margin-top: 14px;">
+            <span class="callout-label">What the corrected backtest actually says</span>
+            <p>On the 2-year sample, the composite strategy returned <strong>+23.3%</strong> (CAGR 19.5%, max drawdown −9.5%, expectancy +0.222R, profit factor 1.53) versus <strong>+26.5%</strong> for simply buying and holding SPY. It did <em>not</em> beat the index over this window. Momentum alone did worse: +13.7% against the same 24.1% benchmark. Walk-forward shows why — the middle window (Oct 2025 → Feb 2026) had <strong>negative expectancy</strong> for both strategies. The edge is real but regime-dependent, and this is a 2-year sample, which is short. These numbers are reported as they come out, including when they are unflattering.</p>
+          </div>
 
           <h4 style="margin-top: 16px;">Signal quality</h4>
           <ul>

@@ -1836,6 +1836,9 @@
         Stops are checked before targets within a bar (conservative). If a bar opens below the stop, the fill is at the
         open — a worse-than-1R loss — which is what actually happens and is why most retail backtests overstate results.
         Positions still open at the end of the window are discarded rather than marked to market.
+        The portfolio is capped at <strong>5 concurrent positions</strong>: signals that fired while the book was already full
+        are skipped and counted, because you could not actually have taken them. Walk-forward windows each carry the full
+        preceding history so indicators are valid, but only trades entered inside the window are scored.
       </div>
     </div>
   </div>
@@ -2777,6 +2780,7 @@ import { runBacktest, walkForward } from './backtest.js';
       <div class="stat-row"><span class="lbl">Gapped past stop</span><span class="val ${m.gapThroughStopRate > 0.05 ? 'neg' : ''}">${(m.gapThroughStopRate * 100).toFixed(1)}%</span></div>
       <div class="stat-row"><span class="lbl">Worst gap loss</span><span class="val neg">${m.worstGapR.toFixed(2)}R</span></div>
       <div class="stat-row"><span class="lbl">Final equity ($10k)</span><span class="val ${m.finalEquity >= 10000 ? 'pos' : 'neg'}">$${m.finalEquity.toLocaleString(undefined, {maximumFractionDigits: 0})}</span></div>
+      <div class="stat-row"><span class="lbl">Signals skipped (full book)</span><span class="val" title="Max ${m.maxConcurrent} concurrent positions. Signals firing while the book was full could not have been taken.">${m.skippedForCapacity ?? 0}<span style="font-size: 10px; color: var(--ink-3);"> of ${m.candidatesGenerated ?? m.trades}</span></span></div>
       <div class="stat-row" style="border-bottom: none;"><span class="lbl">Exits</span><span class="val" style="font-size: 10px; text-align: right; max-width: 140px;">${reasons}</span></div>
     `;
 
