@@ -319,6 +319,10 @@
     .brand-mark { width: 30px; height: 30px; margin-right: 8px; vertical-align: -4px; }
     .meta { text-align: left; font-size: 10.5px; line-height: 1.9; }
     .theme-toggle, .refresh-btn { min-height: 36px; padding: 8px 12px; }
+    /* Header buttons inline rather than stacked — reclaims vertical space */
+    .meta { display: flex; flex-direction: column; gap: 2px; }
+    .meta > div { display: block; }
+    .theme-toggle { align-self: flex-start; margin-top: 6px; }
 
     .broker-strip { padding: 12px 14px; gap: 8px; font-size: 10.5px; }
 
@@ -358,7 +362,7 @@
     .empty-state, .loading-state { padding: 32px 16px; font-size: 14px; }
   }
 
-  @media (max-width: 380px) {
+  @media (max-width: 360px) {
     .brand { font-size: 23px; }
     .opt-analytics { grid-template-columns: 1fr; }
     .an-cell { border-right: none; }
