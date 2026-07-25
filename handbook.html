@@ -50,6 +50,7 @@
     --rule: #262B36; --panel: #161B24; --accent: #D6A24B; --signal: #5FBF83; --caution: #D4A040; --risk: #D96355;
   }
   html { color-scheme: light dark; }
+  html, body { overflow-x: hidden; max-width: 100%; }
   body { background: var(--ground); color: var(--ink); font-family: var(--serif); font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
   * { box-sizing: border-box; }
 
@@ -408,6 +409,20 @@
    * ══════════════════════════════════════════════════════════════════════ */
   @media (max-width: 640px) {
     body { font-size: 16px; }                 /* reading page — keep it generous */
+
+    /* Grid/flex children default to min-width:auto and refuse to shrink below
+       their content, which pushes the page wider than the viewport. Allowing
+       them to shrink is what actually stops horizontal scroll. */
+    .desk, .desk > *, .picks, .card, .card > *, .card-body, .card-body > *,
+    .detail, .detail > *, .pos-card, .pos-card > *, .pos-primary, .pos-primary > *,
+    .opt-card, .opt-card > *, .opt-top, .opt-top > *, .metal-panel, .metal-panel > *,
+    .an-cell, .an-cell > *, .rules, .rule-cell, .intel, .feed li, .feed li > * {
+      min-width: 0;
+    }
+    /* Long unbroken strings (OCC symbols, URLs) must wrap rather than push */
+    .thesis, .verdict-reason, .buzz-snippet, .hd, .pos-notes, .an-value, .an-sub {
+      overflow-wrap: anywhere;
+    }
     .shell { padding: 16px 16px 60px; gap: 20px; }
 
     .masthead { grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px; padding-bottom: 14px; }

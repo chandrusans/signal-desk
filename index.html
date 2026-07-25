@@ -80,6 +80,7 @@
   }
 
   html { color-scheme: light dark; }
+  html, body { overflow-x: hidden; max-width: 100%; }
   body {
     background: var(--ground);
     color: var(--ink);
@@ -1670,6 +1671,19 @@
   @media (max-width: 640px) {
     body { font-size: 15px; }                 /* 14px reads too small on a phone */
     .shell { padding: 14px 14px 60px; }
+
+    /* Grid/flex children default to min-width:auto and refuse to shrink below
+       their content, which pushes the page wider than the viewport. Letting
+       them shrink is what actually stops horizontal scroll. */
+    .desk, .desk > *, .picks, .card, .card > *, .card-body, .card-body > *,
+    .detail, .detail > *, .an-cell, .an-cell > *, .rules, .rule-cell,
+    .intel, .feed li, .feed li > *, .bt-headline, .bt-hl-cell, .back-grid > * {
+      min-width: 0;
+    }
+    /* Long unbroken strings (OCC symbols, URLs) must wrap rather than push */
+    .thesis, .verdict-reason, .buzz-snippet, .hd, .an-value, .an-sub {
+      overflow-wrap: anywhere;
+    }
 
     /* --- Tab bar: horizontally scrollable, snapping, never shrinking --- */
     .tabbar {
