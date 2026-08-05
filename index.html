@@ -1883,11 +1883,20 @@
   <div class="pulse" id="pulse"></div>
 
   <div class="section-head">
-    <h2>Top candidates · ranked by live composite score</h2>
+    <h2>Top candidates · S&amp;P 500, ranked by live composite score</h2>
     <span class="aside" id="picks-count">—</span>
   </div>
 
   <div class="filter-bar">
+    <div class="filter-group" style="width: 100%;">
+      <span class="flbl">Universe</span>
+      <span id="scan-status" style="font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.04em;">loading…</span>
+      <button class="refresh-btn" id="rescan-btn" title="Re-scan the full S&amp;P 500">↻ Rescan</button>
+    </div>
+    <div class="filter-group" style="width: 100%;">
+      <span class="flbl">Sector</span>
+      <div class="seg" id="seg-sector"></div>
+    </div>
     <div class="filter-group">
       <span class="flbl">Setup</span>
       <div class="seg" id="seg-setup">
@@ -1913,10 +1922,10 @@
     <div class="filter-group">
       <span class="flbl">Show</span>
       <div class="seg" id="seg-show">
-        <button data-v="5" class="on">5</button>
-        <button data-v="10">10</button>
+        <button data-v="10" class="on">10</button>
         <button data-v="25">25</button>
-        <button data-v="999">All</button>
+        <button data-v="50">50</button>
+        <button data-v="9999">All</button>
       </div>
     </div>
   </div>
@@ -2525,6 +2534,12 @@ import { runBacktest, walkForward } from './backtest.js';
     },
   ];
 
+  // The hand-authored entries above are kept aside because `picks` gets
+  // rebuilt from the S&P 500 scan. When a curated name appears in the scan
+  // results it keeps its written thesis and source badges; everything else
+  // renders from computed data alone.
+  const CURATED = picks.map(p => ({ ...p }));
+
   // ------- Sparkline renderer -------
   function sparkline(data, w=90, h=28) {
     const min = Math.min(...data), max = Math.max(...data);
@@ -2593,7 +2608,7 @@ import { runBacktest, walkForward } from './backtest.js';
     return 'HOLD';
   }
 
-  let showCount = 5;
+  let showCount = 10;
   let setupFilter = 'ALL';
   let verdictFilter = 'ALL';
   const picksCountEl = document.getElementById('picks-count');
@@ -2602,6 +2617,7 @@ import { runBacktest, walkForward } from './backtest.js';
     // Apply filters BEFORE slicing to showCount so "Show 25" of BUYs actually
     // shows 25 BUYs, not 25 of everything filtered down to a handful.
     const filtered = picks.filter(p => {
+      if (sectorFilter !== 'ALL' && p.sector !== sectorFilter) return false;
       if (setupFilter !== 'ALL' && p.setup !== setupFilter) return false;
       if (verdictFilter !== 'ALL' && verdictForStock(p) !== verdictFilter) return false;
       return true;
@@ -2675,10 +2691,17 @@ import { runBacktest, walkForward } from './backtest.js';
           } catch (err) { alert('Failed: ' + err.message); }
           return;
         }
-        activeTicker = el.dataset.ticker; renderPicks(); renderDetail(activeTicker);
+        activeTicker = el.dataset.ticker;
+        renderPicks(); renderDetail(activeTicker);
+        ensureDetail(activeTicker);   // fetch full bars for this one ticker
       });
       el.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeTicker = el.dataset.ticker; renderPicks(); renderDetail(activeTicker); }
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          activeTicker = el.dataset.ticker;
+          renderPicks(); renderDetail(activeTicker);
+          ensureDetail(activeTicker);
+        }
       });
     });
   }
@@ -2707,6 +2730,15 @@ import { runBacktest, walkForward } from './backtest.js';
         <em style="color: var(--ink-2);">
           Regime · <span class="surfaced-src">${currentRegime.level.toUpperCase()}</span> (VIX ${currentRegime.vix?.toFixed(1) ?? '—'}) — ${currentRegime.note}.
           ${gated ? ' <strong style="color: var(--risk);">Regime blocks new entry on this setup.</strong>' : ''}
+        </em>
+      </div>
+    ` : p.scan ? `
+      <div class="surfaced">
+        <span class="surfaced-label">Setup · ${p.scan.su}</span>
+        ${p.scan.reason}<br/>
+        <em style="color: var(--ink-2);">
+          Regime · <span class="surfaced-src">${currentRegime.level.toUpperCase()}</span> (VIX ${currentRegime.vix?.toFixed(1) ?? '—'}) — ${currentRegime.note}.
+          Loading full history for the detailed breakdown…
         </em>
       </div>
     ` : `
@@ -2783,6 +2815,28 @@ import { runBacktest, walkForward } from './backtest.js';
         <li>Flat after ${a.plan.timeStopDays} trading days → close (opportunity cost).</li>
         <li>SPY closes below 50-day MA → exit entire momentum book.</li>
       </ul>
+      ` : p.scan ? `
+      <h3>Indicators (from screen)</h3>
+      <div class="score-parts" style="grid-template-columns: 140px 1fr 90px;">
+        <span class="pk">Price</span>              <div></div> <span class="pv">${p.scan.p != null ? '$' + p.scan.p.toFixed(2) : '—'}</span>
+        <span class="pk">RSI(14)</span>            <div></div> <span class="pv">${p.scan.rsi ?? '—'}</span>
+        <span class="pk">ATR %</span>              <div></div> <span class="pv">${p.scan.atr != null ? p.scan.atr + '%' : '—'}</span>
+        <span class="pk">20d / 60d return</span>   <div></div> <span class="pv">${p.scan.r20 ?? '—'}% / ${p.scan.r60 ?? '—'}%</span>
+        <span class="pk">RS vs SPY (20d)</span>    <div></div> <span class="pv">${p.scan.rs != null ? (p.scan.rs >= 0 ? '+' : '') + p.scan.rs + '%' : '—'}</span>
+        <span class="pk">RS vs sector</span>       <div></div> <span class="pv">${p.scan.srs != null ? (p.scan.srs >= 0 ? '+' : '') + p.scan.srs + '%' : '—'}</span>
+        <span class="pk">From 52w high</span>      <div></div> <span class="pv">${p.scan.d52 ?? '—'}%</span>
+        <span class="pk">Vol 5d/20d</span>         <div></div> <span class="pv">${p.scan.vr != null ? p.scan.vr + '×' : '—'}</span>
+        <span class="pk">Above 50d MA</span>       <div></div> <span class="pv">${p.scan.a50 == null ? '—' : (p.scan.a50 ? 'yes' : 'no')}</span>
+      </div>
+
+      <h3>Trade plan · ATR-derived</h3>
+      <div class="plan">
+        <div class="plan-cell stop"><div class="l">Stop</div><div class="n">${p.scan.stop != null ? '$' + p.scan.stop.toFixed(2) : '—'}</div></div>
+        <div class="plan-cell tgt"><div class="l">Target</div><div class="n">${p.scan.tgt != null ? '$' + p.scan.tgt.toFixed(2) : '—'}</div></div>
+      </div>
+      <p style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin: 8px 0 0; letter-spacing: 0.06em;">
+        Screened values. Full breakdown — score components, tape notes, exit checklist — loads in a moment.
+      </p>
       ` : ''}
     `;
   }
@@ -2864,8 +2918,14 @@ import { runBacktest, walkForward } from './backtest.js';
 
   async function fetchBacktestBars() {
     if (btBars) return btBars;
-    const universe = [...new Set([...Object.keys(EXTRA_NAMES), ...picks.map(p => p.ticker)])]
-      .filter(t => !t.startsWith('^'));
+    // Backtest universe is deliberately bounded. `picks` now holds the whole
+    // S&P 500; running 500 tickers × 2y of bars bar-by-bar through the scoring
+    // engine in the browser is neither fast nor more informative than a broad,
+    // liquid sample. Top-ranked names plus the fixed liquid set.
+    const universe = [...new Set([
+      ...Object.keys(EXTRA_NAMES),
+      ...picks.slice(0, 20).map(p => p.ticker),
+    ])].filter(t => !t.startsWith('^')).slice(0, 40);
     const withMacro = [...universe, 'SPY', '^VIX'].join(',');
     const res = await fetch(`/api/quotes?tickers=${encodeURIComponent(withMacro)}&range=2y`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`quotes HTTP ${res.status}`);
@@ -3236,9 +3296,21 @@ import { runBacktest, walkForward } from './backtest.js';
     return POL_SECTORS[ticker] || null;
   }
 
+  // How many of the ranked candidates get live price polling. `picks` now
+  // holds the whole S&P 500, and asking /api/quotes for 500 tickers of 1y bars
+  // every poll is both far past the endpoint's 60-ticker cap and the 13MB
+  // payload the server-side scan exists to avoid. The rest keep their scan
+  // price, which is live as of the last scan, and refresh on the next one.
+  //
+  // Budget check: /api/quotes caps at 60 tickers and silently drops the rest.
+  // The fixed part of the list — EXTRA_NAMES (25) + screener universe (20) +
+  // 5 macro symbols — dedupes to 39, leaving 21 slots. Keep this at or below
+  // that, and re-check it if EXTRA_NAMES or the screener universe grows.
+  const POLL_TOP_N = 20;
+
   function tickerList() {
     return [...new Set([
-      ...picks.map(p => p.ticker),
+      ...picks.slice(0, POLL_TOP_N).map(p => p.ticker),
       ...universe.map(u => u.ticker),
       ...Object.keys(EXTRA_NAMES),
       // Macro tickers for the pulse strip — S&P 500, Nasdaq 100, DXY, US 10Y, VIX
@@ -3252,8 +3324,244 @@ import { runBacktest, walkForward } from './backtest.js';
       .join(',');
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // S&P 500 SCAN
+  // The full index at 1y of daily bars is ~13MB of raw Yahoo payload — over
+  // Vercel's response limit and unusable on mobile. So scoring happens
+  // server-side (/api/scan) and we ship ~360 bytes per ticker instead: ~178KB
+  // for all 503. Full bar history is fetched for the ONE ticker a user opens.
+  // ══════════════════════════════════════════════════════════════════════
+  const SCAN_BATCH = 50;
+  const SCAN_CONCURRENCY = 6;         // browsers cap ~6 connections per host anyway
+  let spxUniverse = null;             // [{symbol, name, sector, sectorEtf}]
+  let scanRows = [];                  // compact scored rows, merged across batches
+  let scanning = false;
+  let lastScanAt = 0;
+  let sectorFilter = 'ALL';
+
+  async function loadUniverse() {
+    if (spxUniverse) return spxUniverse;
+    const r = await fetch('/api/universe', { cache: 'no-store' });
+    if (!r.ok) throw new Error(`universe HTTP ${r.status}`);
+    const d = await r.json();
+    spxUniverse = d.constituents || [];
+    return spxUniverse;
+  }
+
+  function setScanStatus(msg) {
+    const el = document.getElementById('scan-status');
+    if (el) el.textContent = msg;
+  }
+
+  /** Run pool-limited async work, invoking onProgress as each task lands. */
+  async function pooled(items, limit, worker, onProgress) {
+    const results = [];
+    let idx = 0, done = 0;
+    async function runner() {
+      while (idx < items.length) {
+        const i = idx++;
+        try { results[i] = await worker(items[i], i); }
+        catch { results[i] = null; }
+        done++;
+        onProgress?.(done, items.length, results[i]);
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, runner));
+    return results;
+  }
+
+  async function scanUniverse({ force = false } = {}) {
+    if (scanning) return;
+    // Scanning the whole index is heavy; don't redo it on every 15s price poll.
+    if (!force && Date.now() - lastScanAt < 5 * 60 * 1000 && scanRows.length) return;
+    scanning = true;
+    const btn = document.getElementById('rescan-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⋯ Scanning'; }
+
+    try {
+      const uni = await loadUniverse();
+      setScanStatus(`scanning ${uni.length} tickers…`);
+
+      // Chunk into batches, each carrying its own ticker->sectorETF map so the
+      // server can compute sector-relative strength alongside market RS.
+      const batches = [];
+      for (let i = 0; i < uni.length; i += SCAN_BATCH) batches.push(uni.slice(i, i + SCAN_BATCH));
+
+      const merged = [];
+      await pooled(batches, SCAN_CONCURRENCY, async (batch) => {
+        const tickers = batch.map(c => c.symbol).join(',');
+        const sectors = batch.filter(c => c.sectorEtf).map(c => `${c.symbol}:${c.sectorEtf}`).join(',');
+        const url = `/api/scan?tickers=${encodeURIComponent(tickers)}&sectors=${encodeURIComponent(sectors)}`;
+        const r = await fetch(url, { cache: 'no-store' });
+        if (!r.ok) return null;
+        const d = await r.json();
+        return d.rows || [];
+      }, (done, total, rows) => {
+        if (Array.isArray(rows)) merged.push(...rows);
+        setScanStatus(`scanning… ${merged.length} scored · batch ${done}/${total}`);
+        // Render progressively so the page fills in rather than sitting blank
+        if (done % 2 === 0 || done === total) {
+          scanRows = merged.slice();
+          rebuildPicksFromScan();
+          renderPicks();
+        }
+      });
+
+      scanRows = merged;
+      lastScanAt = Date.now();
+      rebuildPicksFromScan();
+      renderPicks();
+      renderSectorFilter();
+
+      // Breadth from the full index is far more meaningful than from 30 names
+      const withMa = scanRows.filter(r => r.a50 != null);
+      if (withMa.length > 50) {
+        const above = withMa.filter(r => r.a50).length;
+        currentBreadth = { pctAbove50: (above / withMa.length) * 100, above, total: withMa.length };
+        if (currentRegime?.vix != null) {
+          currentRegime = Object.assign(regime(currentRegime.vix, currentBreadth), { vix: currentRegime.vix });
+        }
+        renderPulseLive(lastQuotes || {});
+      }
+      setScanStatus(`${scanRows.length} of ${spxUniverse.length} scored · S&P 500`);
+    } catch (e) {
+      setScanStatus(`scan failed · ${e.message}`);
+    } finally {
+      scanning = false;
+      if (btn) { btn.disabled = false; btn.textContent = '↻ Rescan'; }
+    }
+  }
+
+  /**
+   * Turn compact scan rows into the pick shape the card renderer expects.
+   * Curated entries keep their hand-authored thesis and source badges; the
+   * rest render from computed data alone.
+   */
+  /**
+   * "Surfaced by" badges for a screened name. The curated picks have
+   * hand-written provenance; a scanned name's provenance is the screen itself,
+   * so show the numbers that actually put it on the list.
+   */
+  function scanSources(r) {
+    const out = [{ src: 'tech', w: String(r.sc) }];
+    if (r.rs != null && r.rs > 0) out.push({ src: 'rating', w: r.rs.toFixed(1) });
+    if (r.vr != null && r.vr >= 1.3) out.push({ src: 'flow', w: r.vr.toFixed(1) });
+    return out;
+  }
+
+  /**
+   * Rank order for the candidate list. The composite caps at 100 and across
+   * 500 names a dozen or more tie there, so break ties on leadership rather
+   * than leaving it to array order.
+   */
+  function comparePicks(a, b) {
+    const rsOf = (p) => p.analysis?.indicators?.rs20 ?? p.scan?.rs ?? null;
+    const srsOf = (p) => p.scan?.srs ?? null;
+    return (b.score || 0) - (a.score || 0)
+      || (srsOf(b) ?? -999) - (srsOf(a) ?? -999)
+      || (rsOf(b) ?? -999) - (rsOf(a) ?? -999);
+  }
+
+  function rebuildPicksFromScan() {
+    if (!scanRows.length) return;
+    const curatedByTicker = Object.fromEntries(CURATED.map(p => [p.ticker, p]));
+    const meta = Object.fromEntries((spxUniverse || []).map(c => [c.symbol, c]));
+    const next = scanRows.map(r => {
+      const cur = curatedByTicker[r.t];
+      const m = meta[r.t];
+      return {
+        ticker: r.t,
+        name: m ? `${m.name} · ${m.sector}` : (cur?.name || r.t),
+        sector: m?.sector || null,
+        polSector: polSectorFor(r.t),
+        risk: cur?.risk || DEFAULT_RISK,
+        thesis: cur?.thesis || '',
+        rationale: cur?.rationale || [],
+        signals: cur?.signals || {},
+        sources: cur?.sources?.length ? cur.sources : scanSources(r),
+        price: r.p,
+        todayChangePct: r.c,
+        score: r.sc,
+        setup: r.su,
+        setupReason: r.reason,
+        spark: r.spark,
+        scan: r,                    // keep the compact row for the card + filters
+        analysis: null,             // full analysis is fetched on demand when opened
+      };
+    });
+    // Keep any non-S&P names already slotted in (COIN, HOOD, …) — they aren't
+    // index constituents so the scan will never return them.
+    const scanned = new Set(next.map(p => p.ticker));
+    const keep = picks.filter(p => p.auto && !scanned.has(p.ticker));
+    picks.length = 0;
+    picks.push(...next, ...keep);
+    picks.sort(comparePicks);
+    // Only the top slice gets live price polling — 500 tickers every 15s is
+    // neither necessary nor kind to the upstream API.
+    window.__pick_tickers = picks.slice(0, POLL_TOP_N).map(p => p.ticker);
+  }
+
+  /**
+   * Full analysis for one ticker, fetched only when the user opens its card.
+   * This is what keeps the index-wide scan cheap — we never ship 500 tickers
+   * of bar history, only the one being inspected.
+   */
+  async function ensureDetail(ticker) {
+    const p = picks.find(x => x.ticker === ticker);
+    if (!p || p.analysis) return;
+    try {
+      const r = await fetch(`/api/quotes?tickers=${encodeURIComponent(ticker)},SPY&range=1y`, { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      const q = d.quotes?.[ticker];
+      const spy = d.quotes?.SPY?.bars || null;
+      if (!q?.bars || q.bars.length < 60) return;
+      const a = analyze(q.bars, {
+        benchBars: spy,
+        news: latestNews[ticker],
+        earnings: latestFundamentals[ticker]?.earnings,
+      });
+      if (a.insufficient) return;
+      p.analysis = a;
+      p.price = q.price ?? p.price;
+      p.todayChangePct = q.changePct ?? p.todayChangePct;
+      p.score = a.score;
+      p.setup = a.setup;
+      p.setupReason = a.setupReason;
+      if (activeTicker === ticker) renderDetail(ticker);
+      renderPicks();
+    } catch { /* detail stays unavailable; card still renders from scan data */ }
+  }
+
+  function renderSectorFilter() {
+    const el = document.getElementById('seg-sector');
+    if (!el || !spxUniverse) return;
+    const counts = {};
+    for (const p of picks) if (p.sector) counts[p.sector] = (counts[p.sector] || 0) + 1;
+    const sectors = Object.keys(counts).sort();
+    if (!sectors.length) return;
+    const short = (s) => s
+      .replace('Information Technology', 'Tech')
+      .replace('Consumer Discretionary', 'Cons Disc')
+      .replace('Consumer Staples', 'Staples')
+      .replace('Communication Services', 'Comms')
+      .replace('Health Care', 'Health')
+      .replace('Real Estate', 'REIT');
+    el.innerHTML = `<button data-v="ALL" class="${sectorFilter === 'ALL' ? 'on' : ''}">All</button>` +
+      sectors.map(s => `<button data-v="${s}" class="${sectorFilter === s ? 'on' : ''}">${short(s)} ${counts[s]}</button>`).join('');
+    el.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        el.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        sectorFilter = b.dataset.v;
+        renderPicks();
+      });
+    });
+  }
+
   let latestNews = {};
   let latestFundamentals = {};   // market cap, P/E, earnings dates from /api/fundamentals
+  let lastQuotes = null;         // most recent quotes payload, for pulse redraws
   let currentBreadth = null;     // { pctAbove50 } — second regime input
   let fundamentalsLoaded = false;
 
@@ -3347,17 +3655,23 @@ import { runBacktest, walkForward } from './backtest.js';
   let currentRegime = { level: 'unknown', sizeMult: 1, allow: [], note: 'connecting…' };
 
   function applyQuotes(quotes, news = {}) {
+    lastQuotes = quotes;
     // Benchmark bars for relative-strength scoring — a stock up 5% while SPY is
     // up 9% is a laggard, and absolute momentum alone can't see that.
     const benchBars = quotes['SPY']?.bars || null;
     // Market breadth: % of the universe above its own 50d MA. VIX alone lags;
     // low VIX with collapsing breadth is when momentum entries stop working.
-    const breadthInput = {};
-    for (const [t, q] of Object.entries(quotes)) {
-      if (t.startsWith('^') || !q.bars || q.bars.length < 50) continue;
-      breadthInput[t] = q.bars;
+    // Breadth measured across the whole S&P 500 is the real thing; the handful
+    // of polled tickers is only a stand-in until the first scan lands.
+    const scanBreadthReady = scanRows.filter(r => r.a50 != null).length > 50;
+    if (!scanBreadthReady) {
+      const breadthInput = {};
+      for (const [t, q] of Object.entries(quotes)) {
+        if (t.startsWith('^') || !q.bars || q.bars.length < 50) continue;
+        breadthInput[t] = q.bars;
+      }
+      currentBreadth = computeBreadth(breadthInput);
     }
-    currentBreadth = computeBreadth(breadthInput);
 
     // Picks: derive live price, analytics (with news catalyst), computed score, ATR-based plan
     picks.forEach(p => {
@@ -3451,7 +3765,7 @@ import { runBacktest, walkForward } from './backtest.js';
     }
 
     // Sort picks by computed score, descending — highest quality setups float to top
-    picks.sort((a, b) => (b.score || 0) - (a.score || 0));
+    picks.sort(comparePicks);
 
     renderPicks();
     if (activeTicker) renderDetail(activeTicker);
@@ -3666,5 +3980,15 @@ import { runBacktest, walkForward } from './backtest.js';
 
   // Publish current pick tickers so the buzz drawer can request them
   window.__pick_tickers = picks.map(p => p.ticker);
+
+  // ------- S&P 500 scan -------
+  const rescanBtn = document.getElementById('rescan-btn');
+  if (rescanBtn) rescanBtn.addEventListener('click', () => scanUniverse({ force: true }));
+
+  // Scan the index once the first quote poll has painted something, then keep
+  // it fresh on a slow cadence — index-wide scoring is expensive and setups
+  // don't change minute to minute the way prices do.
+  setTimeout(() => scanUniverse(), 400);
+  setInterval(() => scanUniverse(), 10 * 60 * 1000);
 })();
 </script>

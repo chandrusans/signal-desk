@@ -295,9 +295,12 @@ export function analyze(bars, extras = {}) {
   if (earningsRisk && earningsRisk.severity === 'imminent') {
     setup = 'EARNINGS';
     setupReason = `Earnings in ${earningsRisk.calendarDays}d (${earningsRisk.date}). No new entry — a gap through your stop is unmanageable. Revisit after the print.`;
-  } else if (!alignedShort || (ma50 && price < ma50)) {
+  } else if (ma50 && price < ma50) {
     setup = 'BROKEN';
-    setupReason = 'Price below key MAs — trend broken; wait for base and reclaim';
+    setupReason = 'Price below the 50-day MA — structural trend damage; wait for a base and a reclaim';
+  } else if (!alignedShort && ma20 && ma50 && ma20 < ma50) {
+    setup = 'BROKEN';
+    setupReason = 'Below the 20-day with the 20-day rolling under the 50-day — trend deteriorating';
   } else if (rsi14 != null && (rsi14 > 78 || (distFrom52w != null && distFrom52w > 0 && r20 > 25))) {
     setup = 'EXTENDED';
     setupReason = 'Overextended — chasing here has poor R:R; wait for pullback to MA10/20';
@@ -308,6 +311,11 @@ export function analyze(bars, extras = {}) {
     setup = 'BREAKOUT';
     setupReason = 'At 20d highs on expanding volume with healthy RSI — clean momentum entry';
   } else if (
+    // Deliberately narrow: price must still be ABOVE the MA20, hugging the
+    // MA10. Widening this to admit dips *below* the 20-day was tested and
+    // rejected — it added 27 trades over 2y and took momentum expectancy from
+    // +0.073R to −0.044R. With a 1.5×ATR stop, buying under the 20-day just
+    // buys stop-outs. See handbook changelog v3.1.
     alignedMid && ma10 && Math.abs((price - ma10) / ma10) < 0.02 &&
     rsi14 != null && rsi14 >= 40 && rsi14 <= 58 && r20 > 3
   ) {

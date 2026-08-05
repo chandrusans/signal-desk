@@ -475,12 +475,12 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.0</div>
+      <div class="kicker">Signal Desk · Handbook · v3.1</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
       <div id="hb-topnav"><a href="/">← dashboard</a> · <a href="/metals">metals →</a></div>
-      <div>LAST UPDATED · 2026-07-22</div>
+      <div>LAST UPDATED · 2026-08-04</div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
   </header>
@@ -662,9 +662,15 @@
 
       <p><span class="setup-chip setup-EXTENDED">EXTENDED</span> Price is more than 6% above the MA20 or RSI is above 78. Chasing here has poor risk/reward. Wait for a pullback to MA10/20 before considering entry.</p>
 
-      <p><span class="setup-chip setup-BROKEN">BROKEN</span> Price is below MA20 or MA50. Trend is broken. Skip until the stock builds a new base and reclaims the moving averages on volume.</p>
+      <p><span class="setup-chip setup-BROKEN">BROKEN</span> <strong>Structural</strong> trend damage — either price is below the 50-day moving average, or price is below the 20-day <em>and</em> the 20-day has rolled under the 50-day. Skip until the stock builds a new base and reclaims the moving averages on volume.</p>
 
       <p><span class="setup-chip setup-AVOID">AVOID</span> Nothing clean. No entry criteria met. Do nothing.</p>
+
+      <div class="callout">
+        <span class="callout-label">BROKEN vs AVOID — a distinction that matters</span>
+        <p>Until v3.1, <strong>any</strong> close below the 20-day MA was labelled BROKEN. Scanning the full S&amp;P 500 exposed how wrong that was: it flagged 208 of 501 names as "trend broken" on a day when 68% of the index was trading <em>above</em> its own 50-day MA. A stock in a healthy uptrend dipping to its 20-day is not a broken trend, and calling it one produced a <strong>SELL</strong> verdict on names that were fine.</p>
+        <p>BROKEN now means the structure is actually damaged. A shallow dip that meets no entry criteria falls through to AVOID — "no clean setup on this bar" — which is honest, and no longer triggers a SELL.</p>
+      </div>
 
       <p><span class="setup-chip" style="color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 16%, transparent);">EARNINGS</span> <strong>Earnings within 5 days.</strong> This state overrides every other classification, no matter how good the technicals look. A stock that opens −12% on a miss fills your stop at −12%, not at −1R. You cannot risk-manage an overnight gap — the stop price simply doesn't exist at the open. Wait for the print.</p>
 
@@ -749,7 +755,21 @@
 
     <section id="screener">
       <h2><span class="chnum">Chapter 08</span>The screener</h2>
-      <p>Below the fold, the screener runs the same composite scoring against a 20-ticker universe (mix of megacaps, momentum names, sectors). Use it when the pinned picks aren't showing setups you like — sort by score descending and see what's actually setting up in the wider market.</p>
+
+      <h3>The candidate list scans the entire S&amp;P 500</h3>
+      <p>The ranked candidate list at the top of the Stocks tab is not a hand-picked watchlist. Every name in the <strong>S&amp;P 500</strong> is scored on every scan — roughly 500 tickers, each with a year of daily bars, relative strength against SPY <em>and</em> against its own GICS sector ETF. The constituent list is pulled live, so index additions and removals follow automatically.</p>
+      <p>Use the <strong>Sector</strong> filter to narrow to one GICS sector, <strong>Setup</strong> and <strong>Verdict</strong> to narrow to what's actionable, and <strong>Show</strong> to control how many rows render. The status line reports how many names were scored; <strong>↻ Rescan</strong> forces a fresh pass.</p>
+
+      <div class="callout">
+        <span class="callout-label">Why scoring happens on the server</span>
+        <p>500 tickers × a year of daily bars is about <strong>13 MB</strong> of raw data — too large to send to a browser, and hopeless on mobile. So the scoring runs server-side and each ticker comes back as a compact ~400-byte row: score, setup, the indicators the card needs, and a 20-point sparkline. The whole index arrives in roughly <strong>195 KB</strong>. Full bar history is fetched for exactly one ticker — the one you click.</p>
+        <p>A side benefit: everyone sees identical, reproducible scores, instead of each browser computing its own.</p>
+      </div>
+
+      <p>Because the composite caps at 100 and a dozen or more names can tie there across 500 tickers, ties are broken by <strong>sector-relative strength first</strong>, then relative strength vs SPY. Beating SPY while lagging your own sector is not leadership.</p>
+
+      <h3>The lower screener table</h3>
+      <p>Below the fold, the screener runs the same composite scoring against a smaller fixed universe with additional fundamental columns. Use it when you want market cap and P/E alongside the technical score.</p>
       <p>Filter controls:</p>
       <ul>
         <li><strong>Sector</strong> — GICS-style sector filter (Semiconductors, Software, Cybersecurity, etc.)</li>
@@ -780,11 +800,15 @@
         <li><strong>Prices, OHLC, volume, VIX</strong> — Yahoo Finance chart API. No auth key. Polled every 30 seconds.</li>
         <li><strong>News headlines</strong> — Yahoo Finance search endpoint. Also no key. Pulled on each poll.</li>
         <li><strong>Sentiment (general + political)</strong> — computed client-side from headlines using keyword lexicons.</li>
-        <li><strong>All technical indicators</strong> — computed in the browser from the 1-year OHLC series.</li>
+        <li><strong>All technical indicators</strong> — computed from the 1-year OHLC series (server-side for the index scan, in the browser for the ticker you open).</li>
+        <li><strong>S&amp;P 500 constituents and GICS sectors</strong> — <code>/api/universe</code>, sourced from the <code>datasets/s-and-p-500-companies</code> list that tracks the index table. Cached 24 hours; index changes follow automatically. Falls back to an embedded mega-cap list if the source is unreachable, so the app degrades to "fewer tickers" rather than "broken".</li>
+        <li><strong>Index-wide composite scores</strong> — <code>/api/scan</code>, scored server-side in batches of 50. Cached 60 seconds at the edge.</li>
+        <li><strong>Sector-relative strength</strong> — each batch fetches the SPDR sector ETFs it needs (XLK, XLV, XLF, XLY, XLC, XLI, XLP, XLE, XLU, XLRE, XLB) over the same window as the tickers being scored.</li>
+        <li><strong>Market breadth</strong> — percentage of the full S&amp;P 500 above its own 50-day MA, computed from the scan rather than from a handful of polled names.</li>
       </ul>
       <h3>Still mock or static</h3>
       <ul>
-        <li><strong>Market cap and P/E</strong> in the screener — would need Finnhub free tier or SEC filings.</li>
+        <li><strong>Market cap and P/E</strong> in the lower screener table — would need Finnhub free tier or SEC filings.</li>
         <li><strong>Insider / options-flow narratives</strong> in the older intel section — placeholder data.</li>
         <li><strong>Political calendar</strong> — curated list, not scraped. Update by editing the array in <code>index.html</code>.</li>
         <li><strong>Reddit mention counts</strong> — blocked without OAuth (see README for setup).</li>
@@ -953,6 +977,38 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 15</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.1<br/>2026-08-04</div>
+        <div class="what">
+          <h4>The full S&amp;P 500 is now the candidate universe</h4>
+          <ul>
+            <li>The Stocks candidate list scans <strong>every S&amp;P 500 constituent</strong> — about 500 names per pass, up from a 30-ticker hand-picked list. Constituents come from a live source, so index additions and removals follow automatically.</li>
+            <li><strong>Sector filter</strong> added, driven by real GICS sectors. <strong>Show</strong> options raised to 10 / 25 / 50 / All, and <strong>↻ Rescan</strong> forces a fresh pass.</li>
+            <li><strong>Sector-relative strength</strong> is now computed for every name against its own SPDR sector ETF, alongside relative strength vs SPY.</li>
+            <li><strong>Market breadth</strong> is measured across the whole index instead of a handful of polled tickers — which is what the regime filter always needed it to be.</li>
+            <li>Score ties (the composite caps at 100, and across 500 names a dozen or more reach it) now break on sector-relative strength, then RS vs SPY, so the ranking is deterministic rather than arbitrary.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">Scoring moved server-side</h4>
+          <ul>
+            <li>500 tickers × a year of daily bars is ~13 MB of raw data — over the hosting response limit and unusable on mobile. Scoring now happens on the server and returns ~400 bytes per ticker: <strong>the whole index arrives in about 195 KB</strong>. Full bar history is fetched only for the ticker you actually open.</li>
+            <li>Everyone now sees identical, reproducible scores instead of each browser computing its own.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">BROKEN no longer means "dipped below the 20-day"</h4>
+          <ul>
+            <li>Scanning the full index exposed a real defect: <strong>208 of 501 names were labelled BROKEN on a day when 68% of the index was above its own 50-day MA</strong>. The classifier treated any close under the 20-day as a broken trend — and because BROKEN with a low score maps to <strong>SELL</strong>, it was telling you to sell healthy names on shallow dips.</li>
+            <li>BROKEN now requires actual structural damage: price below the 50-day, or below the 20-day <em>with</em> the 20-day rolled under the 50-day. Shallow dips fall through to AVOID ("no clean setup on this bar"), which is honest and does not trigger a SELL.</li>
+          </ul>
+
+          <div class="callout warn" style="margin-top: 16px;">
+            <span class="callout-label">A change that was tested and rejected</span>
+            <p>While fixing the above, the PULLBACK definition was also widened to admit dips <em>to</em> the 20-day MA — reasoning that this is the classic entry. The backtest disagreed: it added 27 trades over two years and moved momentum expectancy from <strong>+0.073R to −0.044R</strong>, profit factor 1.16 → 0.92, and out-of-sample walk-forward windows from 2-of-3 positive to 1-of-3. With a 1.5×ATR stop, buying below the 20-day mostly buys stop-outs.</p>
+            <p><strong>That change was reverted.</strong> PULLBACK still requires price above the MA20, hugging the MA10. The BROKEN fix ships alone and leaves trade selection byte-identical to before — it changes labels and verdicts, not entries. This is recorded here because a plausible-sounding improvement that loses money is worth remembering.</p>
+          </div>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.0<br/>2026-07-25</div>
