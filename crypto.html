@@ -1,0 +1,1481 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Signal Desk — Crypto</title>
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('sd-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root {
+    --ground: #F4EFE4;
+    --ground-2: #EDE7D8;
+    --ink: #161512;
+    --ink-2: #3A362E;
+    --ink-3: #6B655A;
+    --rule: #D9D2BF;
+    --panel: #FBF8F0;
+    --accent: #B8863A;
+    --accent-soft: #E9D3A3;
+    --signal: #3B8C5A;
+    --caution: #B57F1F;
+    --risk: #B84438;
+    --grid: rgba(22, 21, 18, 0.06);
+    --gold: #C89B3C;
+    --silver: #9BA1A6;
+
+    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: ui-sans-serif, -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0E1116;
+      --ground-2: #141821;
+      --ink: #E7E2D6;
+      --ink-2: #B5AF9F;
+      --ink-3: #7C7767;
+      --rule: #262B36;
+      --panel: #161B24;
+      --accent: #D6A24B;
+      --accent-soft: #4A3820;
+      --signal: #5FBF83;
+      --caution: #D4A040;
+      --risk: #D96355;
+      --grid: rgba(231, 226, 214, 0.06);
+      --gold: #E0B45C;
+      --silver: #C4CBD1;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#F4EFE4;--ground-2:#EDE7D8;--ink:#161512;--ink-2:#3A362E;--ink-3:#6B655A;--rule:#D9D2BF;--panel:#FBF8F0;--accent:#B8863A;--accent-soft:#E9D3A3;--signal:#3B8C5A;--caution:#B57F1F;--risk:#B84438;--grid:rgba(22,21,18,0.06);--gold:#C89B3C;--silver:#9BA1A6;
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E1116;--ground-2:#141821;--ink:#E7E2D6;--ink-2:#B5AF9F;--ink-3:#7C7767;--rule:#262B36;--panel:#161B24;--accent:#D6A24B;--accent-soft:#4A3820;--signal:#5FBF83;--caution:#D4A040;--risk:#D96355;--grid:rgba(231,226,214,0.06);--gold:#E0B45C;--silver:#C4CBD1;
+  }
+
+  html { color-scheme: light dark; }
+  html, body { overflow-x: hidden; max-width: 100%; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+
+  .shell { max-width: 1280px; margin: 0 auto; padding: 32px 28px 80px; }
+
+  .masthead {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--ink);
+  }
+  .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+  .brand { font-family: var(--serif); font-size: 40px; line-height: 1; letter-spacing: -0.015em; font-weight: 500; text-wrap: balance; margin: 0; }
+  .brand em { font-style: italic; color: var(--accent); font-weight: 400; }
+  .meta { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-2); line-height: 1.7; }
+  .meta .date { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .meta a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+  .meta a:hover { border-bottom-style: solid; }
+  .theme-toggle {
+    background: transparent; border: 1px solid var(--rule); color: var(--ink-2);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 6px 10px; margin-top: 8px; cursor: pointer;
+  }
+  .theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
+
+  @media (max-width: 900px) {
+    .brand { font-size: 30px; }
+  }
+
+  /* Cross-asset strip */
+  .drivers {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  @media (max-width: 900px) { .drivers { grid-template-columns: repeat(2, 1fr); } }
+  .drv-cell {
+    padding: 14px 16px;
+    border-right: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .drv-cell:last-child { border-right: none; }
+  @media (max-width: 900px) { .drv-cell:nth-child(2n) { border-right: none; } }
+  .drv-cell .label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+  .drv-cell .value { font-size: 15px; color: var(--ink); }
+  .drv-cell .delta { font-size: 11px; margin-top: 2px; }
+  .up { color: var(--signal); }
+  .down { color: var(--risk); }
+  .flat { color: var(--ink-3); }
+
+  /* Section head */
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 36px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .section-head h2 {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .section-head .aside {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* Two big metal panels */
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .panels { grid-template-columns: 1fr; } }
+  .metal-panel {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 24px 26px;
+    position: relative;
+  }
+  .metal-panel.gold::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gold); }
+  .metal-panel.silver::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--silver); }
+
+  .mp-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+  }
+  .mp-ticker {
+    font-family: var(--mono);
+    font-size: 20px;
+    letter-spacing: 0.02em;
+    font-weight: 500;
+  }
+  .mp-name {
+    font-family: var(--serif);
+    font-size: 12px;
+    color: var(--ink-3);
+    font-style: italic;
+    margin-top: 2px;
+  }
+  .mp-price {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 28px;
+    color: var(--ink);
+    line-height: 1;
+    text-align: right;
+  }
+  .mp-change {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  .mp h3 {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 20px 0 10px;
+    font-weight: 500;
+  }
+  .mp h3:first-of-type { margin-top: 0; }
+
+  /* Range block — the day/week projection */
+  .range {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--rule);
+    background: var(--ground-2);
+  }
+  .range-cell {
+    padding: 12px 14px;
+    border-right: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .range-cell:last-child { border-right: none; }
+  .range-cell .l {
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .range-cell .hi { color: var(--signal); font-size: 15px; }
+  .range-cell .lo { color: var(--risk); font-size: 15px; }
+  .range-cell .band { font-size: 11px; color: var(--ink-2); margin-top: 4px; }
+  .range-visual {
+    height: 6px;
+    background: var(--ground-2);
+    margin: 10px 0;
+    position: relative;
+    border: 1px solid var(--rule);
+  }
+  .range-fill {
+    position: absolute; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--risk), var(--ink-3), var(--signal));
+    opacity: 0.5;
+  }
+  .range-marker {
+    position: absolute;
+    top: -3px; bottom: -3px;
+    width: 2px;
+    background: var(--ink);
+  }
+  .range-marker::before {
+    content: '';
+    position: absolute;
+    top: -4px; left: -3px;
+    width: 8px; height: 8px;
+    background: var(--ink);
+    border-radius: 50%;
+  }
+
+  /* Indicator grid */
+  .ind-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    gap: 10px;
+    row-gap: 6px;
+    align-items: baseline;
+  }
+  .ind-grid .k {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .ind-grid .v {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: var(--ink);
+    text-align: right;
+  }
+  .bar-track { height: 6px; background: var(--ground-2); position: relative; overflow: hidden; }
+  .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+
+  /* Setup chip */
+  .setup-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border: 1px solid;
+    line-height: 1.5;
+  }
+  .setup-BREAKOUT { color: var(--signal); border-color: var(--signal); }
+  .setup-PULLBACK { color: var(--accent); border-color: var(--accent); }
+  .setup-EARLY    { color: var(--ink-2); border-color: var(--ink-3); }
+  .setup-EXTENDED { color: var(--caution); border-color: var(--caution); }
+  .setup-BROKEN   { color: var(--risk); border-color: var(--risk); }
+  .setup-AVOID    { color: var(--risk); border-color: var(--risk); }
+
+  .thesis {
+    background: var(--ground-2);
+    border-left: 3px solid var(--accent);
+    padding: 12px 14px;
+    font-family: var(--serif);
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  .plan {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 1px solid var(--rule);
+  }
+  .plan-cell {
+    padding: 12px 14px;
+    border-right: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .plan-cell:last-child { border-right: none; }
+  .plan-cell .l {
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .plan-cell .n { font-size: 14px; color: var(--ink); }
+  .plan-cell.tgt .n { color: var(--signal); }
+  .plan-cell.stop .n { color: var(--risk); }
+
+  /* Notes */
+  .notes-list { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; }
+  .notes-list li {
+    font-family: var(--serif); font-size: 12.5px; line-height: 1.45;
+    color: var(--ink-2); padding-left: 12px; position: relative;
+  }
+  .notes-list li::before { content: "·"; color: var(--accent); position: absolute; left: 0; top: -1px; font-weight: bold; }
+
+  /* Calendar (reuse from dashboard rules layout) */
+  .rules { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; background: var(--panel); border: 1px solid var(--rule); }
+  @media (max-width: 900px) { .rules { grid-template-columns: 1fr; } }
+  .rule-cell { padding: 18px 20px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .rule-cell:nth-child(2n) { border-right: none; }
+  .rule-cell:nth-last-child(-n+2) { border-bottom: none; }
+  @media (max-width: 900px) { .rule-cell { border-right: none; } .rule-cell:not(:last-child) { border-bottom: 1px solid var(--rule); } }
+  .rule-cell h4 {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-3); margin: 0 0 8px; font-weight: 500;
+  }
+  .rule-cell h4 .num {
+    font-family: var(--serif); font-style: italic; color: var(--accent);
+    font-size: 14px; margin-right: 6px; letter-spacing: 0;
+  }
+  .rule-cell p { font-family: var(--serif); font-size: 13.5px; line-height: 1.5; color: var(--ink); margin: 0 0 6px; }
+  .rule-cell code { font-family: var(--mono); font-size: 11.5px; background: var(--ground-2); padding: 1px 5px; color: var(--ink); }
+
+  /* News */
+  .intel { background: var(--panel); border: 1px solid var(--rule); }
+  .feed { list-style: none; margin: 0; padding: 0; }
+  .feed li {
+    display: grid;
+    grid-template-columns: 60px 60px 60px 1fr 60px;
+    gap: 14px;
+    padding: 12px 18px;
+    border-bottom: 1px dotted var(--rule);
+    align-items: baseline;
+  }
+  .feed li:last-child { border-bottom: none; }
+  .feed .ts { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.04em; }
+  .feed .src-badge {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-2); padding: 2px 6px; border: 1px solid var(--rule); text-align: center;
+  }
+  .feed .tk { font-family: var(--mono); font-size: 12px; color: var(--ink); letter-spacing: 0.02em; }
+  .feed .hd { font-family: var(--serif); font-size: 13.5px; line-height: 1.4; color: var(--ink); }
+  .feed .hd a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--ink-3); }
+  .feed .hd a:hover { border-bottom-color: var(--accent); }
+  .feed .sent { font-family: var(--mono); font-size: 10.5px; text-align: right; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+  .sent.pos { color: var(--signal); }
+  .sent.neg { color: var(--risk); }
+  .sent.neu { color: var(--ink-3); }
+  @media (max-width: 900px) {
+    .feed li { grid-template-columns: 55px 55px 1fr 55px; }
+    .feed .tk { display: none; }
+  }
+
+  /* Disclosure */
+  .disclosure {
+    margin-top: 36px; padding: 20px 24px;
+    background: transparent;
+    border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule);
+  }
+  .disclosure h4 {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--risk); margin: 0 0 8px; font-weight: 500;
+  }
+  .disclosure p {
+    font-family: var(--serif); font-style: italic; font-size: 13.5px; line-height: 1.55;
+    color: var(--ink-2); margin: 0; max-width: 78ch;
+  }
+
+  /* Tab bar + Handbook button (mirrored from dashboard) */
+  .tabbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 0 12px; margin-bottom: 20px; border-bottom: 1px solid var(--rule); }
+  .tabbar-tabs { display: flex; gap: 0; }
+  .tab { padding: 10px 22px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); text-decoration: none; border: none; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; background: transparent; cursor: pointer; }
+  .tab:hover { color: var(--ink); }
+  .tab.on { color: var(--ink); border-bottom-color: var(--accent); }
+  .handbook-btn { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+  .handbook-btn:hover, .handbook-btn:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
+  .handbook-btn .hb-glyph { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+
+  /* Handbook slide-over drawer */
+  .hb-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 900; }
+  .hb-backdrop.open { display: block; animation: hb-bg-in 0.2s ease-out; }
+  @keyframes hb-bg-in { from { opacity: 0; } to { opacity: 1; } }
+  .hb-drawer { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: min(960px, 92vw); background: var(--ground); z-index: 1000; flex-direction: column; box-shadow: -8px 0 40px rgba(0, 0, 0, 0.35); }
+  .hb-drawer.open { display: flex; animation: hb-in 0.24s ease-out; }
+  @keyframes hb-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  .hb-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--rule); background: var(--panel); }
+  .hb-title { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+  .hb-title strong { color: var(--ink); }
+  .hb-close { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 12px; cursor: pointer; }
+  .hb-close:hover, .hb-close:focus-visible { border-color: var(--ink); color: var(--ink); outline: none; }
+  .hb-frame { flex: 1; border: none; width: 100%; background: var(--ground); }
+
+  /* --- UI trends layer (mirror of dashboard) --- */
+  :root {
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+    --neu-hi: rgba(255, 255, 255, 0.9);
+    --neu-lo: rgba(96, 84, 60, 0.14);
+    --neu-inset-hi: rgba(255, 255, 255, 0.7);
+    --neu-inset-lo: rgba(96, 84, 60, 0.16);
+    --glass-bg: rgba(251, 248, 240, 0.72);
+    --glass-border: rgba(22, 21, 18, 0.10);
+    --glass-blur: 20px;
+    --card-glow: transparent;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --neu-hi: rgba(255, 255, 255, 0.045);
+      --neu-lo: rgba(0, 0, 0, 0.55);
+      --neu-inset-hi: rgba(255, 255, 255, 0.03);
+      --neu-inset-lo: rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(14, 17, 22, 0.65);
+      --glass-border: rgba(214, 162, 75, 0.12);
+      --card-glow: rgba(214, 162, 75, 0.06);
+    }
+    body {
+      background:
+        radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.08), transparent 60%),
+        radial-gradient(900px 600px at 90% 100%, rgba(155, 161, 166, 0.05), transparent 55%),
+        var(--ground);
+    }
+  }
+  :root[data-theme="dark"] body {
+    background:
+      radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.08), transparent 60%),
+      radial-gradient(900px 600px at 90% 100%, rgba(155, 161, 166, 0.05), transparent 55%),
+      var(--ground);
+  }
+  :root[data-theme="light"] body { background: var(--ground); }
+
+  /* Neu buttons */
+  .tab { border-radius: 10px 10px 0 0; transition: color 0.18s var(--ease-out), background 0.18s var(--ease-out); }
+  .tab:hover:not(.on) { color: var(--ink); background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 6%, transparent)); }
+  .tab.on {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
+    box-shadow: inset 0 -2px 0 var(--accent);
+    border-bottom-color: transparent;
+  }
+  .handbook-btn {
+    border-radius: 8px; background: var(--panel);
+    box-shadow: 3px 3px 8px var(--neu-lo), -3px -3px 8px var(--neu-hi);
+    transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), color 0.18s var(--ease-out);
+  }
+  .handbook-btn:hover, .handbook-btn:focus-visible {
+    transform: translateY(-1px); color: var(--ink);
+    box-shadow: 4px 4px 12px var(--neu-lo), -4px -4px 12px var(--neu-hi);
+  }
+  .handbook-btn:active {
+    transform: translateY(0);
+    box-shadow: inset 2px 2px 6px var(--neu-inset-lo), inset -2px -2px 6px var(--neu-inset-hi);
+  }
+  .handbook-btn .hb-glyph { box-shadow: 0 0 8px var(--accent); }
+  .theme-toggle {
+    border-radius: 6px; background: var(--panel);
+    box-shadow: 2px 2px 6px var(--neu-lo), -2px -2px 6px var(--neu-hi);
+    transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), color 0.18s var(--ease-out);
+    border: none;
+  }
+  .theme-toggle:hover { transform: translateY(-1px); }
+  .theme-toggle:active {
+    transform: translateY(0);
+    box-shadow: inset 2px 2px 4px var(--neu-inset-lo), inset -2px -2px 4px var(--neu-inset-hi);
+  }
+
+  /* Glass drawer */
+  .hb-backdrop {
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px) saturate(140%);
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+  }
+  .hb-drawer {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    border-left: 1px solid var(--glass-border);
+    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.45), inset 1px 0 0 rgba(255, 255, 255, 0.06);
+  }
+  .hb-header { background: transparent; border-bottom: 1px solid var(--glass-border); }
+
+  /* Metal panels — hover lift + gold/silver glow */
+  .metal-panel {
+    transition: transform 0.24s var(--ease-out), box-shadow 0.24s var(--ease-out);
+  }
+  .metal-panel.gold:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px color-mix(in srgb, var(--gold) 14%, transparent);
+  }
+  .metal-panel.silver:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px color-mix(in srgb, var(--silver) 12%, transparent);
+  }
+
+  /* Live-dot pulse */
+  @keyframes live-pulse {
+    0%, 100% { opacity: 1; text-shadow: 0 0 6px currentColor; }
+    50% { opacity: 0.65; text-shadow: 0 0 0px currentColor; }
+  }
+  #live-dot { display: inline-block; animation: live-pulse 2s var(--ease-inout) infinite; }
+
+  /* Price flash */
+  @keyframes flash-up { 0% { background: color-mix(in srgb, var(--signal) 45%, transparent); color: var(--signal); } 100% { background: transparent; color: inherit; } }
+  @keyframes flash-down { 0% { background: color-mix(in srgb, var(--risk) 45%, transparent); color: var(--risk); } 100% { background: transparent; color: inherit; } }
+  .flash-up   { animation: flash-up 1.4s var(--ease-out); border-radius: 3px; }
+  .flash-down { animation: flash-down 1.4s var(--ease-out); border-radius: 3px; }
+
+  .refresh-btn {
+    background: transparent; border: 1px solid var(--rule); color: var(--ink-3);
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 3px 7px; margin-left: 6px; cursor: pointer; border-radius: 3px;
+    transition: color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+  }
+  .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Page-load stagger */
+  @keyframes rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .masthead { animation: rise-in 0.5s var(--ease-out) both; }
+  .drivers  { animation: rise-in 0.5s var(--ease-out) 0.08s both; }
+  .section-head { animation: rise-in 0.5s var(--ease-out) 0.16s both; }
+  .panels   { animation: rise-in 0.5s var(--ease-out) 0.24s both; }
+  .rules    { animation: rise-in 0.5s var(--ease-out) 0.32s both; }
+  .intel    { animation: rise-in 0.5s var(--ease-out) 0.40s both; }
+
+  /* Brand logomark on masthead */
+  .brand-mark {
+    display: inline-block;
+    vertical-align: -6px;
+    margin-right: 12px;
+    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 32%, transparent));
+    animation: spin-slow 60s linear infinite;
+  }
+  @keyframes spin-slow { to { transform: rotate(360deg); } }
+
+  /* Coin illustrations in headers */
+  .coin-ill {
+    display: inline-block;
+    vertical-align: -4px;
+    margin-right: 10px;
+  }
+  .coin-ill.gold circle.face { fill: color-mix(in srgb, var(--gold) 24%, var(--panel)); }
+  .coin-ill.silver circle.face { fill: color-mix(in srgb, var(--silver) 22%, var(--panel)); }
+  .coin-ill { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25)); }
+  .coin-ill .glint { opacity: 0.5; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, #live-dot { transition: none !important; animation: none !important; }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+   * MOBILE — phones (≤ 640px)
+   * ══════════════════════════════════════════════════════════════════════ */
+  @media (max-width: 640px) {
+    body { font-size: 15px; }
+
+    /* Grid/flex children default to min-width:auto and refuse to shrink below
+       their content, which pushes the page wider than the viewport. Allowing
+       them to shrink is what actually stops horizontal scroll. */
+    .desk, .desk > *, .picks, .card, .card > *, .card-body, .card-body > *,
+    .detail, .detail > *, .pos-card, .pos-card > *, .pos-primary, .pos-primary > *,
+    .opt-card, .opt-card > *, .opt-top, .opt-top > *, .metal-panel, .metal-panel > *,
+    .an-cell, .an-cell > *, .rules, .rule-cell, .intel, .feed li, .feed li > * {
+      min-width: 0;
+    }
+    /* Long unbroken strings (OCC symbols, URLs) must wrap rather than push */
+    .thesis, .verdict-reason, .buzz-snippet, .hd, .pos-notes, .an-value, .an-sub {
+      overflow-wrap: anywhere;
+    }
+    .shell { padding: 14px 14px 60px; }
+
+    .tabbar { flex-direction: column; align-items: stretch; gap: 10px; padding: 0 0 10px; margin-bottom: 14px; }
+    .tabbar-tabs {
+      overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+      margin: 0 -14px; padding: 0 14px;
+    }
+    .tabbar-tabs::-webkit-scrollbar { display: none; }
+    .tab { padding: 12px 16px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
+
+    .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
+    .brand { font-size: 25px; }
+    .brand-mark { width: 30px; height: 30px; margin-right: 8px; vertical-align: -4px; }
+    .meta { text-align: left; font-size: 10.5px; line-height: 1.9; }
+    .theme-toggle, .refresh-btn { min-height: 36px; padding: 8px 12px; }
+    /* Header buttons inline rather than stacked — reclaims vertical space */
+    .meta { display: flex; flex-direction: column; gap: 2px; }
+    .meta > div { display: block; }
+    .theme-toggle { align-self: flex-start; margin-top: 6px; }
+
+    /* Drivers strip 2-up */
+    .drivers { grid-template-columns: 1fr 1fr; }
+    .drv-cell { padding: 11px 12px; border-bottom: 1px solid var(--rule); }
+    .drv-cell:nth-child(2n) { border-right: none; }
+    .drv-cell .value { font-size: 14px; }
+
+    .section-head { flex-direction: column; align-items: flex-start; gap: 6px; margin: 24px 0 12px; }
+    .section-head h2 { font-size: 19px; }
+
+    /* Metal panels */
+    .panels { gap: 14px; }
+    .metal-panel { padding: 16px; }
+    .mp-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .mp-ticker { font-size: 18px; }
+    .mp-price { font-size: 24px; text-align: left; }
+    .mp-change { text-align: left; }
+    .coin-ill { width: 24px; height: 24px; margin-right: 8px; }
+    .range-cell { padding: 11px 12px; }
+    .range-cell .hi, .range-cell .lo { font-size: 14px; }
+    .ind-grid { grid-template-columns: 96px 1fr auto; gap: 8px; }
+    .plan { grid-template-columns: 1fr 1fr; }
+    .plan-cell { border-bottom: 1px solid var(--rule); }
+    .plan-cell:nth-child(2n) { border-right: none; }
+
+    .rules { grid-template-columns: 1fr; }
+    .rule-cell { border-right: none; padding: 14px 16px; }
+
+    .feed li { grid-template-columns: 46px 52px 1fr; gap: 8px; padding: 11px 14px; }
+    .feed .tk, .feed .sent { display: none; }
+    .feed .hd { font-size: 13px; }
+
+    .hb-drawer { width: 100vw; }
+    .hb-header { padding: 12px 14px; }
+    .hb-close { min-height: 40px; }
+    .disclosure { padding: 16px 14px; }
+  }
+
+  @media (max-width: 360px) {
+    .brand { font-size: 22px; }
+    .drivers { grid-template-columns: 1fr; }
+    .drv-cell { border-right: none; }
+    .plan { grid-template-columns: 1fr; }
+    .plan-cell { border-right: none; }
+  }
+
+  /* ---- Crypto-specific ---- */
+  /* The detail panel. The shared shell carries only its mobile overrides,
+     so the base styling has to be declared here. */
+  .detail {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 22px 24px;
+    position: sticky;
+    top: 20px;
+    min-width: 0;
+  }
+  .detail h3 {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-3); margin: 20px 0 10px; font-weight: 500;
+  }
+  .detail h3:first-of-type { margin-top: 0; }
+  .panels { grid-template-columns: 1fr minmax(0, 420px); align-items: start; }
+  @media (max-width: 900px) {
+    .panels { grid-template-columns: 1fr; }
+    .detail { position: static; }
+  }
+
+  .reality {
+    border: 1px solid var(--risk);
+    border-left: 3px solid var(--risk);
+    background: color-mix(in srgb, var(--risk) 7%, transparent);
+    padding: 20px 22px;
+    margin: 0 0 28px;
+    border-radius: 4px;
+  }
+  .reality h2 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--risk); margin: 0 0 12px; font-weight: 600;
+  }
+  .reality .headline {
+    font-family: var(--serif); font-size: 21px; line-height: 1.35;
+    color: var(--ink); margin: 0 0 14px;
+  }
+  .reality p { font-size: 13.5px; line-height: 1.65; color: var(--ink-2); margin: 0 0 10px; }
+  .reality strong { color: var(--ink); }
+  .reality .num { font-family: var(--mono); font-weight: 600; color: var(--risk); }
+  .reality .numok { font-family: var(--mono); font-weight: 600; color: var(--signal); }
+
+  /* The table is wider than a phone. It must scroll inside its own box —
+     letting it overflow clips the right-hand columns silently. */
+  .fee-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 14px 0 6px; }
+  .fee-table { width: 100%; min-width: 460px; border-collapse: collapse; font-family: var(--mono); font-size: 11.5px; }
+  .fee-table th {
+    text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule);
+    color: var(--ink-3); font-weight: 500; letter-spacing: 0.08em; font-size: 10px; text-transform: uppercase;
+  }
+  .fee-table td { padding: 7px 8px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-2); }
+  .fee-table td.pos { color: var(--signal); font-weight: 600; }
+  .fee-table td.neg { color: var(--risk); font-weight: 600; }
+  .fee-table tr.you td { background: color-mix(in srgb, var(--risk) 9%, transparent); }
+  .fee-table .venue { color: var(--ink); }
+
+  .target-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    margin: 14px 0 4px; border-radius: 3px; overflow: hidden;
+  }
+  .target-cell { background: var(--ground); padding: 12px 14px; min-width: 0; }
+  .target-cell .l {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 5px;
+  }
+  .target-cell .n { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--ink); }
+  .target-cell .n.bad { color: var(--risk); }
+  .target-cell .sub { font-size: 11px; color: var(--ink-3); margin-top: 3px; line-height: 1.4; }
+
+  .coin-card {
+    display: grid; grid-template-columns: 42px 1fr auto; gap: 14px; align-items: start;
+    border: 1px solid var(--rule); border-radius: 4px; padding: 15px 16px; margin-bottom: 10px;
+    background: var(--ground); cursor: pointer; transition: border-color .18s, transform .18s;
+    min-width: 0;
+  }
+  .coin-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .coin-card.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .coin-card .rank {
+    font-family: var(--serif); font-style: italic; font-size: 20px; color: var(--accent); line-height: 1;
+  }
+  .coin-card .sym {
+    font-family: var(--mono); font-size: 15px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--ink); margin-bottom: 2px; overflow-wrap: anywhere;
+  }
+  .coin-card .nm { font-size: 12px; color: var(--ink-3); margin-bottom: 7px; overflow-wrap: anywhere; }
+  .coin-card .why { font-size: 12.5px; color: var(--ink-2); line-height: 1.55; margin-top: 6px; }
+  .coin-right { text-align: right; min-width: 0; }
+  .coin-right .score-label {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .coin-right .score { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--ink); line-height: 1.1; }
+
+  .verdict-pill {
+    display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 0.1em; padding: 4px 9px; border: 1px solid; border-radius: 3px;
+  }
+  .verdict-BUY   { color: var(--signal); border-color: var(--signal); background: color-mix(in srgb, var(--signal) 14%, transparent); }
+  .verdict-HOLD  { color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 14%, transparent); }
+  .verdict-AVOID { color: var(--ink-3); border-color: var(--rule); }
+  .verdict-SELL  { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 14%, transparent); }
+
+  .filter-bar {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    padding: 12px 0 16px; border-bottom: 1px solid var(--rule-soft); margin-bottom: 18px;
+  }
+  .filter-group { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .flbl {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-3); white-space: nowrap;
+  }
+  .seg { display: flex; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+  .seg button {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; padding: 6px 11px;
+    background: transparent; border: none; border-right: 1px solid var(--rule);
+    color: var(--ink-3); cursor: pointer; white-space: nowrap;
+  }
+  .seg button:last-child { border-right: none; }
+  .seg button.on { background: var(--accent); color: var(--ground); font-weight: 600; }
+
+  .hours-grid { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; margin: 12px 0 8px; }
+  .hour-bar {
+    position: relative; height: 46px; background: var(--ground-2);
+    border-radius: 2px; display: flex; align-items: flex-end; overflow: hidden;
+  }
+  .hour-bar i { display: block; width: 100%; background: var(--ink-3); }
+  .hour-bar.pos i { background: var(--signal); }
+  .hour-bar.neg i { background: var(--risk); }
+  .hour-bar.sig { outline: 1px solid var(--accent); }
+  .hours-axis {
+    display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px;
+    font-family: var(--mono); font-size: 8px; color: var(--ink-3); text-align: center;
+  }
+
+  .empty-note {
+    border: 1px dashed var(--rule); border-radius: 4px; padding: 26px 20px;
+    text-align: center; color: var(--ink-3); font-size: 13px;
+  }
+
+  @media (max-width: 640px) {
+    .reality { padding: 15px 14px; }
+    .reality .headline { font-size: 17px; }
+    .coin-card { grid-template-columns: 28px 1fr; gap: 10px; padding: 13px 12px; }
+    .coin-right { grid-column: 1 / -1; text-align: left; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .coin-right .score { font-size: 21px; }
+    .filter-bar { gap: 10px; }
+    .filter-group { width: 100%; }
+    .seg { overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
+    .seg::-webkit-scrollbar { display: none; }
+    .seg button { min-height: 40px; scroll-snap-align: start; }
+    .fee-table { font-size: 10.5px; }
+    .fee-table th, .fee-table td { padding: 6px 5px; }
+    .hours-grid { grid-template-columns: repeat(12, 1fr); }
+    .hours-axis { grid-template-columns: repeat(12, 1fr); }
+  }
+</style>
+
+<div class="shell">
+
+  <nav class="tabbar" role="tablist" aria-label="Views">
+    <div class="tabbar-tabs">
+      <a href="/dashboard" class="tab" data-view="dashboard" role="tab" aria-selected="false">Dashboard</a>
+      <a href="/" class="tab" data-view="stocks" role="tab" aria-selected="false">Stocks</a>
+      <a href="/options" class="tab" data-view="options" role="tab" aria-selected="false">Options</a>
+      <a href="/crypto" class="tab on" data-view="crypto" role="tab" aria-selected="true">Crypto</a>
+      <a href="/metals" class="tab" data-view="metals" role="tab" aria-selected="false">Metals</a>
+    </div>
+    <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
+      <span class="hb-glyph" aria-hidden="true"></span>
+      Handbook
+    </button>
+  </nav>
+
+  <header class="masthead">
+    <div>
+      <div class="kicker">The Signal Desk · Crypto · 24/7 Markets</div>
+      <h1 class="brand">
+        <svg class="brand-mark" width="42" height="42" viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <radialGradient id="lg-c" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="21" cy="21" r="20" fill="url(#lg-c)"/>
+          <circle cx="21" cy="21" r="14" fill="none" stroke="var(--accent)" stroke-width="1.1" opacity="0.75"/>
+          <circle cx="21" cy="21" r="8" fill="none" stroke="var(--accent)" stroke-width="1.1" opacity="0.5"/>
+          <circle cx="21" cy="21" r="3" fill="var(--accent)"/>
+        </svg>
+        Crypto, <em>measured not promised.</em>
+      </h1>
+    </div>
+    <div class="meta">
+      <div>RUN · <span id="run-ts">—</span></div>
+      <div class="feed">FEED · <span class="dot" id="feed-dot"></span> <span id="feed-label">connecting…</span></div>
+      <button class="refresh-btn" id="refresh-now">↻ Refresh</button>
+      <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
+    </div>
+  </header>
+
+  <!-- The reality check goes FIRST and deliberately cannot be dismissed.
+       Someone arriving here wanting a daily income number needs the measured
+       result before the shiny ranked list, not after it. -->
+  <section class="reality" id="reality">
+    <h2>Reality check · measured, not assumed</h2>
+    <div class="headline" id="reality-headline">Running the backtest over ~5 years of daily candles…</div>
+    <div id="reality-body"></div>
+  </section>
+
+  <div class="drivers" id="pulse" aria-label="Crypto market pulse"></div>
+
+  <div class="section-head">
+    <h2>Coins · ranked by live composite score</h2>
+    <span class="aside" id="coin-count">—</span>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="flbl">Universe</span>
+      <span id="scan-status" style="font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.04em;">loading…</span>
+    </div>
+    <div class="filter-group">
+      <span class="flbl">Verdict</span>
+      <div class="seg" id="seg-verdict">
+        <button data-v="ALL" class="on">All</button>
+        <button data-v="BUY">Buy</button>
+        <button data-v="HOLD">Hold</button>
+        <button data-v="AVOID">Avoid</button>
+        <button data-v="SELL">Sell</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="flbl">Setup</span>
+      <div class="seg" id="seg-setup">
+        <button data-v="ALL" class="on">All</button>
+        <button data-v="BREAKOUT">Breakout</button>
+        <button data-v="PULLBACK">Pullback</button>
+        <button data-v="EARLY">Early</button>
+        <button data-v="EXTENDED">Extended</button>
+        <button data-v="BROKEN">Broken</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="flbl">Show</span>
+      <div class="seg" id="seg-show">
+        <button data-v="10" class="on">10</button>
+        <button data-v="25">25</button>
+        <button data-v="999">All</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panels">
+    <div id="coins"></div>
+    <aside class="detail" id="detail">
+      <p style="color: var(--ink-3); font-size: 13px;">Select a coin for its trade plan and hour-of-day analysis.</p>
+    </aside>
+  </div>
+
+  <div class="disclosure">
+    <strong>Not investment advice.</strong> This is a research tool. Every number on this page is computed from
+    live market data and a mechanical rulebook — it is a starting point for your own analysis, not a recommendation
+    to buy or sell. Crypto is volatile and largely unregulated; you can lose your entire position. Past measured
+    performance does not predict future results.
+  </div>
+
+</div>
+<div class="hb-backdrop" id="hb-backdrop" hidden></div>
+<aside class="hb-drawer" id="hb-drawer" hidden aria-modal="true" role="dialog" aria-labelledby="hb-title">
+  <header class="hb-header">
+    <span class="hb-title" id="hb-title"><strong>Handbook</strong> — click any chapter to jump</span>
+    <button class="hb-close" id="hb-close" aria-label="Close handbook">Close ✕</button>
+  </header>
+  <iframe class="hb-frame" id="hb-frame" title="Signal Desk Handbook" src="about:blank" loading="lazy"></iframe>
+</aside>
+
+<script>
+(function () {
+  const btn = document.getElementById('open-handbook');
+  const drawer = document.getElementById('hb-drawer');
+  const backdrop = document.getElementById('hb-backdrop');
+  const closeBtn = document.getElementById('hb-close');
+  const frame = document.getElementById('hb-frame');
+  if (!btn || !drawer || !frame) return;
+  let loaded = false;
+  function open() {
+    if (!loaded) { frame.src = '/handbook'; loaded = true; }
+    drawer.classList.add('open');
+    backdrop.classList.add('open');
+    drawer.removeAttribute('hidden');
+    backdrop.removeAttribute('hidden');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => closeBtn.focus(), 100);
+  }
+  function close() {
+    drawer.classList.remove('open');
+    backdrop.classList.remove('open');
+    drawer.setAttribute('hidden', '');
+    backdrop.setAttribute('hidden', '');
+    document.body.style.overflow = '';
+    btn.focus();
+  }
+  btn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  backdrop.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawer.classList.contains('open')) close(); });
+})();
+</script>
+
+<script>
+// Theme toggle. The early inline script in <head> already applied the stored
+// choice before first paint; this only handles switching and iframe sync.
+(function () {
+  const root = document.documentElement;
+  const mql = window.matchMedia('(prefers-color-scheme: dark)');
+  function applyTheme(next) {
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('sd-theme', next); } catch (e) {}
+    const frame = document.getElementById('hb-frame');
+    if (frame && frame.contentWindow) {
+      try { frame.contentWindow.postMessage({ type: 'sd-theme', theme: next }, '*'); } catch (e) {}
+    }
+  }
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme') || (mql.matches ? 'dark' : 'light');
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'sd-theme' && (e.data.theme === 'dark' || e.data.theme === 'light')) {
+      applyTheme(e.data.theme);
+    }
+  });
+})();
+</script>
+
+<script type="module">
+import { cryptoRegime } from '/analyze.js';
+
+(() => {
+  'use strict';
+
+  const REFRESH_MS = 20000;
+  const DAILY_TARGET = 50;          // the user's stated goal, in dollars per day
+  const RISK_PCT = 1.0;             // % of capital risked per trade
+
+  let coins = [];                   // universe metadata from /api/crypto-universe
+  let rows = [];                    // scored rows from /api/crypto-scan
+  let backtest = null;              // /api/crypto-backtest
+  let regimeNow = null;
+  let activeCoin = null;
+  let hourCache = {};
+  let lastOk = 0, inFlight = false, nextAt = 0;
+
+  let verdictFilter = 'ALL', setupFilter = 'ALL', showCount = 10;
+
+  const $ = (id) => document.getElementById(id);
+  const fmtPrice = (p) => {
+    if (p == null) return '—';
+    if (p >= 1000) return '$' + p.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    if (p >= 1) return '$' + p.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+    return '$' + p.toPrecision(3);
+  };
+  const pct = (x, d = 2) => (x == null ? '—' : `${x >= 0 ? '+' : ''}${x.toFixed(d)}%`);
+  const money = (x) => (x == null ? '—' : '$' + Math.round(x).toLocaleString('en-US'));
+
+  // ---- Verdict: same rulebook as Stocks, minus the earnings gate ----
+  function verdictFor(r) {
+    const s = r.sc || 0;
+    const bad = regimeNow && ['stress', 'crisis', 'divergent'].includes(regimeNow.level);
+    if (bad) return 'AVOID';
+    if (r.su === 'BROKEN' && s < 30) return 'SELL';
+    if (r.su === 'BROKEN' || r.su === 'AVOID') return 'AVOID';
+    if (r.su === 'EXTENDED') return 'HOLD';
+    if (r.su === 'BREAKOUT' && s >= 65) return 'BUY';
+    if (r.su === 'PULLBACK' && s >= 60) return 'BUY';
+    if (r.su === 'EARLY' && s >= 50) return 'HOLD';
+    if (s >= 70) return 'BUY';
+    return 'HOLD';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // THE DAILY TARGET MATHS
+  //
+  // This is the part the user actually asked about, so it has to be right and
+  // it has to be honest. Two cases:
+  //
+  //   expectancy <= 0 — no capital produces income. Size only scales the loss.
+  //                     Saying "you need $X" here would be a lie dressed as
+  //                     arithmetic, so we refuse to print a capital figure.
+  //
+  //   expectancy  > 0 — capital is derivable:
+  //                       $/trade      = expectancy(R) x risk$
+  //                       trades/day   = tradesPerYear / 365
+  //                       risk$ needed = target / (expectancy x trades/day)
+  //                       capital      = risk$ / (riskPct/100)
+  //                     This is an AVERAGE. Variance around it is large and the
+  //                     panel says so rather than implying a daily paycheque.
+  // ══════════════════════════════════════════════════════════════════════
+  function dailyTargetMaths(m, target = DAILY_TARGET, riskPct = RISK_PCT) {
+    if (!m || !m.trades || m.expectancy == null) return null;
+    const tradesPerDay = (m.tradesPerYear || 0) / 365;
+    if (m.expectancy <= 0 || tradesPerDay <= 0) {
+      return { achievable: false, expectancy: m.expectancy, tradesPerDay };
+    }
+    const riskDollars = target / (m.expectancy * tradesPerDay);
+    const capital = riskDollars / (riskPct / 100);
+    return {
+      achievable: true,
+      expectancy: m.expectancy,
+      tradesPerDay,
+      riskDollars,
+      capital,
+      // Losing days are not an edge case. With a ~30% win rate, most individual
+      // trades lose; profit comes from the few large winners.
+      winRate: m.winRate,
+    };
+  }
+
+  function renderReality() {
+    const head = $('reality-headline');
+    const body = $('reality-body');
+    if (!backtest) return;
+    if (backtest.error) {
+      head.textContent = 'Backtest unavailable right now.';
+      body.innerHTML = `<p>${backtest.error}. The rankings below still reflect live data; the measured edge figures will return on the next refresh.</p>`;
+      return;
+    }
+
+    const retail = backtest.sweep.find(s => s.bps === backtest.defaultFeeBps) || backtest.sweep[0];
+    const best = backtest.sweep.find(s => s.bps === 0);
+    const maths = dailyTargetMaths(retail);
+    const bh = backtest.buyHold;
+
+    head.innerHTML = maths && !maths.achievable
+      ? `Over ${retail.years} years and ${retail.trades} trades, this strategy <strong>loses money on crypto after real trading fees</strong>. No amount of capital turns that into $${DAILY_TARGET} a day.`
+      : `Measured over ${retail.years} years and ${retail.trades} trades.`;
+
+    const feeRows = backtest.sweep.map(s => `
+      <tr class="${s.bps === backtest.defaultFeeBps ? 'you' : ''}">
+        <td class="venue">${s.venue}${s.bps === backtest.defaultFeeBps ? ' ←' : ''}</td>
+        <td>${s.bps}</td>
+        <td>${s.winRate}%</td>
+        <td class="${s.expectancy >= 0 ? 'pos' : 'neg'}">${s.expectancy >= 0 ? '+' : ''}${s.expectancy}R</td>
+        <td class="${s.profitFactor >= 1 ? 'pos' : 'neg'}">${s.profitFactor}</td>
+        <td class="${s.totalReturn >= 0 ? 'pos' : 'neg'}">${s.totalReturn}%</td>
+      </tr>`).join('');
+
+    body.innerHTML = `
+      <p>
+        The engine buys BREAKOUT and PULLBACK setups across ${backtest.coins} liquid coins, with an ATR-based stop
+        and a 2.5R target — the same rulebook the Stocks tab uses. Every trade is filled at the <em>next</em> bar's
+        open, gaps are honoured, and exchange fees are charged on both sides.
+      </p>
+      <p>
+        <strong>Fees decide the outcome.</strong> Before costs the edge is
+        <span class="${best && best.expectancy >= 0 ? 'numok' : 'num'}">${best ? (best.expectancy >= 0 ? '+' : '') + best.expectancy + 'R' : '—'}</span>
+        per trade — thin but positive. Coinbase's retail taker fee of
+        <span class="num">${backtest.defaultFeeBps} bps a side</span> (${backtest.defaultFeeBps * 2} bps round trip) turns that into
+        <span class="num">${retail.expectancy >= 0 ? '+' : ''}${retail.expectancy}R</span>. The exchange takes the whole edge and then some.
+      </p>
+
+      <div class="fee-scroll">
+        <table class="fee-table">
+          <thead><tr><th>Venue / fee tier</th><th>bps/side</th><th>Win</th><th>Expectancy</th><th>Profit factor</th><th>Total return</th></tr></thead>
+          <tbody>${feeRows}</tbody>
+        </table>
+      </div>
+      <p style="font-size:12px;color:var(--ink-3);margin-top:4px;">
+        ${backtest.breakevenBps != null
+          ? `Breakeven sits near <strong>${backtest.breakevenBps} bps a side</strong>. Below that the strategy is roughly flat, not rich — it is not a fee problem with a profitable strategy hiding behind it.`
+          : `No fee tier in this range produces a positive expectancy.`}
+      </p>
+
+      <h2 style="margin-top:20px;">Your $${DAILY_TARGET}/day target</h2>
+      ${maths && !maths.achievable ? `
+        <div class="target-grid">
+          <div class="target-cell">
+            <div class="l">Measured expectancy</div>
+            <div class="n bad">${maths.expectancy >= 0 ? '+' : ''}${maths.expectancy}R</div>
+            <div class="sub">per trade, after retail fees</div>
+          </div>
+          <div class="target-cell">
+            <div class="l">Capital for $${DAILY_TARGET}/day</div>
+            <div class="n bad">Impossible</div>
+            <div class="sub">a negative edge scales losses, not income</div>
+          </div>
+          <div class="target-cell">
+            <div class="l">Signals per day</div>
+            <div class="n">${maths.tradesPerDay.toFixed(2)}</div>
+            <div class="sub">across all ${backtest.coins} coins — roughly one every ${Math.round(1 / maths.tradesPerDay)} days, not daily</div>
+          </div>
+          <div class="target-cell">
+            <div class="l">BTC buy &amp; hold, same window</div>
+            <div class="n ${bh && bh.totalReturn >= 0 ? '' : 'bad'}">${bh ? (bh.totalReturn >= 0 ? '+' : '') + bh.totalReturn + '%' : '—'}</div>
+            <div class="sub">${bh ? `${bh.cagr}% CAGR, ${bh.maxDrawdown}% max drawdown` : ''}</div>
+          </div>
+        </div>
+        <p style="margin-top:12px;">
+          There are two separate problems with a fixed daily figure, and both survive any change of strategy.
+          <strong>First, the edge here is negative</strong> — trading it more, or with more money, loses faster.
+          <strong>Second, even a genuinely profitable system does not pay daily.</strong> This one generates about
+          <strong>${maths.tradesPerDay.toFixed(2)} signals a day</strong>; most days it has nothing to do, and around
+          <strong>${(100 - retail.winRate).toFixed(0)}% of the trades it does take are losers</strong>. Profit, when it exists,
+          comes from a handful of large winners — not from a steady drip.
+        </p>
+        <p>
+          For scale: if you had an edge of <strong>+0.20R</strong> — better than anything measured here, and better than
+          most professional systematic strategies sustain — $${DAILY_TARGET}/day at this signal rate would still need roughly
+          <strong>${money(DAILY_TARGET / (0.20 * maths.tradesPerDay) / (RISK_PCT / 100))}</strong> of capital at ${RISK_PCT}% risk per trade.
+          The daily-income framing needs six figures even when the strategy works.
+        </p>
+        <p style="margin-bottom:0;">
+          <strong>What the rankings below are actually for.</strong> They are a research screen: which coins are
+          technically strongest right now, with a defined entry, stop and target so risk is known before you commit.
+          Use them to shortlist and to size, not as a daily paycheque. If you want crypto exposure and the measured
+          active edge is negative, the honest alternative on this data is a smaller buy-and-hold position — with clear
+          eyes about the ${bh ? bh.maxDrawdown + '%' : 'severe'} drawdown that came with it.
+        </p>
+      ` : maths ? `
+        <div class="target-grid">
+          <div class="target-cell"><div class="l">Measured expectancy</div><div class="n">+${maths.expectancy}R</div><div class="sub">per trade, after fees</div></div>
+          <div class="target-cell"><div class="l">Risk per trade</div><div class="n">${money(maths.riskDollars)}</div><div class="sub">to average $${DAILY_TARGET}/day</div></div>
+          <div class="target-cell"><div class="l">Capital required</div><div class="n">${money(maths.capital)}</div><div class="sub">at ${RISK_PCT}% risk per trade</div></div>
+          <div class="target-cell"><div class="l">Signals per day</div><div class="n">${maths.tradesPerDay.toFixed(2)}</div><div class="sub">across ${backtest.coins} coins</div></div>
+        </div>
+        <p style="margin-top:12px;margin-bottom:0;">
+          That capital figure buys a <strong>long-run average</strong>, not a daily payment. At a
+          ${retail.winRate}% win rate most individual trades lose, and the strategy goes days with no signal at all.
+          Expect losing weeks inside a profitable year.
+        </p>
+      ` : '<p>Not enough trades to measure an edge.</p>'}
+
+      ${backtest.coverage && !backtest.coverage.adequate ? `
+        <p style="margin-top:12px;font-size:12px;color:var(--caution);">
+          ⚠ Only ${backtest.coverage.years} years of history loaded this run — short of the 3+ years needed to span
+          a full crypto cycle. Treat these figures as provisional until a longer window loads.
+        </p>` : ''}
+    `;
+  }
+
+  function renderPulse() {
+    const el = $('pulse');
+    if (!el) return;
+    const btc = rows.find(r => r.t === 'BTC');
+    const eth = rows.find(r => r.t === 'ETH');
+    const withMa = rows.filter(r => r.a50 != null);
+    const above = withMa.filter(r => r.a50).length;
+    const breadthPct = withMa.length ? (above / withMa.length) * 100 : null;
+
+    const cell = (label, value, sub, cls = '') =>
+      `<div class="drv-cell"><div class="l">${label}</div><div class="n ${cls}">${value}</div><div class="s">${sub}</div></div>`;
+
+    el.innerHTML = [
+      btc ? cell('Bitcoin · BTC', fmtPrice(btc.p), pct(btc.c), btc.c >= 0 ? 'up' : 'down') : cell('Bitcoin · BTC', '—', ''),
+      eth ? cell('Ethereum · ETH', fmtPrice(eth.p), pct(eth.c), eth.c >= 0 ? 'up' : 'down') : cell('Ethereum · ETH', '—', ''),
+      breadthPct != null
+        ? cell('Breadth · >50d MA', `${breadthPct.toFixed(0)}%`, `${above}/${withMa.length} coins`, breadthPct >= 50 ? 'up' : 'down')
+        : cell('Breadth', '—', ''),
+      regimeNow
+        ? cell(`Regime · BTC vol ${regimeNow.realisedVol != null ? regimeNow.realisedVol.toFixed(0) + '%' : '—'}`,
+               regimeNow.level.toUpperCase(), regimeNow.note)
+        : cell('Regime', '—', 'computing…'),
+    ].join('');
+  }
+
+  function renderCoins() {
+    const el = $('coins');
+    const filtered = rows.filter(r => {
+      if (verdictFilter !== 'ALL' && verdictFor(r) !== verdictFilter) return false;
+      if (setupFilter !== 'ALL' && r.su !== setupFilter) return false;
+      return true;
+    });
+    const visible = filtered.slice(0, showCount);
+    $('coin-count').textContent = `${visible.length} of ${filtered.length} matches · ${rows.length} scored`;
+
+    if (!visible.length) {
+      el.innerHTML = `<div class="empty-note"><strong>No coins match these filters.</strong><br/>Loosen the verdict or setup filter.</div>`;
+      return;
+    }
+
+    const meta = Object.fromEntries(coins.map(c => [c.symbol, c]));
+    el.innerHTML = visible.map((r, i) => {
+      const v = verdictFor(r);
+      const m = meta[r.t];
+      return `
+      <div class="coin-card ${r.t === activeCoin ? 'active' : ''}" data-coin="${r.t}" tabindex="0" role="button">
+        <div class="rank">${String(i + 1).padStart(2, '0')}</div>
+        <div style="min-width:0;">
+          <div class="sym">${r.t} <span style="color:var(--ink-3);font-size:12px;font-weight:400;">· ${fmtPrice(r.p)}</span>
+            <span style="font-size:11px;font-weight:400;color:${r.c >= 0 ? 'var(--signal)' : 'var(--risk)'};">${pct(r.c)}</span>
+          </div>
+          <div class="nm">${m ? m.name : r.t}${m && m.rank ? ` · rank #${m.rank}` : ''}</div>
+          <span class="setup-chip setup-${r.su}">${r.su}</span>
+          <div class="why">${r.reason || ''}</div>
+          <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:8px;letter-spacing:0.04em;">
+            ${r.t === 'BTC' ? 'benchmark' : `RS vs BTC ${r.rs != null ? (r.rs >= 0 ? '+' : '') + r.rs + '%' : '—'}`}
+            · ATR ${r.atr != null ? r.atr + '%' : '—'}
+            · stop ${r.stopPct != null ? '−' + r.stopPct + '%' : '—'}
+            · target ${r.tgtPct != null ? '+' + r.tgtPct + '%' : '—'}
+          </div>
+        </div>
+        <div class="coin-right">
+          <span class="verdict-pill verdict-${v}">${v}</span>
+          <div class="score-label" style="margin-top:8px;">Composite</div>
+          <div class="score">${r.sc != null ? r.sc : '—'}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    el.querySelectorAll('.coin-card').forEach(card => {
+      const open = () => { activeCoin = card.dataset.coin; renderCoins(); renderDetail(); loadHours(activeCoin); };
+      card.addEventListener('click', open);
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+      });
+    });
+  }
+
+  function renderDetail() {
+    const el = $('detail');
+    if (!activeCoin) return;
+    const r = rows.find(x => x.t === activeCoin);
+    if (!r) return;
+    const v = verdictFor(r);
+    const hrs = hourCache[activeCoin];
+    const sizeMult = regimeNow ? regimeNow.sizeMult : 1;
+
+    el.innerHTML = `
+      <div class="detail-head" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;">
+        <div style="font-family:var(--mono);font-size:20px;font-weight:600;">${r.t}</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--ink-3);">
+          ${fmtPrice(r.p)} <span style="color:${r.c >= 0 ? 'var(--signal)' : 'var(--risk)'};">${pct(r.c)}</span> · score ${r.sc}
+        </div>
+      </div>
+
+      <div style="margin:12px 0;padding:12px 14px;border-left:2px solid var(--accent);background:var(--ground-2);">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">
+          Setup · ${r.su} → ${v}
+        </div>
+        <div style="font-size:13px;color:var(--ink-2);line-height:1.6;">${r.reason || ''}</div>
+        ${regimeNow && regimeNow.allow.length && !regimeNow.allow.includes(r.su)
+          ? `<div style="margin-top:8px;font-size:12.5px;color:var(--risk);"><strong>Regime blocks a new entry on this setup.</strong> ${regimeNow.note}</div>`
+          : ''}
+      </div>
+
+      <h3>Trade plan · ATR-derived</h3>
+      <div class="plan">
+        <div class="plan-cell"><div class="l">Entry</div><div class="n">${fmtPrice(r.p)}</div></div>
+        <div class="plan-cell stop"><div class="l">Stop (−${r.stopPct}%)</div><div class="n">${fmtPrice(r.stop)}</div></div>
+        <div class="plan-cell tgt"><div class="l">Target (+${r.tgtPct}%)</div><div class="n">${fmtPrice(r.tgt)}</div></div>
+        <div class="plan-cell"><div class="l">Time stop</div><div class="n">15 days</div></div>
+      </div>
+      <p style="font-family:var(--mono);font-size:10px;color:var(--ink-3);margin:8px 0 0;letter-spacing:0.05em;line-height:1.6;">
+        R:R 2.5 : 1 · risk 1% of capital, × ${sizeMult} for regime ·
+        stop = max(1.5×ATR, 3%) capped 15% · on $10,000 that is $${(100 * sizeMult).toFixed(0)} at risk
+      </p>
+      <p style="font-size:12px;color:var(--caution);margin-top:8px;line-height:1.6;">
+        Coinbase's retail fee costs ~1.2% of the round trip. On this ${r.tgtPct}% target that is
+        roughly ${((1.2 / (r.tgtPct || 1)) * 100).toFixed(0)}% of the gross win handed to the exchange before you keep anything.
+      </p>
+
+      <h3 style="margin-top:22px;">When to sell · hour-of-day</h3>
+      ${renderHours(hrs)}
+    `;
+  }
+
+  function renderHours(h) {
+    if (!h) return `<p style="color:var(--ink-3);font-size:12.5px;">Loading ~100 days of hourly candles…</p>`;
+    if (h.insufficient) return `<p style="color:var(--ink-3);font-size:12.5px;">${h.note}</p>`;
+
+    const vals = h.hours.filter(x => x.avg != null).map(x => x.avg);
+    const max = Math.max(...vals.map(Math.abs), 0.0001);
+    const bars = h.hours.map(x => {
+      if (x.avg == null) return `<div class="hour-bar"><i style="height:0"></i></div>`;
+      const sig = h.significant.some(s => s.h === x.h);
+      const pctH = Math.max(4, (Math.abs(x.avg) / max) * 100);
+      return `<div class="hour-bar ${x.avg >= 0 ? 'pos' : 'neg'} ${sig ? 'sig' : ''}" title="${String(x.h).padStart(2, '0')}:00 UTC · avg ${x.avg}% · win ${x.winRate}% · n=${x.n} · t=${x.t}">
+                <i style="height:${pctH}%"></i></div>`;
+    }).join('');
+    const axis = h.hours.map(x => `<div>${x.h % 3 === 0 ? String(x.h).padStart(2, '0') : ''}</div>`).join('');
+
+    return `
+      <div class="hours-grid">${bars}</div>
+      <div class="hours-axis">${axis}</div>
+      <p style="font-family:var(--mono);font-size:10px;color:var(--ink-3);margin:8px 0 10px;letter-spacing:0.04em;">
+        UTC hour · ${h.sampleDays} days · ~${h.obsPerHour} observations per hour
+      </p>
+      <div style="padding:12px 14px;border-left:2px solid ${h.anySignificant ? 'var(--signal)' : 'var(--risk)'};background:var(--ground-2);">
+        <div style="font-size:13px;color:var(--ink-2);line-height:1.6;">${h.verdict}</div>
+        <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:8px;line-height:1.6;">
+          best ${String(h.best.h).padStart(2, '0')}:00 ${h.best.avg >= 0 ? '+' : ''}${h.best.avg}% (t=${h.best.t}) ·
+          worst ${String(h.worst.h).padStart(2, '0')}:00 ${h.worst.avg}% (t=${h.worst.t}) ·
+          significance needs |t| ≥ ${h.method.tCritical}
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--ink-3);margin-top:10px;line-height:1.6;">
+        Testing all 24 hours and reporting the best one finds a "winner" even in pure noise, so each hour is
+        t-tested against zero and judged with a Bonferroni correction (${h.method.correction}). Bars outlined in
+        gold cleared it. ${h.anySignificant ? '' : 'None did here.'}
+      </p>`;
+  }
+
+  async function loadHours(coin) {
+    if (hourCache[coin]) { renderDetail(); return; }
+    try {
+      const r = await fetch(`/api/crypto-hours?coin=${encodeURIComponent(coin)}`, { cache: 'no-store' });
+      if (!r.ok) return;
+      hourCache[coin] = await r.json();
+      if (activeCoin === coin) renderDetail();
+    } catch { /* leave the loading state */ }
+  }
+
+  function setFeed(state, label) {
+    const dot = $('feed-dot'); const lab = $('feed-label');
+    if (dot) dot.style.background = state === 'live' ? 'var(--signal)' : state === 'stale' ? 'var(--caution)' : 'var(--risk)';
+    if (lab) lab.textContent = label;
+  }
+
+  function updateLiveLabel() {
+    if (!lastOk) return;
+    const age = Math.floor((Date.now() - lastOk) / 1000);
+    const nxt = Math.max(0, Math.ceil((nextAt - Date.now()) / 1000));
+    setFeed(age > 90 ? 'stale' : 'live', `${age > 90 ? 'stale' : 'live'} · updated ${age}s ago · next in ${nxt}s`);
+  }
+
+  async function loadUniverse() {
+    if (coins.length) return coins;
+    const r = await fetch('/api/crypto-universe?limit=40', { cache: 'no-store' });
+    if (!r.ok) throw new Error(`universe HTTP ${r.status}`);
+    coins = (await r.json()).constituents || [];
+    return coins;
+  }
+
+  async function pull() {
+    if (inFlight) return;
+    inFlight = true;
+    try {
+      const uni = await loadUniverse();
+      const syms = uni.map(c => c.symbol).join(',');
+      const r = await fetch(`/api/crypto-scan?coins=${encodeURIComponent(syms)}`, { cache: 'no-store' });
+      if (!r.ok) throw new Error(`scan HTTP ${r.status}`);
+      const d = await r.json();
+      rows = d.rows || [];
+
+      // Regime from the BTC closes the scan returns, plus universe breadth
+      if (d.btc && d.btc.length) {
+        const withMa = rows.filter(x => x.a50 != null);
+        const breadth = withMa.length
+          ? { pctAbove50: (withMa.filter(x => x.a50).length / withMa.length) * 100 }
+          : null;
+        regimeNow = cryptoRegime(d.btc, breadth);
+      }
+
+      $('scan-status').textContent = `${d.scored} of ${d.requested} coins scored · Coinbase USD pairs`;
+      $('run-ts').textContent = new Date(d.asOf).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+      lastOk = Date.now(); nextAt = lastOk + REFRESH_MS;
+
+      renderPulse(); renderCoins();
+      if (activeCoin) renderDetail();
+      updateLiveLabel();
+    } catch (e) {
+      setFeed('down', `feed unavailable · ${e.message}`);
+    } finally {
+      inFlight = false;
+    }
+  }
+
+  async function loadBacktest() {
+    try {
+      const r = await fetch('/api/crypto-backtest', { cache: 'no-store' });
+      backtest = r.ok ? await r.json() : { error: `HTTP ${r.status}` };
+    } catch (e) {
+      backtest = { error: e.message };
+    }
+    renderReality();
+  }
+
+  function wireSeg(id, onChange) {
+    document.querySelectorAll(`#${id} button`).forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll(`#${id} button`).forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        onChange(b.dataset.v);
+        renderCoins();
+      });
+    });
+  }
+  wireSeg('seg-verdict', v => { verdictFilter = v; });
+  wireSeg('seg-setup', v => { setupFilter = v; });
+  wireSeg('seg-show', v => { showCount = parseInt(v, 10); });
+
+  $('refresh-now')?.addEventListener('click', async (e) => {
+    const b = e.currentTarget;
+    b.disabled = true; b.textContent = '↻ Refreshing…';
+    await pull();
+    setTimeout(() => { b.disabled = false; b.textContent = '↻ Refresh'; }, 800);
+  });
+
+  pull();
+  loadBacktest();
+  setInterval(pull, REFRESH_MS);
+  setInterval(updateLiveLabel, 1000);
+})();
+</script>

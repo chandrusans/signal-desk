@@ -15,6 +15,7 @@ const PAGES = {
   '/stocks': 'index.html',
   '/dashboard': 'dashboard.html',
   '/options': 'options.html',
+  '/crypto': 'crypto.html',
   '/metals': 'metals.html',
   '/handbook': 'handbook.html',
 };

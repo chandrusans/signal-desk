@@ -25,6 +25,7 @@ signal-desk/
 ├── index.html         Stocks UI (all inline CSS/JS)
 ├── dashboard.html     Personal portfolio tracker
 ├── options.html       Options recommendations
+├── crypto.html        Crypto — rankings + measured-edge reality check
 ├── metals.html        Gold / silver
 ├── handbook.html      Beginner reference + changelog (see CLAUDE.md — keep current)
 ├── analyze.js         Pure computation — indicators, score, setup, trade plan
@@ -37,7 +38,11 @@ signal-desk/
 │   ├── buzz.js        StockTwits + CNBC aggregator
 │   ├── options.js     NASDAQ option chains + recommendation engine
 │   ├── option-quote.js  Live per-contract premiums by OCC symbol
-│   └── fundamentals.js  Market cap, P/E, earnings dates
+│   ├── fundamentals.js  Market cap, P/E, earnings dates
+│   ├── crypto-universe.js  Top coins by mcap ∩ Coinbase USD pairs
+│   ├── crypto-scan.js      Batch crypto scorer, BTC as benchmark
+│   ├── crypto-hours.js     Hour-of-day returns + Bonferroni significance test
+│   └── crypto-backtest.js  Crypto backtest + venue fee sweep
 ├── tools/
 │   ├── devserver.mjs  Local server routing /api/* to the handler modules
 │   └── lint.mjs       Undefined-function detector for inline scripts
@@ -78,7 +83,7 @@ NODE_EXTRA_CA_CERTS=/tmp/ca.pem node tools/devserver.mjs 3000
 ### Checks before committing
 
 ```bash
-node tools/lint.mjs index.html dashboard.html options.html metals.html handbook.html
+node tools/lint.mjs index.html dashboard.html options.html crypto.html metals.html handbook.html
 ```
 
 This catches called-but-never-defined functions in the inline `<script>` blocks —
@@ -131,6 +136,23 @@ Scores up to 80 tickers per call. Returns compact rows — `t` ticker, `p` price
 `sc` score, `su` setup, `rs` / `srs` relative strength vs SPY and sector,
 `stop` / `tgt` plan levels, `spark` a 20-point sparkline.
 
+### Crypto: fees decide the outcome
+
+The crypto momentum strategy earns roughly **+0.06R per trade before costs** over
+~5 years across the liquid majors — thin but positive. At Coinbase's retail taker
+fee of 60 bps a side (120 bps round trip) that becomes **negative**. Breakeven
+sits far below retail pricing, so venue choice is a bigger lever on this strategy
+than coin choice.
+
+`/api/crypto-backtest` computes this live and returns a fee sweep across venue
+tiers. The Crypto page shows it above the rankings and does not let it be
+dismissed — a screen that looks authoritative while losing money is worse than no
+screen. Asset-class costs and stop bounds live in `CLASS_CFG` in `backtest.js`.
+
+Hour-of-day timing is measured, not asserted: `/api/crypto-hours` t-tests all 24
+hours against zero with a Bonferroni correction. On the majors tested, no hour
+survives it.
+
 ## What's live
 
 - S&P 500 constituents + GICS sectors → `/api/universe`
@@ -139,6 +161,9 @@ Scores up to 80 tickers per call. Returns compact rows — `t` ticker, `p` price
 - Market breadth — % of the full index above its own 50d MA, computed from the scan
 - News headlines + keyword-based sentiment per ticker → `/api/news` (Yahoo Finance search)
 - News sentiment feeds into the composite score as a **catalyst adjustment** (max ±10 pts)
+- Crypto prices, daily/hourly candles → Coinbase Exchange public API (no key)
+- Crypto universe + market caps → CoinGecko free tier, intersected with Coinbase USD pairs
+- Crypto backtest + fee sweep → `/api/crypto-backtest`, computed live and cached 6h
 
 ## What's still mock
 

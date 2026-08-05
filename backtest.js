@@ -26,6 +26,19 @@ const DEFAULTS = {
   targetR: 2.5,
   startEquity: 10000,
   warmupBars: 200,           // need 200 bars before MA200 is valid
+  assetClass: 'equity',      // 'equity' | 'crypto' — selects stop bounds + costs
+};
+
+// Per-asset-class execution cost and stop bounds. Cost is charged per side.
+//
+// The crypto number is the one that matters. Coinbase's retail taker fee is
+// 0.60% below $10k of 30-day volume (0.40% above it) — 60 bps a side, roughly
+// 9x the equity assumption and 120 bps round trip. Modelling crypto with
+// equity costs overstates results badly enough to flip the conclusion, so this
+// defaults to the honest, pessimistic retail number.
+const CLASS_CFG = {
+  equity: { costBps: 7,  stopFloorPct: 0.05, stopCapPct: 0.10 },
+  crypto: { costBps: 60, stopFloorPct: 0.03, stopCapPct: 0.15 },
 };
 
 /**
@@ -38,6 +51,10 @@ const DEFAULTS = {
 export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars = null) {
   const cfg = { ...DEFAULTS, ...opts };
   const strategy = cfg.strategy || 'momentum';   // 'momentum' | 'mean-reversion' | 'composite'
+  const klass = CLASS_CFG[cfg.assetClass] || CLASS_CFG.equity;
+  // An explicit slippageBps in opts wins; otherwise take the asset class's cost.
+  const costBps = opts.slippageBps != null ? opts.slippageBps : klass.costBps;
+  cfg.slippageBps = costBps;
 
   // Build a VIX lookup by timestamp for the regime filter
   const vixByTs = {};
@@ -122,7 +139,7 @@ export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars =
       }
 
       // ---- Look for an entry ----
-      const a = analyze(slice);
+      const a = analyze(slice, { assetClass: cfg.assetClass });
       if (a.insufficient) continue;
 
       // Regime filter
@@ -153,7 +170,7 @@ export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars =
       const entryFill = entryRaw * (1 + cfg.slippageBps / 10000);
       const atr = a.indicators.atr14;
       if (!(atr > 0)) continue;
-      const stopDist = Math.min(entryFill * 0.10, Math.max(1.5 * atr, entryFill * 0.05));
+      const stopDist = Math.min(entryFill * klass.stopCapPct, Math.max(1.5 * atr, entryFill * klass.stopFloorPct));
       const stop = entryFill - stopDist;
       const target = entryFill + cfg.targetR * stopDist;
 

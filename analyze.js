@@ -92,11 +92,16 @@ export function analyze(bars, extras = {}) {
     return { insufficient: true, reason: 'need ≥60 bars of history' };
   }
   const news = extras.news;
-  // extras.benchBars  — SPY (or sector ETF) bars for relative-strength scoring
-  // extras.earnings   — { date: 'YYYY-MM-DD' } next earnings date
+  // extras.benchBars  — benchmark bars for relative strength: SPY (or a sector
+  //                     ETF) for equities, BTC for crypto. Same maths either way
+  //                     — what changes is what "the market" means.
+  // extras.earnings   — { date: 'YYYY-MM-DD' } next earnings date. Equities only.
   // extras.breadth    — { pctAbove50: 0..100 } market breadth for regime context
+  // extras.assetClass — 'equity' (default) | 'crypto'. Selects stop bounds and
+  //                     turns off the earnings gate, which has no crypto analogue.
   const benchBars = extras.benchBars;
-  const earnings = extras.earnings;
+  const assetClass = extras.assetClass === 'crypto' ? 'crypto' : 'equity';
+  const earnings = assetClass === 'crypto' ? null : extras.earnings;
   const closes = bars.map((b) => b.c);
   const price = closes[closes.length - 1];
 
@@ -159,17 +164,22 @@ export function analyze(bars, extras = {}) {
   // 5% while SPY is up 9% scores as the laggard it is. Falls back to absolute
   // 20d return only when no benchmark is available.
   const r20 = ret20 || 0;
+  // What counts as "clear leadership" scales with the asset class. Beating SPY
+  // by 8% over 20 days is a strong equity signal; beating BTC by 8% is ordinary
+  // noise for an altcoin, so crypto needs a higher bar to mean the same thing.
+  const bench = assetClass === 'crypto' ? 'BTC' : 'SPY';
+  const rsFull = assetClass === 'crypto' ? 15 : 8;
   if (rs20 != null) {
-    // RS sweet spot: +8% or better vs SPY over 20 days = full marks
+    // RS sweet spot: rsFull or better vs the benchmark over 20 days = full marks
     if (rs20 <= 0) {
       parts.momentum = 0;
-      notes.push(`Relative strength ${rs20.toFixed(1)}% vs SPY — underperforming, laggard`);
-    } else if (rs20 >= 8) {
+      notes.push(`Relative strength ${rs20.toFixed(1)}% vs ${bench} — underperforming, laggard`);
+    } else if (rs20 >= rsFull) {
       parts.momentum = 25;
-      notes.push(`Relative strength +${rs20.toFixed(1)}% vs SPY — clear leader`);
+      notes.push(`Relative strength +${rs20.toFixed(1)}% vs ${bench} — clear leader`);
     } else {
-      parts.momentum = Math.round((rs20 / 8) * 25);
-      notes.push(`Relative strength +${rs20.toFixed(1)}% vs SPY (abs ${r20 >= 0 ? '+' : ''}${r20.toFixed(1)}%)`);
+      parts.momentum = Math.round((rs20 / rsFull) * 25);
+      notes.push(`Relative strength +${rs20.toFixed(1)}% vs ${bench} (abs ${r20 >= 0 ? '+' : ''}${r20.toFixed(1)}%)`);
     }
     // Confirm with the 60-day RS — persistence matters more than a single spike
     if (rs60 != null && rs60 > 0 && rs20 > 0) {
@@ -333,7 +343,7 @@ export function analyze(bars, extras = {}) {
   }
 
   // ---- Trade plan (ATR-based) ----
-  const plan = tradePlan({ price, atr14, atrPct, setup, ma10, ma20, distFrom52w });
+  const plan = tradePlan({ price, atr14, atrPct, setup, ma10, ma20, distFrom52w, assetClass });
 
   return {
     price,
@@ -355,15 +365,28 @@ export function analyze(bars, extras = {}) {
   };
 }
 
-function tradePlan({ price, atr14, atrPct, setup, ma10, ma20 }) {
+// Stop bounds differ by asset class. The floor stops noise from taking you out;
+// the cap stops one wild name from eating the risk budget. Crypto needs wider
+// bounds — its ATR runs roughly 2-3x equities (BTC ~2.3%/day, small alts ~7%),
+// so equity bounds would clip high-ATR coins to a flat 10% and destroy the
+// ATR-proportionality that makes R-multiples comparable across names. The
+// floor can also be tighter than equities: crypto trades 24/7, so there is no
+// overnight gap risk to buffer against.
+const STOP_BOUNDS = {
+  equity: { floorPct: 0.05, capPct: 0.10 },
+  crypto: { floorPct: 0.03, capPct: 0.15 },
+};
+
+function tradePlan({ price, atr14, atrPct, setup, ma10, ma20, assetClass = 'equity' }) {
   if (atr14 == null || price == null) return null;
   // Entry: at market for BREAKOUT; at MA10 pullback zone for PULLBACK
   const entryLow  = setup === 'PULLBACK' && ma10 ? Math.min(price, ma10) * 0.995 : price * 0.985;
   const entryHigh = setup === 'PULLBACK' && ma10 ? Math.max(price, ma10) * 1.005 : price * 1.015;
   const entry = (entryLow + entryHigh) / 2;
 
-  // Stop: max(1.5*ATR, 5% of price), capped at 10%
-  const stopDist = Math.min(entry * 0.10, Math.max(1.5 * atr14, entry * 0.05));
+  // Stop: max(1.5*ATR, floor), capped — bounds per asset class
+  const b = STOP_BOUNDS[assetClass] || STOP_BOUNDS.equity;
+  const stopDist = Math.min(entry * b.capPct, Math.max(1.5 * atr14, entry * b.floorPct));
   const stop = entry - stopDist;
   const stopPct = (stopDist / entry) * 100;
 
@@ -418,6 +441,79 @@ export function regime(vixPrice, breadth = null) {
       base.sizeMult = Math.min(base.sizeMult, 0.5);
       base.allow = base.allow.filter(s => s === 'PULLBACK');
       base.note = `Narrow tape — ${b.toFixed(0)}% above 50d MA. Half size, pullbacks only. ${base.note}`;
+    } else if (b > 65) {
+      base.note = `${base.note} · Breadth healthy (${b.toFixed(0)}% above 50d MA).`;
+    }
+  }
+  return base;
+}
+
+/**
+ * Crypto regime. There is no VIX for crypto, so the volatility input is BTC's
+ * own realised volatility — the annualised standard deviation of its daily log
+ * returns over the last 30 days. BTC is the market: when it is calm and above
+ * its 50-day, alts trend; when it breaks down, correlations go to 1 and every
+ * altcoin setup fails at once regardless of how good its own chart looks.
+ *
+ * @param btcBars  daily OHLC for BTC-USD
+ * @param breadth  { pctAbove50 } across the crypto universe
+ */
+export function cryptoRegime(btcBars, breadth = null) {
+  if (!btcBars || btcBars.length < 51) {
+    return { level: 'unknown', sizeMult: 1, allow: ['BREAKOUT', 'PULLBACK', 'EARLY'], note: 'BTC history unavailable' };
+  }
+  const closes = btcBars.map(b => b.c);
+  const price = closes[closes.length - 1];
+
+  // Annualised realised vol from 30d of daily log returns. Crypto trades every
+  // day, so the annualisation factor is 365 — not the 252 trading days used for
+  // equities. Using 252 here would understate crypto vol by about 20%.
+  const rets = [];
+  for (let i = closes.length - 30; i < closes.length; i++) {
+    if (i > 0 && closes[i - 1] > 0) rets.push(Math.log(closes[i] / closes[i - 1]));
+  }
+  const mean = rets.reduce((s, x) => s + x, 0) / rets.length;
+  const variance = rets.reduce((s, x) => s + (x - mean) ** 2, 0) / Math.max(rets.length - 1, 1);
+  const rv = Math.sqrt(variance) * Math.sqrt(365) * 100;
+
+  const btcMa50 = sma(closes, 50);
+  const btcAbove50 = btcMa50 != null && price > btcMa50;
+
+  // Thresholds are crypto-native. BTC realised vol sits ~40-50% in quiet
+  // stretches and spikes past 100% in a genuine risk event; an equity VIX
+  // scale applied here would read "crisis" permanently.
+  let base;
+  if (rv < 35)      base = { level: 'calm',     sizeMult: 1.0,  allow: ['BREAKOUT', 'PULLBACK', 'EARLY'], note: `BTC realised vol ${rv.toFixed(0)}% — quiet, full sizing` };
+  else if (rv < 55) base = { level: 'normal',   sizeMult: 1.0,  allow: ['BREAKOUT', 'PULLBACK'],          note: `BTC realised vol ${rv.toFixed(0)}% — normal, A+ setups only` };
+  else if (rv < 75) base = { level: 'elevated', sizeMult: 0.5,  allow: ['PULLBACK'],                      note: `BTC realised vol ${rv.toFixed(0)}% — half size, pullbacks only` };
+  else if (rv < 110) base = { level: 'stress',  sizeMult: 0.25, allow: [],                                note: `BTC realised vol ${rv.toFixed(0)}% — no new longs, manage risk` };
+  else              base = { level: 'crisis',   sizeMult: 0,    allow: [],                                note: `BTC realised vol ${rv.toFixed(0)}% — risk-off` };
+
+  base.realisedVol = rv;
+  base.btcAbove50 = btcAbove50;
+
+  // BTC below its own 50-day overrides a calm vol reading. Low volatility while
+  // BTC bleeds is a distribution pattern, not a buying opportunity — alts fall
+  // harder than BTC in that tape, so an alt "breakout" is a trap.
+  if (!btcAbove50 && (base.level === 'calm' || base.level === 'normal')) {
+    base.level = 'divergent';
+    base.sizeMult = Math.min(base.sizeMult, 0.25);
+    base.allow = [];
+    base.note = `BTC below its 50-day MA with vol only ${rv.toFixed(0)}% — quiet downtrend. Alts fall harder than BTC here. No new longs.`;
+  }
+
+  if (breadth && breadth.pctAbove50 != null) {
+    const b = breadth.pctAbove50;
+    base.breadth = b;
+    if (b < 30) {
+      base.sizeMult = Math.min(base.sizeMult, 0.25);
+      base.allow = [];
+      if (base.level === 'calm' || base.level === 'normal') base.level = 'divergent';
+      base.note = `Only ${b.toFixed(0)}% of coins above their 50d MA — broad breakdown. No new longs.`;
+    } else if (b < 45) {
+      base.sizeMult = Math.min(base.sizeMult, 0.5);
+      base.allow = base.allow.filter(s => s === 'PULLBACK');
+      base.note = `Narrow tape — ${b.toFixed(0)}% of coins above 50d MA. Half size, pullbacks only. ${base.note}`;
     } else if (b > 65) {
       base.note = `${base.note} · Breadth healthy (${b.toFixed(0)}% above 50d MA).`;
     }

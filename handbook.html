@@ -475,12 +475,12 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.1</div>
+      <div class="kicker">Signal Desk · Handbook · v3.2</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
-      <div id="hb-topnav"><a href="/">← dashboard</a> · <a href="/metals">metals →</a></div>
-      <div>LAST UPDATED · 2026-08-04</div>
+      <div id="hb-topnav"><a href="/">← stocks</a> · <a href="/crypto">crypto</a> · <a href="/metals">metals →</a></div>
+      <div>LAST UPDATED · 2026-08-05</div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
   </header>
@@ -532,6 +532,13 @@
       <div class="toc-sub">Options</div>
       <ul>
         <li><a href="#options">Options · calls & puts for Robinhood + Schwab</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-sub">Crypto</div>
+      <ul>
+        <li><a href="#crypto">Crypto · and why fees decide it</a></li>
       </ul>
     </div>
 
@@ -974,9 +981,85 @@
       </div>
     </section>
 
+    <section id="crypto">
+      <h2><span class="chnum">Chapter 15</span>Crypto · and why fees decide it</h2>
+
+      <p>The Crypto tab scores the top coins by market cap that are actually tradeable as USD pairs on Coinbase. Ranking a coin you cannot buy is noise, so the universe is the intersection of the two lists, not just the market-cap leaderboard.</p>
+
+      <div class="callout warn">
+        <span class="callout-label">Read this before using the rankings</span>
+        <p>Backtested over roughly five years of daily candles, the momentum strategy has a <strong>small positive edge before costs and a negative edge after real Coinbase fees</strong>. The exchange takes the entire edge and more. The page shows this measured result at the top and does not hide it behind the rankings — because a screen that looks authoritative while losing money is worse than no screen at all.</p>
+      </div>
+
+      <h3>What changes for crypto</h3>
+      <ul>
+        <li><strong>The benchmark is BTC, not SPY.</strong> Relative strength is measured against Bitcoin. An alt up 6% while BTC is up 10% is a laggard, and in a BTC drawdown it will fall harder.</li>
+        <li><strong>Leadership needs a higher bar.</strong> Beating the benchmark by 8% over 20 days earns full momentum marks for a stock; for a coin the threshold is 15%, because that much dispersion is ordinary noise in crypto.</li>
+        <li><strong>Wider stop bounds.</strong> Crypto ATR runs 2–3× equities — BTC around 2.3% a day, small alts near 7%. The stop is <code>max(1.5 × ATR, 3%)</code> capped at 15%, against 5%/10% for equities. Equity bounds would clip high-volatility coins to a flat 10% and destroy the ATR-proportionality that makes R-multiples comparable.</li>
+        <li><strong>A tighter floor.</strong> Crypto trades 24/7, so there is no overnight gap to buffer against and the floor can sit below the equity 5%.</li>
+        <li><strong>No earnings gate.</strong> There is no crypto equivalent, so that override is switched off.</li>
+      </ul>
+
+      <h3>The regime filter without a VIX</h3>
+      <p>There is no volatility index for crypto, so the regime input is <strong>BTC's own realised volatility</strong> — the annualised standard deviation of its daily log returns over 30 days, annualised by 365 rather than 252 because crypto trades every day.</p>
+      <ul>
+        <li>Under 35% — <code>CALM</code>, full sizing</li>
+        <li>35–55% — <code>NORMAL</code>, A+ setups only</li>
+        <li>55–75% — <code>ELEVATED</code>, half size, pullbacks only</li>
+        <li>75–110% — <code>STRESS</code>, no new longs</li>
+        <li>Above 110% — <code>CRISIS</code>, risk-off</li>
+      </ul>
+      <p>Two overrides sit on top. <strong>BTC below its own 50-day MA</strong> with a calm volatility reading forces <code>DIVERGENT</code> — a quiet downtrend is distribution, and alts fall harder than BTC in that tape. Universe breadth below 30% does the same.</p>
+
+      <h3>"What time should I sell?"</h3>
+      <p>Crypto has no opening bell, so timing has no calendar answer — but it might have a measurable one, since Asia, Europe and US sessions overlap at different UTC hours. Open any coin and the page shows the average return for each of the 24 hours, from about 100 days of hourly candles.</p>
+      <div class="callout">
+        <span class="callout-label">Why each hour carries a t-statistic</span>
+        <p>Testing 24 hours and reporting the best one will always find a "winner", even in pure noise — that is multiple-comparison bias, and it is how most published trading-time rules are manufactured. So every hour is t-tested against zero and judged against a <strong>Bonferroni-corrected</strong> threshold (alpha 0.05 ÷ 24 tests, |t| ≥ 3.09). Bars outlined in gold cleared it.</p>
+        <p>On the majors tested so far, <strong>none do</strong>. The honest reading is that time of day is not a reliable edge, and the page says so rather than naming a spurious best hour.</p>
+      </div>
+
+      <h3>Why a fixed daily profit target does not work</h3>
+      <p>The page carries an explicit answer to "how do I make $50 a day", because it is the most common way people lose money in this market. Two independent problems:</p>
+      <ul>
+        <li><strong>The measured edge is negative after fees.</strong> Trading a negative edge more often, or with more capital, loses faster. No position size fixes it, so the page refuses to print a capital figure.</li>
+        <li><strong>Even a profitable system does not pay daily.</strong> This one produces well under one signal a day across the whole universe, and around 70% of the trades it does take are losers. Profit, when it exists, comes from a few large winners — not a steady drip.</li>
+      </ul>
+      <p>For scale: at an edge of +0.20R — better than anything measured here and better than most professional systematic strategies sustain — $50/day at this signal rate would still need roughly six figures of capital at 1% risk per trade. The daily-income framing needs serious money even when the strategy works.</p>
+
+      <h3>The fee table</h3>
+      <p>The reality panel sweeps the same backtest across venue fee tiers, from Coinbase retail down to zero. It exists because <strong>venue choice, not coin choice, is the biggest single lever</strong> on whether this strategy has an edge at all. Breakeven sits far below Coinbase's retail taker fee. Read the table before assuming a better coin list would fix the result.</p>
+    </section>
+
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 15</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 16</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.2<br/>2026-08-05</div>
+        <div class="what">
+          <h4>Crypto tab — and a finding that changes how to use it</h4>
+          <ul>
+            <li>New <strong>Crypto</strong> tab scoring the top coins by market cap that are genuinely tradeable as Coinbase USD pairs. Same composite score, setups and trade plans as Stocks, with BTC as the benchmark instead of SPY.</li>
+            <li><strong>Crypto-specific stop bounds</strong> — <code>max(1.5 × ATR, 3%)</code> capped 15%, against 5%/10% for equities. Crypto ATR runs 2–3× stocks, so equity bounds clipped high-volatility coins to a flat 10% and destroyed ATR-proportionality.</li>
+            <li><strong>Regime without a VIX</strong> — BTC realised volatility over 30 days, annualised by 365. BTC below its 50-day MA on calm vol forces <code>DIVERGENT</code>: a quiet downtrend is distribution, and alts fall harder than BTC.</li>
+            <li>Relative-strength threshold raised to 15% for crypto — beating BTC by 8% is ordinary noise, not leadership.</li>
+          </ul>
+
+          <div class="callout warn" style="margin-top: 16px;">
+            <span class="callout-label">The headline finding: fees eat the entire edge</span>
+            <p>Backtested over ~5 years across the liquid majors, the momentum strategy earns roughly <strong>+0.06R per trade before costs</strong> — thin but positive. At Coinbase's retail taker fee of 60 bps a side (120 bps round trip) that becomes <strong>negative</strong>. Breakeven sits far below retail pricing.</p>
+            <p>So the tab ships with a permanent, non-dismissable reality panel above the rankings, including a venue fee sweep. <strong>Venue choice is a bigger lever on this strategy than coin choice.</strong> The rankings remain useful as a research screen with defined risk; they are not a daily income engine, and the page says so in those words.</p>
+          </div>
+
+          <h4 style="margin-top: 16px;">Hour-of-day timing, tested properly</h4>
+          <ul>
+            <li>Opening a coin fetches ~100 days of hourly candles and charts the average return for each UTC hour.</li>
+            <li>Every hour carries a <strong>t-statistic judged against a Bonferroni-corrected threshold</strong> (alpha 0.05 ÷ 24, |t| ≥ 3.09). Testing 24 hours and reporting the best one finds a winner even in pure noise — this is how most "best time to trade" rules are manufactured.</li>
+            <li>On BTC, ETH, SOL and ADA, <strong>no hour survives the correction</strong> (largest |t| ≈ 1.9). The page reports that plainly instead of naming a spurious best hour.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.1<br/>2026-08-04</div>
