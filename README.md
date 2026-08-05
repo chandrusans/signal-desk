@@ -22,24 +22,68 @@ A momentum-swing signals dashboard for self-directed equity research. Pulls live
 
 ```
 signal-desk/
-├── index.html         Dashboard UI (all inline CSS/JS)
-├── analyze.js         Pure computation module — indicators, score, setup, trade plan
+├── index.html         Stocks UI (all inline CSS/JS)
+├── dashboard.html     Personal portfolio tracker
+├── options.html       Options recommendations
+├── metals.html        Gold / silver
+├── handbook.html      Beginner reference + changelog (see CLAUDE.md — keep current)
+├── analyze.js         Pure computation — indicators, score, setup, trade plan
+├── backtest.js        Point-in-time backtest + walk-forward validation
 ├── api/
-│   └── quotes.js      Vercel serverless function — Yahoo Finance proxy
+│   ├── quotes.js      Yahoo Finance proxy (bars, 60-ticker cap)
+│   ├── universe.js    S&P 500 constituents + GICS sectors, 24h edge cache
+│   ├── scan.js        Batch server-side scorer — ~400-byte rows per ticker
+│   ├── news.js        Headlines + sentiment
+│   ├── buzz.js        StockTwits + CNBC aggregator
+│   ├── options.js     NASDAQ option chains + recommendation engine
+│   ├── option-quote.js  Live per-contract premiums by OCC symbol
+│   └── fundamentals.js  Market cap, P/E, earnings dates
+├── tools/
+│   ├── devserver.mjs  Local server routing /api/* to the handler modules
+│   └── lint.mjs       Undefined-function detector for inline scripts
 └── vercel.json        Static + serverless config
 ```
+
+### Why scoring is server-side
+
+The candidate list covers the whole S&P 500. At a year of daily bars that's
+~13MB of raw payload — past Vercel's response limit and hopeless on mobile.
+`/api/scan` scores in batches of 50 and returns ~400 bytes per ticker, so the
+full index arrives in ~195KB. Full bar history is fetched for the single ticker
+the user opens. A side benefit is that every client sees identical scores.
 
 ## Local dev
 
 `index.html` uses `<script type="module">` and fetches `/api/quotes`, so it needs a real server (not `file://`). Options:
 
 ```bash
-# Option A — Vercel CLI (recommended, runs the api function too)
-npx vercel dev
+# Option A — the bundled dev server (no install, routes /api/* to the same
+# handler modules Vercel runs)
+node tools/devserver.mjs 3000
 
-# Option B — any static server + real API function URL
-# The dashboard will show "feed unavailable" without the API
+# Option B — Vercel CLI
+npx vercel dev
 ```
+
+If upstream fetches fail with `unable to get local issuer certificate`, you're
+behind a TLS-intercepting proxy. Node doesn't read the macOS keychain; export it
+and point Node at the result:
+
+```bash
+security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain > /tmp/ca.pem
+security find-certificate -a -p /Library/Keychains/System.keychain >> /tmp/ca.pem
+NODE_EXTRA_CA_CERTS=/tmp/ca.pem node tools/devserver.mjs 3000
+```
+
+### Checks before committing
+
+```bash
+node tools/lint.mjs index.html dashboard.html options.html metals.html handbook.html
+```
+
+This catches called-but-never-defined functions in the inline `<script>` blocks —
+a class of bug `node --check` cannot see, and one that has silently killed the
+page bootstrap before.
 
 ## Deploy to Vercel
 
@@ -79,17 +123,28 @@ Returns:
 }
 ```
 
+`GET /api/universe` → S&P 500 constituents with GICS sector and sector ETF.
+
+`GET /api/scan?tickers=AAPL,MSFT,...&sectors=AAPL:XLK,MSFT:XLK`
+
+Scores up to 80 tickers per call. Returns compact rows — `t` ticker, `p` price,
+`sc` score, `su` setup, `rs` / `srs` relative strength vs SPY and sector,
+`stop` / `tgt` plan levels, `spark` a 20-point sparkline.
+
 ## What's live
 
+- S&P 500 constituents + GICS sectors → `/api/universe`
+- Index-wide composite scores → `/api/scan` (server-side, all ~500 names)
 - Prices, OHLC, volume, VIX regime → `/api/quotes` (Yahoo Finance)
+- Market breadth — % of the full index above its own 50d MA, computed from the scan
 - News headlines + keyword-based sentiment per ticker → `/api/news` (Yahoo Finance search)
 - News sentiment feeds into the composite score as a **catalyst adjustment** (max ±10 pts)
 
 ## What's still mock
 
-- The pinned ticker list is hand-picked (NVDA / PLTR / CRWD / HOOD / ASML) — Round 3 would auto-populate from top-scoring universe candidates
 - Insider / options-flow / analyst-rating narratives in the intel feed still hardcoded
-- Screener market cap and P/E values still hardcoded (need Finnhub free tier)
+- Lower screener table's market cap and P/E values still hardcoded (need Finnhub free tier)
+- Political calendar is a curated array in `index.html`, not scraped
 
 ## Trader Buzz — activating paid / auth-gated sources
 
