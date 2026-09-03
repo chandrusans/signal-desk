@@ -1024,6 +1024,7 @@ import { cryptoRegime } from '/analyze.js';
   let rows = [];                    // scored rows from /api/crypto-scan
   let backtest = null;              // /api/crypto-backtest
   let regimeNow = null;
+  let macroRisk = null;             // /api/macro-calendar — event-risk gate
   let activeCoin = null;
   let hourCache = {};
   let lastOk = 0, inFlight = false, nextAt = 0;
@@ -1044,6 +1045,9 @@ import { cryptoRegime } from '/analyze.js';
   function verdictFor(r) {
     const s = r.sc || 0;
     const bad = regimeNow && ['stress', 'crisis', 'divergent'].includes(regimeNow.level);
+    // Crypto trades through US macro releases and reacts hard to them — NFP and
+    // CPI move BTC as much as they move the index. Same gate as equities.
+    if (macroRisk && macroRisk.level === 'blocked') return 'AVOID';
     if (bad) return 'AVOID';
     if (r.su === 'BROKEN' && s < 30) return 'SELL';
     if (r.su === 'BROKEN' || r.su === 'AVOID') return 'AVOID';
@@ -1237,6 +1241,10 @@ import { cryptoRegime } from '/analyze.js';
         ? cell(`Regime · BTC vol ${regimeNow.realisedVol != null ? regimeNow.realisedVol.toFixed(0) + '%' : '—'}`,
                regimeNow.level.toUpperCase(), regimeNow.note)
         : cell('Regime', '—', 'computing…'),
+      cell('Macro · next US release',
+           macroRisk ? macroRisk.level.toUpperCase() : '—',
+           macroRisk ? macroRisk.note : 'loading calendar…',
+           macroRisk && macroRisk.level === 'blocked' ? 'down' : ''),
     ].join('');
   }
 
@@ -1442,6 +1450,16 @@ import { cryptoRegime } from '/analyze.js';
     }
   }
 
+  // Macro event gate — ForexFactory calendar via the FairEconomy feed.
+  async function loadMacro() {
+    try {
+      const r = await fetch('/api/macro-calendar?hours=96', { cache: 'no-store' });
+      if (!r.ok) return;
+      macroRisk = (await r.json()).macroRisk || null;
+      renderPulse(); renderCoins();
+    } catch { /* gate stays open */ }
+  }
+
   async function loadBacktest() {
     try {
       const r = await fetch('/api/crypto-backtest', { cache: 'no-store' });
@@ -1475,6 +1493,8 @@ import { cryptoRegime } from '/analyze.js';
 
   pull();
   loadBacktest();
+  loadMacro();
+  setInterval(loadMacro, 15 * 60 * 1000);
   setInterval(pull, REFRESH_MS);
   setInterval(updateLiveLabel, 1000);
 })();

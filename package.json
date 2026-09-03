@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@clerk/backend": "^1.14.0",
-    "@supabase/supabase-js": "^2.45.0"
+    "@supabase/supabase-js": "^2.45.0",
+    "unpdf": "^1.7.0"
   }
 }

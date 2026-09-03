@@ -2589,9 +2589,18 @@ import { runBacktest, walkForward } from './backtest.js';
   }
 
   // BUY / HOLD / AVOID / SELL — derived from setup + score. Big prominent call.
+  // Macro event risk from /api/macro-calendar (ForexFactory's own feed).
+  // Populated by loadMacro(); null until the first fetch lands.
+  let macroRisk = null;
+  let congressByTicker = {};
+
   function verdictForStock(p) {
     const s = p.score || 0;
     const setup = p.setup;
+    // A high-impact US release inside 24h gaps the whole index. An ATR stop is
+    // priced off normal daily range and simply does not trade at that level
+    // through a gap — same reason the earnings gate exists, one level up.
+    if (macroRisk && macroRisk.level === 'blocked') return 'AVOID';
     const regimeBad = currentRegime?.level === 'stress'
                    || currentRegime?.level === 'crisis'
                    || currentRegime?.level === 'divergent';         // breadth collapse
@@ -2633,6 +2642,11 @@ import { runBacktest, walkForward } from './backtest.js';
       const tops = topSources(p, 3);
       const badges = tops.map(s => `<span class="origin-badge ${originClass(s.src)}">${s.src} <span class="w">${s.w}</span></span>`).join('');
       const setupChip = p.setup ? `<span class="setup-chip setup-${p.setup}">${p.setup}</span>` : '';
+      // Congressional disclosure badge — context, never scored. See loadCongress().
+      const cg = congressByTicker[p.ticker];
+      const cgBadge = cg
+        ? ` <span class="origin-badge origin-13f" title="STOCK Act disclosures — median 18-day lag, no measured predictive edge. Context only.">CONGRESS ${cg.net > 0 ? '+' : ''}${cg.net} <span class="w">${cg.buys}B/${cg.sells}S</span></span>`
+        : '';
       const mentions = buzzMentionsFor(p.ticker);
       const mentionPill = mentions.length
         ? ` <span class="mentioned-by" data-buzz-open="1" title="${mentions.slice(0,3).map(m => m.speaker).join(' · ')}"><span class="dot"></span>Mentioned by ${mentions.length}</span>`
@@ -2647,7 +2661,7 @@ import { runBacktest, walkForward } from './backtest.js';
           <div class="thesis">${p.setup && p.setupReason ? p.setupReason : p.thesis}</div>
           <div class="origin">
             <span class="label">Surfaced by</span>
-            ${badges}
+            ${badges}${cgBadge}
           </div>
         </div>
         <div class="card-right">
@@ -3564,6 +3578,39 @@ import { runBacktest, walkForward } from './backtest.js';
   let latestFundamentals = {};   // market cap, P/E, earnings dates from /api/fundamentals
   let lastQuotes = null;         // most recent quotes payload, for pulse redraws
   let currentBreadth = null;     // { pctAbove50 } — second regime input
+
+  /**
+   * Macro event risk — ForexFactory's calendar via the FairEconomy feed.
+   * This is a RISK GATE, not a forecast: it says a release can gap the tape,
+   * never which way it will land.
+   */
+  async function loadMacro() {
+    try {
+      const r = await fetch('/api/macro-calendar?hours=96', { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      macroRisk = d.macroRisk || null;
+      renderPicks();
+      renderPulseLive(lastQuotes || {});
+    } catch { /* gate stays open; nothing else depends on it */ }
+  }
+
+  /**
+   * Congressional STOCK Act disclosures — CONTEXT ONLY, deliberately excluded
+   * from the composite score. Measured over 2,379 disclosed 2026 transactions,
+   * excess return vs SPY from the notification date was -0.49% at +20d for
+   * BUYs (t=-1.39) — no edge, because the median disclosure lag is 18 days.
+   * It shows who traded what; it does not move a verdict.
+   */
+  async function loadCongress() {
+    try {
+      const r = await fetch('/api/congress?limit=45', { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      congressByTicker = Object.fromEntries((d.byTicker || []).map(b => [b.ticker, b]));
+      renderPicks();
+    } catch { /* badges simply do not appear */ }
+  }
   let fundamentalsLoaded = false;
 
   // Snapshot per-ticker prices before applyQuotes so we can compute deltas → flash after render.
@@ -3822,6 +3869,14 @@ import { runBacktest, walkForward } from './backtest.js';
           <div class="delta flat" style="max-width: 22ch;">${currentRegime.note}</div>
         </div>
       `,
+      // Macro event gate — ForexFactory calendar via the FairEconomy feed
+      `
+        <div class="pulse-cell regime-cell">
+          <div class="label">Macro · next US release</div>
+          <div class="value ${macroRisk ? (macroRisk.level === 'blocked' ? 'stress' : macroRisk.level === 'caution' ? 'elevated' : 'calm') : ''}">${macroRisk ? macroRisk.level.toUpperCase() : '—'}</div>
+          <div class="delta flat" style="max-width: 24ch;">${macroRisk ? macroRisk.note : 'loading calendar…'}</div>
+        </div>
+      `,
     ];
     pulseEl.innerHTML = cells.join('');
   }
@@ -3991,5 +4046,13 @@ import { runBacktest, walkForward } from './backtest.js';
   // don't change minute to minute the way prices do.
   setTimeout(() => scanUniverse(), 400);
   setInterval(() => scanUniverse(), 10 * 60 * 1000);
+
+  // ------- External data sources -------
+  // Macro calendar refreshes on a slow cadence (events are scheduled, not
+  // streamed); congressional filings update once or twice a day at most.
+  loadMacro();
+  setInterval(loadMacro, 15 * 60 * 1000);
+  loadCongress();
+  setInterval(loadCongress, 6 * 60 * 60 * 1000);
 })();
 </script>

@@ -164,6 +164,25 @@ survives it.
 - Crypto prices, daily/hourly candles → Coinbase Exchange public API (no key)
 - Crypto universe + market caps → CoinGecko free tier, intersected with Coinbase USD pairs
 - Crypto backtest + fee sweep → `/api/crypto-backtest`, computed live and cached 6h
+- Economic calendar → `/api/macro-calendar` (FairEconomy feed behind ForexFactory)
+- Congressional trades → `/api/congress` (House Clerk STOCK Act PTRs, PDF-parsed)
+
+### External sources: what's gated vs what's only shown
+
+**Macro calendar gates verdicts.** A high-impact US release inside 24h forces
+AVOID; inside 48h it halves sizing. It is a risk control — it never predicts
+direction, only that a gap can jump your stop.
+
+**Congressional trades do not.** Measured across 2,379 disclosed 2026
+transactions, excess return vs SPY from the notification date was −0.49% at +20d
+for BUYs (t=−1.39) and −0.34% for SELLs (t=−0.99) — nothing significant, and
+disclosed buys slightly under-performed. Median disclosure lag is 18 days, so
+the edge is gone before you can see it. It renders as a context badge and is
+excluded from the composite score.
+
+Neither site is scraped. forexfactory.com/calendar and capitoltrades.com both
+block bots; the calendar comes from the publisher's own JSON feed and the
+congressional data from the primary government filings.
 
 ## What's still mock
 
