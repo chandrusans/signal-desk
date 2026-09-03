@@ -175,6 +175,19 @@ survives it.
 - Crypto backtest + fee sweep → `/api/crypto?op=backtest`, computed live and cached 6h
 - Economic calendar → `/api/macro-calendar` (FairEconomy feed behind ForexFactory)
 - Congressional trades → `/api/congress` (House Clerk STOCK Act PTRs, PDF-parsed)
+- pump.fun tokens → `/api/crypto?op=pumpfun` (DexScreener public API, pumpswap pairs)
+
+### pump.fun: an exit-risk screen
+
+In a live ~220-pair sample only **22%** are exitable (liquidity ≥ $10k and 24h
+volume ≥ $1k), ~37% report no liquidity, and median 24h volume collapses from
+about **$4,500 on day one to under $60 after a week**. The binding constraint is
+not picking the right token — it is being able to sell one.
+
+So the screen scores exit risk (high is bad) and gives a max position sized at 1%
+of pool liquidity. It does not rank tokens to buy. Note both biases run the same
+direction: only graduated tokens are indexed, and DexScreener search ranks by
+activity — a 10-query sample reported 73% exitable where 40 queries gives 22%.
 
 ### External sources: what's gated vs what's only shown
 

@@ -475,12 +475,12 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.3</div>
+      <div class="kicker">Signal Desk · Handbook · v3.4</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
       <div id="hb-topnav"><a href="/">← stocks</a> · <a href="/crypto">crypto</a> · <a href="/metals">metals →</a></div>
-      <div>LAST UPDATED · 2026-09-02</div>
+      <div>LAST UPDATED · 2026-09-03</div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
   </header>
@@ -1069,11 +1069,51 @@
         <p>So it earns a badge and nothing more. Feeding it into the composite score would be adding noise with a compelling story attached.</p>
       </div>
       <p>Coverage is partial by nature: roughly 60% of PTRs yield machine-readable transactions, the rest being scans or amendments. The endpoint reports its own coverage so you can see what fraction was parsed.</p>
+
+      <h3>pump.fun — an exit-risk screen, not a pick list</h3>
+      <p>The Crypto tab carries a pump.fun section sourced from DexScreener's public API, which indexes pumpswap (pump.fun's own DEX). pump.fun's endpoints return 403 behind Cloudflare and are not used.</p>
+      <div class="callout warn">
+        <span class="callout-label">What the live sample actually shows</span>
+        <p>Across a live sample of roughly 220 pump.fun pairs:</p>
+        <ul>
+          <li>Only about <strong>22%</strong> have enough depth and activity to exit a small position (liquidity ≥ $10k <em>and</em> 24h volume ≥ $1k).</li>
+          <li>Around <strong>37%</strong> report no liquidity at all.</li>
+          <li>Median 24h volume collapses from roughly <strong>$4,500 on day one to under $60 after a week</strong> — a ~99% decay.</li>
+          <li>About <strong>20%</strong> have a pool worth under 5% of market cap, so the quoted valuation cannot be realised.</li>
+        </ul>
+        <p><strong>Two biases make the truth worse.</strong> Only tokens that completed the bonding curve and reached a DEX are indexed at all — everything that died before graduating is invisible. And DexScreener search ranks by activity, so the sample over-represents busy tokens. A narrower query set reported 73% "exitable" where the wider one reports 22%; that gap is sampling bias, not the market.</p>
+      </div>
+      <p>Because of this the section scores <strong>exit risk</strong>, sorted so the tokens you are most likely to be able to sell appear first. High is bad. It does not rank tokens to buy, and no measurement on this desk predicts which memecoin rises.</p>
+      <p>The rulebook it supports is about sizing and exit, not entry:</p>
+      <ol>
+        <li><strong>Size to the pool.</strong> The <em>Max position</em> column is 1% of pool liquidity — above that your own sale moves the price against you.</li>
+        <li><strong>Assume total loss.</strong> Size so that a position going to zero is survivable. On this venue that is the correct default, not pessimism.</li>
+        <li><strong>Check the exit first.</strong> Under $1k of 24h volume there is no market to sell into.</li>
+        <li><strong>Time-stop in hours.</strong> Volume decays ~99% within a week; there is no long-term hold here because the market disappears underneath the position.</li>
+        <li><strong>Ignore paid boosts.</strong> They are advertising slots bought by promoters. The table flags them so they are not mistaken for demand.</li>
+      </ol>
     </section>
 
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 17</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.4<br/>2026-09-03</div>
+        <div class="what">
+          <h4>pump.fun exit-risk screen</h4>
+          <ul>
+            <li>New pump.fun section on the Crypto tab, sourced from DexScreener's public API (pump.fun's own endpoints are behind Cloudflare and are not used).</li>
+            <li>Scores <strong>exit risk, not entry</strong> — liquidity depth, 24h volume, pool-to-market-cap ratio, sell-side imbalance, and volume decay against age. High is bad.</li>
+            <li>Each token carries a <strong>max position</strong> figure equal to 1% of pool liquidity, the point beyond which your own sale is what moves the price.</li>
+          </ul>
+          <div class="callout warn" style="margin-top: 16px;">
+            <span class="callout-label">Why it is a risk screen and not a signal</span>
+            <p>In a live ~220-pair sample only <strong>22%</strong> are exitable, ~37% report no liquidity, and median 24h volume falls from about <strong>$4,500 on day one to under $60 after a week</strong>. The binding constraint on this venue is not picking the right token — it is being able to sell one at all.</p>
+            <p>Both biases run the same way: only graduated tokens are indexed, and search ranks by activity. A 10-query sample reported 73% exitable; widening to 40 queries gave 22%. That was caught before shipping and the wider sample is what runs.</p>
+          </div>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.3<br/>2026-09-02</div>

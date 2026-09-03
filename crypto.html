@@ -809,6 +809,52 @@
     font-family: var(--mono); font-size: 8px; color: var(--ink-3); text-align: center;
   }
 
+  /* pump.fun section — deliberately styled as a hazard panel, not a pick list */
+  .pf-wrap { margin: 40px 0 0; }
+  .pf-warn {
+    border: 1px solid var(--risk); border-left: 3px solid var(--risk);
+    background: color-mix(in srgb, var(--risk) 8%, transparent);
+    padding: 18px 20px; border-radius: 4px; margin-bottom: 18px;
+  }
+  .pf-warn h3 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--risk); margin: 0 0 10px; font-weight: 600;
+  }
+  .pf-warn p { font-size: 13px; line-height: 1.65; color: var(--ink-2); margin: 0 0 9px; }
+  .pf-warn strong { color: var(--ink); }
+  .pf-warn .big { font-family: var(--mono); font-weight: 600; color: var(--risk); }
+  .pf-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    margin: 14px 0 4px; border-radius: 3px; overflow: hidden;
+  }
+  .pf-stat { background: var(--ground); padding: 11px 13px; min-width: 0; }
+  .pf-stat .l {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.11em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px;
+  }
+  .pf-stat .n { font-family: var(--mono); font-size: 17px; font-weight: 600; color: var(--ink); }
+  .pf-stat .n.bad { color: var(--risk); }
+  .pf-stat .s { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
+
+  .pf-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .pf-table { width: 100%; min-width: 720px; border-collapse: collapse; font-family: var(--mono); font-size: 11.5px; }
+  .pf-table th {
+    text-align: left; padding: 8px; border-bottom: 1px solid var(--rule); color: var(--ink-3);
+    font-weight: 500; letter-spacing: 0.08em; font-size: 9.5px; text-transform: uppercase; white-space: nowrap;
+  }
+  .pf-table td { padding: 8px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-2); white-space: nowrap; }
+  .pf-table td.sym { color: var(--ink); font-weight: 600; }
+  .pf-table td.flags { white-space: normal; font-family: var(--sans); font-size: 11px; color: var(--ink-3); min-width: 200px; }
+  .risk-pill {
+    display: inline-block; font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em;
+    padding: 3px 7px; border: 1px solid; border-radius: 3px;
+  }
+  .risk-MODERATE { color: var(--caution); border-color: var(--caution); }
+  .risk-ELEVATED { color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 12%, transparent); }
+  .risk-HIGH     { color: var(--risk); border-color: var(--risk); }
+  .risk-EXTREME  { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 18%, transparent); }
+
   .empty-note {
     border: 1px dashed var(--rule); border-radius: 4px; padding: 26px 20px;
     text-align: center; color: var(--ink-3); font-size: 13px;
@@ -933,6 +979,26 @@
       <p style="color: var(--ink-3); font-size: 13px;">Select a coin for its trade plan and hour-of-day analysis.</p>
     </aside>
   </div>
+
+  <section class="pf-wrap">
+    <div class="section-head">
+      <h2>pump.fun · exit-risk screen</h2>
+      <span class="aside" id="pf-status">loading…</span>
+    </div>
+    <div class="pf-warn" id="pf-warn">
+      <h3>Read this first — it is not a pick list</h3>
+      <div id="pf-warn-body"><p>Sampling live pump.fun pairs…</p></div>
+    </div>
+    <div class="pf-scroll">
+      <table class="pf-table" id="pf-table">
+        <thead><tr>
+          <th>Token</th><th>Exit risk</th><th>Price</th><th>24h</th>
+          <th>Liquidity</th><th>24h vol</th><th>Pool/mcap</th><th>Max position</th><th>Age</th><th>Why</th>
+        </tr></thead>
+        <tbody id="pf-rows"><tr><td colspan="10">loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
 
   <div class="disclosure">
     <strong>Not investment advice.</strong> This is a research tool. Every number on this page is computed from
@@ -1460,6 +1526,104 @@ import { cryptoRegime } from '/analyze.js';
     } catch { /* gate stays open */ }
   }
 
+
+  // ══════════════════════════════════════════════════════════════════════
+  // pump.fun — EXIT-RISK SCREEN
+  //
+  // This deliberately does not rank tokens to buy. Measured across the live
+  // sample, the binding constraint is not choosing the right token, it is
+  // being able to sell at all: median 24h volume collapses from roughly
+  // $4,500 on day one to under $100 within a week, and only about a fifth of
+  // tokens carry enough depth to exit a small position.
+  //
+  // So the strategy this supports is a sizing-and-exit rulebook, not a signal.
+  // ══════════════════════════════════════════════════════════════════════
+  const PF_REFRESH_MS = 5 * 60 * 1000;
+  let pfData = null;
+
+  const usd = (x) => (x == null ? '—' : x >= 1000000 ? '$' + (x/1e6).toFixed(1) + 'M'
+                    : x >= 1000 ? '$' + Math.round(x/1000) + 'k' : '$' + Math.round(x));
+
+  function renderPumpfun() {
+    const statusEl = document.getElementById('pf-status');
+    const bodyEl = document.getElementById('pf-warn-body');
+    const rowsEl = document.getElementById('pf-rows');
+    if (!bodyEl || !rowsEl) return;
+
+    if (!pfData || pfData.error) {
+      statusEl.textContent = pfData?.error ? 'unavailable' : 'loading…';
+      bodyEl.innerHTML = `<p>${pfData?.error ? 'pump.fun data unavailable right now.' : 'Sampling live pump.fun pairs…'}</p>`;
+      rowsEl.innerHTML = `<tr><td colspan="10">${pfData?.error ? 'no data' : 'loading…'}</td></tr>`;
+      return;
+    }
+
+    const s = pfData.stats;
+    statusEl.textContent = `${pfData.sampled} pairs sampled · via DexScreener`;
+
+    const decay = s.medianVolume24Fresh && s.medianVolume24Older
+      ? Math.round((1 - s.medianVolume24Older / s.medianVolume24Fresh) * 100) : null;
+
+    bodyEl.innerHTML = `
+      <p>
+        Of <strong>${pfData.sampled}</strong> live pump.fun pairs sampled right now, only
+        <span class="big">${s.exitablePct}%</span> have enough depth and activity to exit a small
+        position (liquidity ≥ $10k <em>and</em> 24h volume ≥ $1k). ${s.noLiquidity} report no liquidity at all.
+      </p>
+      <div class="pf-stats">
+        <div class="pf-stat"><div class="l">Exitable</div><div class="n bad">${s.exitablePct}%</div><div class="s">${s.exitable} of ${pfData.sampled} sampled</div></div>
+        <div class="pf-stat"><div class="l">Median vol · day 1</div><div class="n">${usd(s.medianVolume24Fresh)}</div><div class="s">24h volume, &lt;1 day old</div></div>
+        <div class="pf-stat"><div class="l">Median vol · 7 days+</div><div class="n bad">${usd(s.medianVolume24Older)}</div><div class="s">${decay != null ? decay + '% collapse' : 'the death curve'}</div></div>
+        <div class="pf-stat"><div class="l">Extreme exit risk</div><div class="n bad">${s.extremeRiskPct}%</div><div class="s">of the sample</div></div>
+      </div>
+      <p style="margin-top:12px;">
+        <strong>Two biases make the real picture worse than those numbers.</strong>
+        ${pfData.survivorshipWarning} ${pfData.samplingCaveat}
+      </p>
+      <p>
+        <strong>The strategy this data supports.</strong> Nothing here predicts which token goes up —
+        no measurement on this page does, and any screen claiming to would be selling you something.
+        What the data does support is a sizing-and-exit rulebook:
+      </p>
+      <ol style="font-size:13px;line-height:1.7;color:var(--ink-2);margin:0 0 9px;padding-left:20px;">
+        <li><strong>Size to the pool, not to conviction.</strong> The <em>Max position</em> column is 1% of
+            pool liquidity. Above that your own sale is what moves the price against you.</li>
+        <li><strong>Risk only what a total loss would not matter.</strong> Assume every position goes to
+            zero and size so that outcome is survivable. This is the correct default here, not pessimism.</li>
+        <li><strong>Check the exit before the entry.</strong> If 24h volume is under $1k, there is no
+            market — you are buying something you cannot sell at any price you would accept.</li>
+        <li><strong>Time-stop in hours, not weeks.</strong> Median volume falls ${decay != null ? decay + '%' : 'to near zero'}
+            within a week. There is no "hold for the long term" on this venue; the market disappears underneath you.</li>
+        <li><strong>Ignore paid boosts.</strong> They are advertising slots bought by the token's promoters,
+            flagged in the table so they are not mistaken for demand.</li>
+      </ol>
+      <p style="margin-bottom:0;">
+        Sorted by <strong>lowest exit risk first</strong>. That ranks how likely you are to get your money
+        back out — not how likely the token is to go up.
+      </p>`;
+
+    rowsEl.innerHTML = pfData.tokens.slice(0, 25).map(t => `
+      <tr>
+        <td class="sym"><a href="${t.url}" target="_blank" rel="noopener noreferrer" style="color:inherit;">${(t.symbol || '?').slice(0, 14)}</a></td>
+        <td><span class="risk-pill risk-${t.band}">${t.risk} ${t.band}</span></td>
+        <td>${t.priceUsd != null ? '$' + t.priceUsd.toPrecision(3) : '—'}</td>
+        <td style="color:${(t.change24 ?? 0) >= 0 ? 'var(--signal)' : 'var(--risk)'};">${t.change24 != null ? (t.change24 >= 0 ? '+' : '') + t.change24 + '%' : '—'}</td>
+        <td>${usd(t.liquidityUsd)}</td>
+        <td>${usd(t.volume24)}</td>
+        <td>${t.liquidityRatioPct != null ? t.liquidityRatioPct + '%' : '—'}</td>
+        <td style="color:var(--accent);">${t.maxPositionUsd ? '$' + t.maxPositionUsd.toLocaleString() : '—'}</td>
+        <td>${t.ageDays != null ? (t.ageDays < 1 ? Math.round(t.ageDays * 24) + 'h' : Math.round(t.ageDays) + 'd') : '—'}</td>
+        <td class="flags">${(t.flags || []).slice(0, 2).join(' · ') || '—'}</td>
+      </tr>`).join('');
+  }
+
+  async function loadPumpfun() {
+    try {
+      const r = await fetch('/api/crypto?op=pumpfun', { cache: 'no-store' });
+      pfData = r.ok ? await r.json() : { error: `HTTP ${r.status}` };
+    } catch (e) { pfData = { error: e.message }; }
+    renderPumpfun();
+  }
+
   async function loadBacktest() {
     try {
       const r = await fetch('/api/crypto?op=backtest', { cache: 'no-store' });
@@ -1495,6 +1659,8 @@ import { cryptoRegime } from '/analyze.js';
   loadBacktest();
   loadMacro();
   setInterval(loadMacro, 15 * 60 * 1000);
+  loadPumpfun();
+  setInterval(loadPumpfun, PF_REFRESH_MS);
   setInterval(pull, REFRESH_MS);
   setInterval(updateLiveLabel, 1000);
 })();
