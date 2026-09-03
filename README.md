@@ -49,6 +49,15 @@ signal-desk/
 └── vercel.json        Static + serverless config
 ```
 
+### Function budget
+
+Vercel's Hobby plan allows **12 Serverless Functions per deployment**. The four
+crypto endpoints are therefore merged behind one `api/crypto.js` router
+(`?op=universe|scan|hours|backtest`); the handlers live in `_crypto-*.js`, where
+the underscore keeps Vercel from routing them separately. Exceeding the cap fails
+at the "Deploying outputs" step with the build itself green — which reads like a
+code error but isn't. Count `ls api/*.js | grep -v /_` before adding a route.
+
 ### Why scoring is server-side
 
 The candidate list covers the whole S&P 500. At a year of daily bars that's
@@ -144,12 +153,12 @@ fee of 60 bps a side (120 bps round trip) that becomes **negative**. Breakeven
 sits far below retail pricing, so venue choice is a bigger lever on this strategy
 than coin choice.
 
-`/api/crypto-backtest` computes this live and returns a fee sweep across venue
+`/api/crypto?op=backtest` computes this live and returns a fee sweep across venue
 tiers. The Crypto page shows it above the rankings and does not let it be
 dismissed — a screen that looks authoritative while losing money is worse than no
 screen. Asset-class costs and stop bounds live in `CLASS_CFG` in `backtest.js`.
 
-Hour-of-day timing is measured, not asserted: `/api/crypto-hours` t-tests all 24
+Hour-of-day timing is measured, not asserted: `/api/crypto?op=hours` t-tests all 24
 hours against zero with a Bonferroni correction. On the majors tested, no hour
 survives it.
 
@@ -163,7 +172,7 @@ survives it.
 - News sentiment feeds into the composite score as a **catalyst adjustment** (max ±10 pts)
 - Crypto prices, daily/hourly candles → Coinbase Exchange public API (no key)
 - Crypto universe + market caps → CoinGecko free tier, intersected with Coinbase USD pairs
-- Crypto backtest + fee sweep → `/api/crypto-backtest`, computed live and cached 6h
+- Crypto backtest + fee sweep → `/api/crypto?op=backtest`, computed live and cached 6h
 - Economic calendar → `/api/macro-calendar` (FairEconomy feed behind ForexFactory)
 - Congressional trades → `/api/congress` (House Clerk STOCK Act PTRs, PDF-parsed)
 

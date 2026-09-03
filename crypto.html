@@ -1020,9 +1020,9 @@ import { cryptoRegime } from '/analyze.js';
   const DAILY_TARGET = 50;          // the user's stated goal, in dollars per day
   const RISK_PCT = 1.0;             // % of capital risked per trade
 
-  let coins = [];                   // universe metadata from /api/crypto-universe
-  let rows = [];                    // scored rows from /api/crypto-scan
-  let backtest = null;              // /api/crypto-backtest
+  let coins = [];                   // universe metadata from /api/crypto?op=universe
+  let rows = [];                    // scored rows from /api/crypto?op=scan
+  let backtest = null;              // /api/crypto?op=backtest
   let regimeNow = null;
   let macroRisk = null;             // /api/macro-calendar — event-risk gate
   let activeCoin = null;
@@ -1388,7 +1388,7 @@ import { cryptoRegime } from '/analyze.js';
   async function loadHours(coin) {
     if (hourCache[coin]) { renderDetail(); return; }
     try {
-      const r = await fetch(`/api/crypto-hours?coin=${encodeURIComponent(coin)}`, { cache: 'no-store' });
+      const r = await fetch(`/api/crypto?op=hours&coin=${encodeURIComponent(coin)}`, { cache: 'no-store' });
       if (!r.ok) return;
       hourCache[coin] = await r.json();
       if (activeCoin === coin) renderDetail();
@@ -1410,7 +1410,7 @@ import { cryptoRegime } from '/analyze.js';
 
   async function loadUniverse() {
     if (coins.length) return coins;
-    const r = await fetch('/api/crypto-universe?limit=40', { cache: 'no-store' });
+    const r = await fetch('/api/crypto?op=universe&limit=40', { cache: 'no-store' });
     if (!r.ok) throw new Error(`universe HTTP ${r.status}`);
     coins = (await r.json()).constituents || [];
     return coins;
@@ -1422,7 +1422,7 @@ import { cryptoRegime } from '/analyze.js';
     try {
       const uni = await loadUniverse();
       const syms = uni.map(c => c.symbol).join(',');
-      const r = await fetch(`/api/crypto-scan?coins=${encodeURIComponent(syms)}`, { cache: 'no-store' });
+      const r = await fetch(`/api/crypto?op=scan&coins=${encodeURIComponent(syms)}`, { cache: 'no-store' });
       if (!r.ok) throw new Error(`scan HTTP ${r.status}`);
       const d = await r.json();
       rows = d.rows || [];
@@ -1462,7 +1462,7 @@ import { cryptoRegime } from '/analyze.js';
 
   async function loadBacktest() {
     try {
-      const r = await fetch('/api/crypto-backtest', { cache: 'no-store' });
+      const r = await fetch('/api/crypto?op=backtest', { cache: 'no-store' });
       backtest = r.ok ? await r.json() : { error: `HTTP ${r.status}` };
     } catch (e) {
       backtest = { error: e.message };
