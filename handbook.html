@@ -277,6 +277,12 @@
 
   /* Version log */
   .changelog { border-top: 2px solid var(--ink); padding-top: 20px; }
+  .cadence { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+  .cadence th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--ink);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+  .cadence td { padding: 8px 10px; border-bottom: 1px solid var(--rule); color: var(--ink-2); }
+  .cadence td:first-child { color: var(--ink); }
+  @media (max-width: 640px) { .cadence { font-size: 11.5px; } .cadence th, .cadence td { padding: 6px 5px; } }
   .log-entry {
     display: grid;
     grid-template-columns: 110px 1fr;
@@ -475,7 +481,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.4</div>
+      <div class="kicker">Signal Desk · Handbook · v3.5</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -550,6 +556,13 @@
     </div>
 
     <div class="toc-group">
+      <div class="toc-sub">Start here</div>
+      <ul>
+        <li><a href="#howtoread">How to read the desk &amp; refresh rates</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
       <div class="toc-sub">External data</div>
       <ul>
         <li><a href="#external">Macro calendar &amp; congressional trades</a></li>
@@ -576,7 +589,7 @@
 
     <section id="what">
       <h2><span class="chnum">Chapter 01</span>What this is</h2>
-      <p>Signal Desk is a research tool for a self-directed retail investor doing swing trading in liquid US equities. It watches a small pinned list of tickers, pulls their live prices from Yahoo Finance every 30 seconds, computes a set of real technical indicators, weighs the news flow around each name, and gives every ticker a composite score from 0 to 100.</p>
+      <p>Signal Desk is a research tool for a self-directed retail investor doing swing trading in liquid US equities. It scores every constituent of the S&amp;P 500, pulls live prices from Yahoo Finance roughly every 30 seconds, computes a set of real technical indicators, weighs the news flow around each name, and gives every ticker a composite score from 0 to 100.</p>
       <p>It also proposes a trade plan — where to enter, where to place your stop, where to take profit — computed from live volatility, not from a hardcoded number. And it tells you when to <em>not</em> trade, because most of the time no clean setup exists.</p>
       <div class="callout">
         <span class="callout-label">The single most important idea</span>
@@ -811,7 +824,7 @@
       <h2><span class="chnum">Chapter 10</span>Data sources</h2>
       <h3>Live</h3>
       <ul>
-        <li><strong>Prices, OHLC, volume, VIX</strong> — Yahoo Finance chart API. No auth key. Polled every 30 seconds.</li>
+        <li><strong>Prices, OHLC, volume, VIX</strong> — Yahoo Finance chart API. No auth key. Polled every 15s (Stocks) / 20s (Crypto), behind a 30s edge cache — see Chapter 17 for the full cadence table.</li>
         <li><strong>News headlines</strong> — Yahoo Finance search endpoint. Also no key. Pulled on each poll.</li>
         <li><strong>Sentiment (general + political)</strong> — computed client-side from headlines using keyword lexicons.</li>
         <li><strong>All technical indicators</strong> — computed from the 1-year OHLC series (server-side for the index scan, in the browser for the ticker you open).</li>
@@ -1094,9 +1107,90 @@
       </ol>
     </section>
 
+
+    <section id="howtoread">
+      <h2><span class="chnum">Chapter 17</span>How to read the desk</h2>
+
+      <p>The desk now pulls from a dozen sources. They are <strong>not equal</strong>, and treating them as if they were is the main way to misuse it. Everything on the site falls into one of three tiers.</p>
+
+      <h3>Tier 1 — Gates. These decide whether you trade at all.</h3>
+      <ul>
+        <li><strong>Macro cell</strong> — a high-impact US release inside 24h forces every verdict to AVOID; inside 48h it halves sizing.</li>
+        <li><strong>Regime cell</strong> — VIX plus breadth for stocks, BTC realised volatility for crypto. <code>STRESS</code>, <code>CRISIS</code> or <code>DIVERGENT</code> means no new longs.</li>
+      </ul>
+      <p>If a gate is red, stop there. Nothing in the lower tiers overrides it.</p>
+
+      <h3>Tier 2 — Signal. Only this ranks anything.</h3>
+      <ul>
+        <li><strong>Composite score, setup state and verdict.</strong> BREAKOUT and PULLBACK at a good score are the only genuine entries. <code>EXTENDED</code> means "strong, but wait for a pullback" — it is a HOLD, not a buy.</li>
+        <li><strong>The trade plan</strong> — entry band, stop, target, size. Read it <em>before</em> deciding, not after.</li>
+      </ul>
+
+      <h3>Tier 3 — Context. Looks like signal. Is not. Never scored.</h3>
+      <ul>
+        <li><strong>Congressional badges</strong> — measured at −0.49% vs SPY at +20 days, median 18-day disclosure lag (Chapter 16).</li>
+        <li><strong>pump.fun table</strong> — sorted by <em>exit</em> risk, not upside. A low score means "you could probably sell it", not "it will rise".</li>
+        <li><strong>Trader buzz and paid boosts</strong> — attention, not demand.</li>
+      </ul>
+
+      <div class="callout">
+        <span class="callout-label">The decision order</span>
+        <ol>
+          <li><strong>Gates first.</strong> Macro red or regime stressed? That is the answer for today.</li>
+          <li><strong>Filter to BUY.</strong> Typically a couple of dozen names out of 500. Most days the honest answer is "nothing qualifies".</li>
+          <li><strong>Read the plan before committing.</strong> If you are not willing to take the stop, do not take the entry.</li>
+          <li><strong>Size from the plan, not from conviction</strong> — 1% risk × the regime multiplier. On pump.fun, 1% of pool liquidity, hard cap.</li>
+          <li><strong>Exit mechanically.</strong> Stop hit → out. Target → scale. Flat after 15 days → out. This is the part people abandon, and it is where the framework earns its keep.</li>
+        </ol>
+      </div>
+
+      <h3>How often each source updates</h3>
+      <p>Effective freshness is whichever is slower — the browser's poll or the edge cache in front of the API.</p>
+      <table class="cadence">
+        <thead><tr><th>Data</th><th>Browser polls</th><th>Edge cache</th><th>You see new data every</th></tr></thead>
+        <tbody>
+          <tr><td>Prices, VIX, breadth</td><td>15s stocks / 20s crypto</td><td>30s</td><td><strong>~30 seconds</strong></td></tr>
+          <tr><td>News + sentiment</td><td>with prices</td><td>60s</td><td>~1 minute</td></tr>
+          <tr><td>Trader buzz</td><td>3 min</td><td>60s</td><td>3 minutes</td></tr>
+          <tr><td>pump.fun</td><td>5 min</td><td>3 min</td><td><strong>5 minutes</strong></td></tr>
+          <tr><td>Macro calendar</td><td>15 min</td><td>15 min</td><td><strong>15 minutes</strong></td></tr>
+          <tr><td>S&amp;P 500 full re-scan</td><td>10 min</td><td>60s</td><td>10 minutes</td></tr>
+          <tr><td>Crypto hour-of-day</td><td>on click</td><td>1 hour</td><td>1 hour</td></tr>
+          <tr><td>Congressional trades</td><td>6 hours</td><td>6 hours</td><td><strong>6 hours</strong></td></tr>
+          <tr><td>Crypto backtest / fee sweep</td><td>on load</td><td>6 hours</td><td>6 hours</td></tr>
+          <tr><td>S&amp;P 500 membership</td><td>on load</td><td>24 hours</td><td>24 hours</td></tr>
+        </tbody>
+      </table>
+      <p>The slow ones are slow deliberately. Congressional filings appear once or twice a day and carry an 18-day disclosure lag; the macro calendar is a published schedule. Polling either every 30 seconds would burn requests to learn nothing.</p>
+
+      <div class="callout warn">
+        <span class="callout-label">Three things worth remembering</span>
+        <ul>
+          <li><strong>Most days there is no trade.</strong> Roughly two dozen BUYs out of 500 names, and well under one crypto signal a day. A screen returning nothing is working correctly.</li>
+          <li><strong>Signals decay fast.</strong> Names that scored 100 a month ago now read AVOID. Anything you remember from last week is stale.</li>
+          <li><strong>Three tested ideas came back with no edge</strong> — congressional trades, crypto hour-of-day timing, and crypto momentum after fees. They are documented because knowing what <em>not</em> to do is worth more than another ranking.</li>
+        </ul>
+      </div>
+
+      <p><strong>The one-line version:</strong> the gates tell you <em>when</em>, the score tells you <em>what</em>, the plan tells you <em>how much</em> — and the rest is context you look at but do not trade on.</p>
+    </section>
+
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 17</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 18</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.5<br/>2026-09-03</div>
+        <div class="what">
+          <h4>New chapter: how to read the desk</h4>
+          <ul>
+            <li>The desk now pulls from a dozen sources and they are <strong>not equal</strong>. Chapter 17 sorts everything into three tiers — <strong>gates</strong> that decide whether you trade at all, <strong>signal</strong> that ranks, and <strong>context</strong> that is shown but never scored — plus a five-step decision order.</li>
+            <li>Added a <strong>refresh cadence table</strong> covering every source, showing browser poll interval, edge cache TTL, and the effective freshness of each.</li>
+            <li>Linked first in the contents under "Start here", since it is the chapter that makes the rest usable.</li>
+          </ul>
+          <p style="margin-top:12px;font-size:13px;">Also corrected two stale claims: the overview still described a "small pinned list of tickers" (it has been the full S&amp;P 500 since v3.1) and quoted a 30-second price poll (it is 15s on Stocks, 20s on Crypto, behind a 30s edge cache).</p>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.4<br/>2026-09-03</div>
