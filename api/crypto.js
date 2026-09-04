@@ -17,8 +17,9 @@ import scan from './_crypto-scan.js';
 import hours from './_crypto-hours.js';
 import backtest from './_crypto-backtest.js';
 import pumpfun from './_pumpfun.js';
+import bars from './_crypto-bars.js';
 
-const OPS = { universe, scan, hours, backtest, pumpfun };
+const OPS = { universe, scan, hours, backtest, pumpfun, bars };
 
 // The backtest paginates ~50 upstream requests; the others are quick.
 export const config = { maxDuration: 60 };

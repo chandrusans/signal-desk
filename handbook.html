@@ -481,12 +481,12 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.6</div>
+      <div class="kicker">Signal Desk · Handbook · v3.7</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
-      <div id="hb-topnav"><a href="/today">← today</a> · <a href="/">stocks</a> · <a href="/crypto">crypto</a> · <a href="/metals">metals →</a></div>
-      <div>LAST UPDATED · 2026-09-03</div>
+      <div id="hb-topnav"><a href="/today">← today</a> · <a href="/simulate">simulate</a> · <a href="/">stocks</a> · <a href="/crypto">crypto</a> · <a href="/metals">metals →</a></div>
+      <div>LAST UPDATED · 2026-09-04</div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
   </header>
@@ -560,6 +560,7 @@
       <ul>
         <li><a href="#howtoread">How to read the desk &amp; refresh rates</a></li>
         <li><a href="#today">The Today tab — the simple version</a></li>
+        <li><a href="#simulate">Simulate — paper auto-trading</a></li>
       </ul>
     </div>
 
@@ -1183,9 +1184,58 @@
       <p><strong>The one-line version:</strong> the gates tell you <em>when</em>, the score tells you <em>what</em>, the plan tells you <em>how much</em> — and the rest is context you look at but do not trade on.</p>
     </section>
 
+    <section id="simulate">
+      <h2><span class="chnum">Chapter 18</span>Simulate — paper auto-trading</h2>
+      <p>The <strong>Simulate</strong> tab lets the rulebook trade <em>pretend money</em> automatically over a window you choose, and shows every decision it made — including what it is still holding right now. <strong>No real order is ever placed.</strong> It is the auto-trader experience with none of the auto-trader risk.</p>
+
+      <h3>What you set</h3>
+      <ul>
+        <li><strong>Investment</strong> — the starting capital.</li>
+        <li><strong>Start trading on</strong> — the rulebook begins deciding from this date and runs to today. The engine needs 200 bars of history before its first decision, so a start earlier than the data allows is moved forward and the page says so.</li>
+        <li><strong>Max days to hold each trade</strong> — the time-stop. A trade that is flat after this many days is sold.</li>
+        <li><strong>Market</strong> — 30 liquid stocks, 12 major coins, or both (capital split evenly).</li>
+        <li><strong>Strategy</strong> — the rulebook (breakout / pullback), mean-reversion on RSI-2 dips, or the composite score.</li>
+        <li><strong>Risk per trade, max open positions, crypto fee</strong> — the same knobs the live rules use. Stocks are charged 7 bps a side; crypto defaults to Coinbase's 60.</li>
+      </ul>
+      <p>Presets fill these in — Rulebook, Conservative, Aggressive, Crypto on Coinbase, Crypto on a low-fee venue, Stocks + crypto — so you can compare like for like with one click.</p>
+
+      <h3>What you get back</h3>
+      <ul>
+        <li>Start → end equity, with the same-window buy-and-hold return of SPY or BTC beside it. A strategy that made 4% while the index made 12% did not win.</li>
+        <li>Realised P&amp;L, what is still open (marked at the last close), win rate, expectancy after fees, worst drawdown, and how many signals were skipped because every slot was full.</li>
+        <li>An equity curve, the open positions with their live stop and target, and every closed trade with entry, exit, why it sold and dollar P&amp;L.</li>
+      </ul>
+
+      <div class="callout">
+        <span class="callout-label">How it is built — and why there is no server</span>
+        <p>It is layered the way auto-invest tools are: a <strong>strategy layer</strong> (the rulebook in <code>analyze.js</code>), an <strong>execution engine</strong> (<code>backtest.js</code> — point-in-time decisions, fills at the next bar's open, fees and slippage, gap-aware stops, a position cap), and an <strong>accounting layer</strong> in the page (cash, equity path, dollar P&amp;L, open positions marked to market).</p>
+        <p>The <strong>scheduler</strong> is the interesting part. A paper portfolio is a pure function of its configuration and market history, so it does not need a cron job or a database: every visit recomputes it from the bars. Saved simulations store only their settings and are re-run live each time you open the tab — no drift, no stale state, nothing to sync. They live on this device only.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-label">Read a good result carefully</span>
+        <p>This is honest but it is still history. Fills, fees and gaps are modelled; your own hesitation, a wider spread on the day, or a halt are not. Ninety days is a short window and can flatter any strategy. Run the same settings from several start dates before believing a number — and on crypto, remember the measured edge at retail fees is negative over the long run regardless of what one window shows.</p>
+      </div>
+    </section>
+
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 18</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 19</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.7<br/>2026-09-04</div>
+        <div class="what">
+          <h4>Simulate tab — paper auto-trading</h4>
+          <ul>
+            <li>New tab. Set an investment, a start date and a maximum hold per trade; the rulebook trades pretend money automatically to today and shows start → end equity, buy-and-hold comparison, every trade, and what it is still holding.</li>
+            <li>Six presets for like-for-like comparison, including crypto on Coinbase vs a low-fee venue.</li>
+            <li>Saved simulations store settings only and are recomputed live on every visit — a paper portfolio is a pure function of config and market history, so there is no cron and no server state.</li>
+            <li>Engine change: <code>backtest.js</code> gains a <code>reportOpen</code> option that returns still-open positions marked at the last close. With it off the closed-trade record is byte-identical to before; open positions never enter win rate or expectancy.</li>
+            <li>New <code>/api/crypto?op=bars</code> (inside the existing router — still 11 functions) for daily candles.</li>
+            <li><strong>No real orders are placed, by design.</strong></li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.6<br/>2026-09-03</div>

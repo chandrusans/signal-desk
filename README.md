@@ -18,6 +18,16 @@ most you can lose. It calls the same endpoints and applies the same rules as
 every other tab; it just puts the answer first. `?preview=open` forces the gates
 open for display only, so the cards can be seen on a day the real gate is shut.
 
+## Simulate: paper auto-trading
+
+`/simulate` lets the rulebook trade pretend money over a window you choose and
+shows every decision, including open positions marked to the last close. It is
+layered like an auto-invest product — strategy (`analyze.js`), execution engine
+(`backtest.js`), accounting (the page) — but the scheduler is "replay on open":
+a paper portfolio is a pure function of config and market history, so saved
+simulations store settings only and are recomputed from bars on every visit.
+No cron, no database, no drift. **No real order is ever placed.**
+
 ## What it does
 
 - **Live prices**: 1-year OHLC + volume via Yahoo Finance chart API (no auth key). Polls every 15s (Stocks) / 20s (Crypto) behind a 30s edge cache.
@@ -33,6 +43,7 @@ open for display only, so the cards can be seen on a day the real gate is shut.
 ```
 signal-desk/
 ├── today.html         START HERE — one page, three questions, all four markets
+├── simulate.html      Paper auto-trading — the rulebook trades pretend money
 ├── index.html         Stocks UI (all inline CSS/JS)
 ├── dashboard.html     Personal portfolio tracker
 ├── options.html       Options recommendations
@@ -68,7 +79,7 @@ signal-desk/
 
 Vercel's Hobby plan allows **12 Serverless Functions per deployment**. The four
 crypto endpoints are therefore merged behind one `api/crypto.js` router
-(`?op=universe|scan|hours|backtest|pumpfun`); the handlers live in `_crypto-*.js`, where
+(`?op=universe|scan|hours|backtest|pumpfun|bars`); the handlers live in `_crypto-*.js`, where
 the underscore keeps Vercel from routing them separately. Exceeding the cap fails
 at the "Deploying outputs" step with the build itself green — which reads like a
 code error but isn't. Count `ls api/*.js | grep -v /_` before adding a route.
@@ -107,7 +118,7 @@ NODE_EXTRA_CA_CERTS=/tmp/ca.pem node tools/devserver.mjs 3000
 ### Checks before committing
 
 ```bash
-node tools/lint.mjs today.html index.html dashboard.html options.html crypto.html metals.html handbook.html
+node tools/lint.mjs today.html simulate.html index.html dashboard.html options.html crypto.html metals.html handbook.html
 ```
 
 This catches called-but-never-defined functions in the inline `<script>` blocks —

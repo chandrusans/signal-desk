@@ -27,6 +27,7 @@ const DEFAULTS = {
   startEquity: 10000,
   warmupBars: 200,           // need 200 bars before MA200 is valid
   assetClass: 'equity',      // 'equity' | 'crypto' — selects stop bounds + costs
+  reportOpen: false,         // return still-open positions marked to the last bar
 };
 
 // Per-asset-class execution cost and stop bounds. Cost is charged per side.
@@ -185,8 +186,35 @@ export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars =
         score: a.score,
       };
     }
-    // Any still-open position at the end of data is discarded — reporting an
-    // unrealized paper gain would inflate the record.
+    // Any still-open position at the end of data is discarded from the RECORD —
+    // reporting an unrealised paper gain as a result would inflate it. With
+    // reportOpen the position is returned separately, marked to the last close,
+    // so a forward paper-trading simulation can show what it is holding now.
+    // It still occupies a slot in pass 2 and is excluded from every metric.
+    if (open && cfg.reportOpen) {
+      const last = bars[bars.length - 1];
+      const mark = last.c;
+      candidates.push({
+        ticker,
+        open: true,
+        entryIdx: open.entryIdx,
+        exitIdx: bars.length - 1,
+        entryDate: bars[open.entryIdx + 1].t,
+        exitDate: last.t,
+        entry: open.entryFill,
+        exit: mark,
+        stop: open.stop,
+        initialStop: open.initialStop,
+        target: open.target,
+        R: open.R,
+        rMultiple: (mark - open.entryFill) / open.R,
+        daysHeld: (bars.length - 1) - open.entryIdx,
+        reason: 'open',
+        gapped: false,
+        setup: open.setup,
+        score: open.score,
+      });
+    }
   }
 
   // ── PASS 2 ─────────────────────────────────────────────────────────────
@@ -210,13 +238,16 @@ export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars =
     trades.push(c);
   }
 
-  const metrics = computeMetrics(trades, cfg, benchBars);
+  const closed = trades.filter(t => !t.open);
+  const openPositions = trades.filter(t => t.open);
+
+  const metrics = computeMetrics(closed, cfg, benchBars);
   if (metrics && !metrics.note) {
     metrics.candidatesGenerated = candidates.length;
     metrics.skippedForCapacity = skippedForCapacity;
     metrics.maxConcurrent = cfg.maxConcurrent;
   }
-  return { trades, metrics, config: cfg, candidates: candidates.length, skippedForCapacity };
+  return { trades: closed, openPositions, metrics, config: cfg, candidates: candidates.length, skippedForCapacity };
 }
 
 function dayKey(ts) {
