@@ -481,11 +481,11 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.5</div>
+      <div class="kicker">Signal Desk · Handbook · v3.6</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
-      <div id="hb-topnav"><a href="/">← stocks</a> · <a href="/crypto">crypto</a> · <a href="/metals">metals →</a></div>
+      <div id="hb-topnav"><a href="/today">← today</a> · <a href="/">stocks</a> · <a href="/crypto">crypto</a> · <a href="/metals">metals →</a></div>
       <div>LAST UPDATED · 2026-09-03</div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
@@ -559,6 +559,7 @@
       <div class="toc-sub">Start here</div>
       <ul>
         <li><a href="#howtoread">How to read the desk &amp; refresh rates</a></li>
+        <li><a href="#today">The Today tab — the simple version</a></li>
       </ul>
     </div>
 
@@ -1111,6 +1112,13 @@
     <section id="howtoread">
       <h2><span class="chnum">Chapter 17</span>How to read the desk</h2>
 
+      <div class="callout" id="today">
+        <span class="callout-label">If the rest of the desk feels like too much, use the Today tab</span>
+        <p>The <strong>Today</strong> tab is the whole rulebook reduced to three questions, answered in plain sentences: <em>Should I trade today? What qualifies across stocks, options, crypto and metals? What do I leave alone?</em> It reads the same live data and applies the same rules as every other tab — it just puts the answer first and the evidence second.</p>
+        <p>Enter your trading capital once and every candidate is sized for you: how many shares or contracts, and the most you can lose if the stop is hit. Each card says in one sentence why it qualifies and exactly when to sell. When nothing qualifies, it says so — that is the normal state, not a fault.</p>
+        <p>Everything else in this handbook exists so you can check the Today tab's work. You do not need to read it to use the tab.</p>
+      </div>
+
       <p>The desk now pulls from a dozen sources. They are <strong>not equal</strong>, and treating them as if they were is the main way to misuse it. Everything on the site falls into one of three tiers.</p>
 
       <h3>Tier 1 — Gates. These decide whether you trade at all.</h3>
@@ -1178,6 +1186,19 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 18</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.6<br/>2026-09-03</div>
+        <div class="what">
+          <h4>Today tab — the simple version of the whole desk</h4>
+          <ul>
+            <li>New first tab. One screen, three questions in plain language: <strong>should I trade today</strong> (a traffic light driven by the macro and regime gates), <strong>what qualifies right now</strong> across stocks, options, crypto and metals in one list, and <strong>what to leave alone</strong>, with the measured reason for each.</li>
+            <li>Enter your capital once; every candidate is sized — shares or contracts to buy, and the most you can lose. Each card gives the buy level, the sell-if-it-falls-to level, the take-profit level, one sentence on why, and the exact exit rule.</li>
+            <li>No new data or rules. It calls the same endpoints and applies the same rulebook as the other tabs; crypto cards carry the measured after-fee caveat on the card itself.</li>
+            <li>Built entirely client-side, so the project stays at 11 serverless functions under Vercel's 12-function cap.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.5<br/>2026-09-03</div>

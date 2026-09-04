@@ -13,6 +13,7 @@ const PORT = Number(process.argv[2] || 3000);
 const PAGES = {
   '/': 'index.html',
   '/stocks': 'index.html',
+  '/today': 'today.html',
   '/dashboard': 'dashboard.html',
   '/options': 'options.html',
   '/crypto': 'crypto.html',

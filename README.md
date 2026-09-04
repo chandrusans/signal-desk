@@ -8,9 +8,19 @@ A momentum-swing signals dashboard for self-directed equity research. Pulls live
 
 **Contributors**: `CLAUDE.md` at the repo root spells out the handbook maintenance rule — any change to scoring, setups, indicators, or data sources requires a same-commit update to `handbook.html`.
 
+## Start with /today
+
+The **Today** tab is the whole desk reduced to three plain-English questions:
+should I trade today (macro + regime gates as a traffic light), what qualifies
+right now across stocks, options, crypto and metals, and what to leave alone.
+Enter your capital once and every card is sized — shares or contracts, and the
+most you can lose. It calls the same endpoints and applies the same rules as
+every other tab; it just puts the answer first. `?preview=open` forces the gates
+open for display only, so the cards can be seen on a day the real gate is shut.
+
 ## What it does
 
-- **Live prices**: 1-year OHLC + volume via Yahoo Finance chart API (no auth key). Polls every 30 seconds.
+- **Live prices**: 1-year OHLC + volume via Yahoo Finance chart API (no auth key). Polls every 15s (Stocks) / 20s (Crypto) behind a 30s edge cache.
 - **Real analytics**: SMA (10/20/50/200), RSI(14), ATR(14), 20d/60d returns, 52-week high distance, volume expansion.
 - **Composite score (0–100)**: transparent breakdown — trend (30) + momentum (25) + location (20) + volume (15) + volatility (10).
 - **Setup classifier**: `BREAKOUT`, `PULLBACK`, `EARLY`, `EXTENDED`, `BROKEN`, `AVOID` — each with mechanical entry rules.
@@ -22,6 +32,7 @@ A momentum-swing signals dashboard for self-directed equity research. Pulls live
 
 ```
 signal-desk/
+├── today.html         START HERE — one page, three questions, all four markets
 ├── index.html         Stocks UI (all inline CSS/JS)
 ├── dashboard.html     Personal portfolio tracker
 ├── options.html       Options recommendations
@@ -39,10 +50,14 @@ signal-desk/
 │   ├── options.js     NASDAQ option chains + recommendation engine
 │   ├── option-quote.js  Live per-contract premiums by OCC symbol
 │   ├── fundamentals.js  Market cap, P/E, earnings dates
-│   ├── crypto-universe.js  Top coins by mcap ∩ Coinbase USD pairs
-│   ├── crypto-scan.js      Batch crypto scorer, BTC as benchmark
-│   ├── crypto-hours.js     Hour-of-day returns + Bonferroni significance test
-│   └── crypto-backtest.js  Crypto backtest + venue fee sweep
+│   ├── macro-calendar.js   ForexFactory calendar (FairEconomy feed) — event gate
+│   ├── congress.js         STOCK Act PTRs from the Clerk of the House
+│   ├── crypto.js           Router: ?op=universe|scan|hours|backtest|pumpfun
+│   ├── _crypto-universe.js   Top coins by mcap ∩ Coinbase USD pairs
+│   ├── _crypto-scan.js       Batch crypto scorer, BTC as benchmark
+│   ├── _crypto-hours.js      Hour-of-day returns + Bonferroni significance
+│   ├── _crypto-backtest.js   Crypto backtest + venue fee sweep
+│   └── _pumpfun.js           pump.fun exit-risk screen (DexScreener)
 ├── tools/
 │   ├── devserver.mjs  Local server routing /api/* to the handler modules
 │   └── lint.mjs       Undefined-function detector for inline scripts
@@ -53,7 +68,7 @@ signal-desk/
 
 Vercel's Hobby plan allows **12 Serverless Functions per deployment**. The four
 crypto endpoints are therefore merged behind one `api/crypto.js` router
-(`?op=universe|scan|hours|backtest`); the handlers live in `_crypto-*.js`, where
+(`?op=universe|scan|hours|backtest|pumpfun`); the handlers live in `_crypto-*.js`, where
 the underscore keeps Vercel from routing them separately. Exceeding the cap fails
 at the "Deploying outputs" step with the build itself green — which reads like a
 code error but isn't. Count `ls api/*.js | grep -v /_` before adding a route.
@@ -92,7 +107,7 @@ NODE_EXTRA_CA_CERTS=/tmp/ca.pem node tools/devserver.mjs 3000
 ### Checks before committing
 
 ```bash
-node tools/lint.mjs index.html dashboard.html options.html crypto.html metals.html handbook.html
+node tools/lint.mjs today.html index.html dashboard.html options.html crypto.html metals.html handbook.html
 ```
 
 This catches called-but-never-defined functions in the inline `<script>` blocks —

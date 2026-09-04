@@ -1,0 +1,1445 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Signal Desk — Today</title>
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('sd-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root {
+    --ground: #F4EFE4;
+    --ground-2: #EDE7D8;
+    --ink: #161512;
+    --ink-2: #3A362E;
+    --ink-3: #6B655A;
+    --rule: #D9D2BF;
+    --panel: #FBF8F0;
+    --accent: #B8863A;
+    --accent-soft: #E9D3A3;
+    --signal: #3B8C5A;
+    --caution: #B57F1F;
+    --risk: #B84438;
+    --grid: rgba(22, 21, 18, 0.06);
+    --gold: #C89B3C;
+    --silver: #9BA1A6;
+
+    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: ui-sans-serif, -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0E1116;
+      --ground-2: #141821;
+      --ink: #E7E2D6;
+      --ink-2: #B5AF9F;
+      --ink-3: #7C7767;
+      --rule: #262B36;
+      --panel: #161B24;
+      --accent: #D6A24B;
+      --accent-soft: #4A3820;
+      --signal: #5FBF83;
+      --caution: #D4A040;
+      --risk: #D96355;
+      --grid: rgba(231, 226, 214, 0.06);
+      --gold: #E0B45C;
+      --silver: #C4CBD1;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#F4EFE4;--ground-2:#EDE7D8;--ink:#161512;--ink-2:#3A362E;--ink-3:#6B655A;--rule:#D9D2BF;--panel:#FBF8F0;--accent:#B8863A;--accent-soft:#E9D3A3;--signal:#3B8C5A;--caution:#B57F1F;--risk:#B84438;--grid:rgba(22,21,18,0.06);--gold:#C89B3C;--silver:#9BA1A6;
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E1116;--ground-2:#141821;--ink:#E7E2D6;--ink-2:#B5AF9F;--ink-3:#7C7767;--rule:#262B36;--panel:#161B24;--accent:#D6A24B;--accent-soft:#4A3820;--signal:#5FBF83;--caution:#D4A040;--risk:#D96355;--grid:rgba(231,226,214,0.06);--gold:#E0B45C;--silver:#C4CBD1;
+  }
+
+  html { color-scheme: light dark; }
+  html, body { overflow-x: hidden; max-width: 100%; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+
+  .shell { max-width: 1280px; margin: 0 auto; padding: 32px 28px 80px; }
+
+  .masthead {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--ink);
+  }
+  .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+  .brand { font-family: var(--serif); font-size: 40px; line-height: 1; letter-spacing: -0.015em; font-weight: 500; text-wrap: balance; margin: 0; }
+  .brand em { font-style: italic; color: var(--accent); font-weight: 400; }
+  .meta { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-2); line-height: 1.7; }
+  .meta .date { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .meta a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+  .meta a:hover { border-bottom-style: solid; }
+  .theme-toggle {
+    background: transparent; border: 1px solid var(--rule); color: var(--ink-2);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 6px 10px; margin-top: 8px; cursor: pointer;
+  }
+  .theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
+
+  @media (max-width: 900px) {
+    .brand { font-size: 30px; }
+  }
+
+  /* Cross-asset strip */
+  .drivers {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  @media (max-width: 900px) { .drivers { grid-template-columns: repeat(2, 1fr); } }
+  .drv-cell {
+    padding: 14px 16px;
+    border-right: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .drv-cell:last-child { border-right: none; }
+  @media (max-width: 900px) { .drv-cell:nth-child(2n) { border-right: none; } }
+  .drv-cell .label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+  .drv-cell .value { font-size: 15px; color: var(--ink); }
+  .drv-cell .delta { font-size: 11px; margin-top: 2px; }
+  .up { color: var(--signal); }
+  .down { color: var(--risk); }
+  .flat { color: var(--ink-3); }
+
+  /* Section head */
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 36px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .section-head h2 {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .section-head .aside {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* Two big metal panels */
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .panels { grid-template-columns: 1fr; } }
+  .metal-panel {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 24px 26px;
+    position: relative;
+  }
+  .metal-panel.gold::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gold); }
+  .metal-panel.silver::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--silver); }
+
+  .mp-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+  }
+  .mp-ticker {
+    font-family: var(--mono);
+    font-size: 20px;
+    letter-spacing: 0.02em;
+    font-weight: 500;
+  }
+  .mp-name {
+    font-family: var(--serif);
+    font-size: 12px;
+    color: var(--ink-3);
+    font-style: italic;
+    margin-top: 2px;
+  }
+  .mp-price {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 28px;
+    color: var(--ink);
+    line-height: 1;
+    text-align: right;
+  }
+  .mp-change {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  .mp h3 {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 20px 0 10px;
+    font-weight: 500;
+  }
+  .mp h3:first-of-type { margin-top: 0; }
+
+  /* Range block — the day/week projection */
+  .range {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--rule);
+    background: var(--ground-2);
+  }
+  .range-cell {
+    padding: 12px 14px;
+    border-right: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .range-cell:last-child { border-right: none; }
+  .range-cell .l {
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .range-cell .hi { color: var(--signal); font-size: 15px; }
+  .range-cell .lo { color: var(--risk); font-size: 15px; }
+  .range-cell .band { font-size: 11px; color: var(--ink-2); margin-top: 4px; }
+  .range-visual {
+    height: 6px;
+    background: var(--ground-2);
+    margin: 10px 0;
+    position: relative;
+    border: 1px solid var(--rule);
+  }
+  .range-fill {
+    position: absolute; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--risk), var(--ink-3), var(--signal));
+    opacity: 0.5;
+  }
+  .range-marker {
+    position: absolute;
+    top: -3px; bottom: -3px;
+    width: 2px;
+    background: var(--ink);
+  }
+  .range-marker::before {
+    content: '';
+    position: absolute;
+    top: -4px; left: -3px;
+    width: 8px; height: 8px;
+    background: var(--ink);
+    border-radius: 50%;
+  }
+
+  /* Indicator grid */
+  .ind-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    gap: 10px;
+    row-gap: 6px;
+    align-items: baseline;
+  }
+  .ind-grid .k {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .ind-grid .v {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: var(--ink);
+    text-align: right;
+  }
+  .bar-track { height: 6px; background: var(--ground-2); position: relative; overflow: hidden; }
+  .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+
+  /* Setup chip */
+  .setup-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border: 1px solid;
+    line-height: 1.5;
+  }
+  .setup-BREAKOUT { color: var(--signal); border-color: var(--signal); }
+  .setup-PULLBACK { color: var(--accent); border-color: var(--accent); }
+  .setup-EARLY    { color: var(--ink-2); border-color: var(--ink-3); }
+  .setup-EXTENDED { color: var(--caution); border-color: var(--caution); }
+  .setup-BROKEN   { color: var(--risk); border-color: var(--risk); }
+  .setup-AVOID    { color: var(--risk); border-color: var(--risk); }
+
+  .thesis {
+    background: var(--ground-2);
+    border-left: 3px solid var(--accent);
+    padding: 12px 14px;
+    font-family: var(--serif);
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  .plan {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 1px solid var(--rule);
+  }
+  .plan-cell {
+    padding: 12px 14px;
+    border-right: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .plan-cell:last-child { border-right: none; }
+  .plan-cell .l {
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .plan-cell .n { font-size: 14px; color: var(--ink); }
+  .plan-cell.tgt .n { color: var(--signal); }
+  .plan-cell.stop .n { color: var(--risk); }
+
+  /* Notes */
+  .notes-list { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; }
+  .notes-list li {
+    font-family: var(--serif); font-size: 12.5px; line-height: 1.45;
+    color: var(--ink-2); padding-left: 12px; position: relative;
+  }
+  .notes-list li::before { content: "·"; color: var(--accent); position: absolute; left: 0; top: -1px; font-weight: bold; }
+
+  /* Calendar (reuse from dashboard rules layout) */
+  .rules { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; background: var(--panel); border: 1px solid var(--rule); }
+  @media (max-width: 900px) { .rules { grid-template-columns: 1fr; } }
+  .rule-cell { padding: 18px 20px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .rule-cell:nth-child(2n) { border-right: none; }
+  .rule-cell:nth-last-child(-n+2) { border-bottom: none; }
+  @media (max-width: 900px) { .rule-cell { border-right: none; } .rule-cell:not(:last-child) { border-bottom: 1px solid var(--rule); } }
+  .rule-cell h4 {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-3); margin: 0 0 8px; font-weight: 500;
+  }
+  .rule-cell h4 .num {
+    font-family: var(--serif); font-style: italic; color: var(--accent);
+    font-size: 14px; margin-right: 6px; letter-spacing: 0;
+  }
+  .rule-cell p { font-family: var(--serif); font-size: 13.5px; line-height: 1.5; color: var(--ink); margin: 0 0 6px; }
+  .rule-cell code { font-family: var(--mono); font-size: 11.5px; background: var(--ground-2); padding: 1px 5px; color: var(--ink); }
+
+  /* News */
+  .intel { background: var(--panel); border: 1px solid var(--rule); }
+  .feed { list-style: none; margin: 0; padding: 0; }
+  .feed li {
+    display: grid;
+    grid-template-columns: 60px 60px 60px 1fr 60px;
+    gap: 14px;
+    padding: 12px 18px;
+    border-bottom: 1px dotted var(--rule);
+    align-items: baseline;
+  }
+  .feed li:last-child { border-bottom: none; }
+  .feed .ts { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.04em; }
+  .feed .src-badge {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-2); padding: 2px 6px; border: 1px solid var(--rule); text-align: center;
+  }
+  .feed .tk { font-family: var(--mono); font-size: 12px; color: var(--ink); letter-spacing: 0.02em; }
+  .feed .hd { font-family: var(--serif); font-size: 13.5px; line-height: 1.4; color: var(--ink); }
+  .feed .hd a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--ink-3); }
+  .feed .hd a:hover { border-bottom-color: var(--accent); }
+  .feed .sent { font-family: var(--mono); font-size: 10.5px; text-align: right; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+  .sent.pos { color: var(--signal); }
+  .sent.neg { color: var(--risk); }
+  .sent.neu { color: var(--ink-3); }
+  @media (max-width: 900px) {
+    .feed li { grid-template-columns: 55px 55px 1fr 55px; }
+    .feed .tk { display: none; }
+  }
+
+  /* Disclosure */
+  .disclosure {
+    margin-top: 36px; padding: 20px 24px;
+    background: transparent;
+    border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule);
+  }
+  .disclosure h4 {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--risk); margin: 0 0 8px; font-weight: 500;
+  }
+  .disclosure p {
+    font-family: var(--serif); font-style: italic; font-size: 13.5px; line-height: 1.55;
+    color: var(--ink-2); margin: 0; max-width: 78ch;
+  }
+
+  /* Tab bar + Handbook button (mirrored from dashboard) */
+  .tabbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 0 12px; margin-bottom: 20px; border-bottom: 1px solid var(--rule); }
+  .tabbar-tabs { display: flex; gap: 0; }
+  .tab { padding: 10px 22px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); text-decoration: none; border: none; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; background: transparent; cursor: pointer; }
+  .tab:hover { color: var(--ink); }
+  .tab.on { color: var(--ink); border-bottom-color: var(--accent); }
+  .handbook-btn { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+  .handbook-btn:hover, .handbook-btn:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
+  .handbook-btn .hb-glyph { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+
+  /* Handbook slide-over drawer */
+  .hb-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 900; }
+  .hb-backdrop.open { display: block; animation: hb-bg-in 0.2s ease-out; }
+  @keyframes hb-bg-in { from { opacity: 0; } to { opacity: 1; } }
+  .hb-drawer { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: min(960px, 92vw); background: var(--ground); z-index: 1000; flex-direction: column; box-shadow: -8px 0 40px rgba(0, 0, 0, 0.35); }
+  .hb-drawer.open { display: flex; animation: hb-in 0.24s ease-out; }
+  @keyframes hb-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  .hb-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--rule); background: var(--panel); }
+  .hb-title { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+  .hb-title strong { color: var(--ink); }
+  .hb-close { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 12px; cursor: pointer; }
+  .hb-close:hover, .hb-close:focus-visible { border-color: var(--ink); color: var(--ink); outline: none; }
+  .hb-frame { flex: 1; border: none; width: 100%; background: var(--ground); }
+
+  /* --- UI trends layer (mirror of dashboard) --- */
+  :root {
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+    --neu-hi: rgba(255, 255, 255, 0.9);
+    --neu-lo: rgba(96, 84, 60, 0.14);
+    --neu-inset-hi: rgba(255, 255, 255, 0.7);
+    --neu-inset-lo: rgba(96, 84, 60, 0.16);
+    --glass-bg: rgba(251, 248, 240, 0.72);
+    --glass-border: rgba(22, 21, 18, 0.10);
+    --glass-blur: 20px;
+    --card-glow: transparent;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --neu-hi: rgba(255, 255, 255, 0.045);
+      --neu-lo: rgba(0, 0, 0, 0.55);
+      --neu-inset-hi: rgba(255, 255, 255, 0.03);
+      --neu-inset-lo: rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(14, 17, 22, 0.65);
+      --glass-border: rgba(214, 162, 75, 0.12);
+      --card-glow: rgba(214, 162, 75, 0.06);
+    }
+    body {
+      background:
+        radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.08), transparent 60%),
+        radial-gradient(900px 600px at 90% 100%, rgba(155, 161, 166, 0.05), transparent 55%),
+        var(--ground);
+    }
+  }
+  :root[data-theme="dark"] body {
+    background:
+      radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.08), transparent 60%),
+      radial-gradient(900px 600px at 90% 100%, rgba(155, 161, 166, 0.05), transparent 55%),
+      var(--ground);
+  }
+  :root[data-theme="light"] body { background: var(--ground); }
+
+  /* Neu buttons */
+  .tab { border-radius: 10px 10px 0 0; transition: color 0.18s var(--ease-out), background 0.18s var(--ease-out); }
+  .tab:hover:not(.on) { color: var(--ink); background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 6%, transparent)); }
+  .tab.on {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
+    box-shadow: inset 0 -2px 0 var(--accent);
+    border-bottom-color: transparent;
+  }
+  .handbook-btn {
+    border-radius: 8px; background: var(--panel);
+    box-shadow: 3px 3px 8px var(--neu-lo), -3px -3px 8px var(--neu-hi);
+    transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), color 0.18s var(--ease-out);
+  }
+  .handbook-btn:hover, .handbook-btn:focus-visible {
+    transform: translateY(-1px); color: var(--ink);
+    box-shadow: 4px 4px 12px var(--neu-lo), -4px -4px 12px var(--neu-hi);
+  }
+  .handbook-btn:active {
+    transform: translateY(0);
+    box-shadow: inset 2px 2px 6px var(--neu-inset-lo), inset -2px -2px 6px var(--neu-inset-hi);
+  }
+  .handbook-btn .hb-glyph { box-shadow: 0 0 8px var(--accent); }
+  .theme-toggle {
+    border-radius: 6px; background: var(--panel);
+    box-shadow: 2px 2px 6px var(--neu-lo), -2px -2px 6px var(--neu-hi);
+    transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), color 0.18s var(--ease-out);
+    border: none;
+  }
+  .theme-toggle:hover { transform: translateY(-1px); }
+  .theme-toggle:active {
+    transform: translateY(0);
+    box-shadow: inset 2px 2px 4px var(--neu-inset-lo), inset -2px -2px 4px var(--neu-inset-hi);
+  }
+
+  /* Glass drawer */
+  .hb-backdrop {
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px) saturate(140%);
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+  }
+  .hb-drawer {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    border-left: 1px solid var(--glass-border);
+    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.45), inset 1px 0 0 rgba(255, 255, 255, 0.06);
+  }
+  .hb-header { background: transparent; border-bottom: 1px solid var(--glass-border); }
+
+  /* Metal panels — hover lift + gold/silver glow */
+  .metal-panel {
+    transition: transform 0.24s var(--ease-out), box-shadow 0.24s var(--ease-out);
+  }
+  .metal-panel.gold:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px color-mix(in srgb, var(--gold) 14%, transparent);
+  }
+  .metal-panel.silver:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px color-mix(in srgb, var(--silver) 12%, transparent);
+  }
+
+  /* Live-dot pulse */
+  @keyframes live-pulse {
+    0%, 100% { opacity: 1; text-shadow: 0 0 6px currentColor; }
+    50% { opacity: 0.65; text-shadow: 0 0 0px currentColor; }
+  }
+  #live-dot { display: inline-block; animation: live-pulse 2s var(--ease-inout) infinite; }
+
+  /* Price flash */
+  @keyframes flash-up { 0% { background: color-mix(in srgb, var(--signal) 45%, transparent); color: var(--signal); } 100% { background: transparent; color: inherit; } }
+  @keyframes flash-down { 0% { background: color-mix(in srgb, var(--risk) 45%, transparent); color: var(--risk); } 100% { background: transparent; color: inherit; } }
+  .flash-up   { animation: flash-up 1.4s var(--ease-out); border-radius: 3px; }
+  .flash-down { animation: flash-down 1.4s var(--ease-out); border-radius: 3px; }
+
+  .refresh-btn {
+    background: transparent; border: 1px solid var(--rule); color: var(--ink-3);
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 3px 7px; margin-left: 6px; cursor: pointer; border-radius: 3px;
+    transition: color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+  }
+  .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Page-load stagger */
+  @keyframes rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .masthead { animation: rise-in 0.5s var(--ease-out) both; }
+  .drivers  { animation: rise-in 0.5s var(--ease-out) 0.08s both; }
+  .section-head { animation: rise-in 0.5s var(--ease-out) 0.16s both; }
+  .panels   { animation: rise-in 0.5s var(--ease-out) 0.24s both; }
+  .rules    { animation: rise-in 0.5s var(--ease-out) 0.32s both; }
+  .intel    { animation: rise-in 0.5s var(--ease-out) 0.40s both; }
+
+  /* Brand logomark on masthead */
+  .brand-mark {
+    display: inline-block;
+    vertical-align: -6px;
+    margin-right: 12px;
+    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 32%, transparent));
+    animation: spin-slow 60s linear infinite;
+  }
+  @keyframes spin-slow { to { transform: rotate(360deg); } }
+
+  /* Coin illustrations in headers */
+  .coin-ill {
+    display: inline-block;
+    vertical-align: -4px;
+    margin-right: 10px;
+  }
+  .coin-ill.gold circle.face { fill: color-mix(in srgb, var(--gold) 24%, var(--panel)); }
+  .coin-ill.silver circle.face { fill: color-mix(in srgb, var(--silver) 22%, var(--panel)); }
+  .coin-ill { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25)); }
+  .coin-ill .glint { opacity: 0.5; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, #live-dot { transition: none !important; animation: none !important; }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+   * MOBILE — phones (≤ 640px)
+   * ══════════════════════════════════════════════════════════════════════ */
+  @media (max-width: 640px) {
+    body { font-size: 15px; }
+
+    /* Grid/flex children default to min-width:auto and refuse to shrink below
+       their content, which pushes the page wider than the viewport. Allowing
+       them to shrink is what actually stops horizontal scroll. */
+    .desk, .desk > *, .picks, .card, .card > *, .card-body, .card-body > *,
+    .detail, .detail > *, .pos-card, .pos-card > *, .pos-primary, .pos-primary > *,
+    .opt-card, .opt-card > *, .opt-top, .opt-top > *, .metal-panel, .metal-panel > *,
+    .an-cell, .an-cell > *, .rules, .rule-cell, .intel, .feed li, .feed li > * {
+      min-width: 0;
+    }
+    /* Long unbroken strings (OCC symbols, URLs) must wrap rather than push */
+    .thesis, .verdict-reason, .buzz-snippet, .hd, .pos-notes, .an-value, .an-sub {
+      overflow-wrap: anywhere;
+    }
+    .shell { padding: 14px 14px 60px; }
+
+    .tabbar { flex-direction: column; align-items: stretch; gap: 10px; padding: 0 0 10px; margin-bottom: 14px; }
+    .tabbar-tabs {
+      overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+      margin: 0 -14px; padding: 0 14px;
+    }
+    .tabbar-tabs::-webkit-scrollbar { display: none; }
+    .tab { padding: 12px 16px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
+
+    .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
+    .brand { font-size: 25px; }
+    .brand-mark { width: 30px; height: 30px; margin-right: 8px; vertical-align: -4px; }
+    .meta { text-align: left; font-size: 10.5px; line-height: 1.9; }
+    .theme-toggle, .refresh-btn { min-height: 36px; padding: 8px 12px; }
+    /* Header buttons inline rather than stacked — reclaims vertical space */
+    .meta { display: flex; flex-direction: column; gap: 2px; }
+    .meta > div { display: block; }
+    .theme-toggle { align-self: flex-start; margin-top: 6px; }
+
+    /* Drivers strip 2-up */
+    .drivers { grid-template-columns: 1fr 1fr; }
+    .drv-cell { padding: 11px 12px; border-bottom: 1px solid var(--rule); }
+    .drv-cell:nth-child(2n) { border-right: none; }
+    .drv-cell .value { font-size: 14px; }
+
+    .section-head { flex-direction: column; align-items: flex-start; gap: 6px; margin: 24px 0 12px; }
+    .section-head h2 { font-size: 19px; }
+
+    /* Metal panels */
+    .panels { gap: 14px; }
+    .metal-panel { padding: 16px; }
+    .mp-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .mp-ticker { font-size: 18px; }
+    .mp-price { font-size: 24px; text-align: left; }
+    .mp-change { text-align: left; }
+    .coin-ill { width: 24px; height: 24px; margin-right: 8px; }
+    .range-cell { padding: 11px 12px; }
+    .range-cell .hi, .range-cell .lo { font-size: 14px; }
+    .ind-grid { grid-template-columns: 96px 1fr auto; gap: 8px; }
+    .plan { grid-template-columns: 1fr 1fr; }
+    .plan-cell { border-bottom: 1px solid var(--rule); }
+    .plan-cell:nth-child(2n) { border-right: none; }
+
+    .rules { grid-template-columns: 1fr; }
+    .rule-cell { border-right: none; padding: 14px 16px; }
+
+    .feed li { grid-template-columns: 46px 52px 1fr; gap: 8px; padding: 11px 14px; }
+    .feed .tk, .feed .sent { display: none; }
+    .feed .hd { font-size: 13px; }
+
+    .hb-drawer { width: 100vw; }
+    .hb-header { padding: 12px 14px; }
+    .hb-close { min-height: 40px; }
+    .disclosure { padding: 16px 14px; }
+  }
+
+  @media (max-width: 360px) {
+    .brand { font-size: 22px; }
+    .drivers { grid-template-columns: 1fr; }
+    .drv-cell { border-right: none; }
+    .plan { grid-template-columns: 1fr; }
+    .plan-cell { border-right: none; }
+  }
+
+  /* ---- Crypto-specific ---- */
+  /* The detail panel. The shared shell carries only its mobile overrides,
+     so the base styling has to be declared here. */
+  .detail {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 22px 24px;
+    position: sticky;
+    top: 20px;
+    min-width: 0;
+  }
+  .detail h3 {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-3); margin: 20px 0 10px; font-weight: 500;
+  }
+  .detail h3:first-of-type { margin-top: 0; }
+  .panels { grid-template-columns: 1fr minmax(0, 420px); align-items: start; }
+  @media (max-width: 900px) {
+    .panels { grid-template-columns: 1fr; }
+    .detail { position: static; }
+  }
+
+  .reality {
+    border: 1px solid var(--risk);
+    border-left: 3px solid var(--risk);
+    background: color-mix(in srgb, var(--risk) 7%, transparent);
+    padding: 20px 22px;
+    margin: 0 0 28px;
+    border-radius: 4px;
+  }
+  .reality h2 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--risk); margin: 0 0 12px; font-weight: 600;
+  }
+  .reality .headline {
+    font-family: var(--serif); font-size: 21px; line-height: 1.35;
+    color: var(--ink); margin: 0 0 14px;
+  }
+  .reality p { font-size: 13.5px; line-height: 1.65; color: var(--ink-2); margin: 0 0 10px; }
+  .reality strong { color: var(--ink); }
+  .reality .num { font-family: var(--mono); font-weight: 600; color: var(--risk); }
+  .reality .numok { font-family: var(--mono); font-weight: 600; color: var(--signal); }
+
+  /* The table is wider than a phone. It must scroll inside its own box —
+     letting it overflow clips the right-hand columns silently. */
+  .fee-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 14px 0 6px; }
+  .fee-table { width: 100%; min-width: 460px; border-collapse: collapse; font-family: var(--mono); font-size: 11.5px; }
+  .fee-table th {
+    text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule);
+    color: var(--ink-3); font-weight: 500; letter-spacing: 0.08em; font-size: 10px; text-transform: uppercase;
+  }
+  .fee-table td { padding: 7px 8px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-2); }
+  .fee-table td.pos { color: var(--signal); font-weight: 600; }
+  .fee-table td.neg { color: var(--risk); font-weight: 600; }
+  .fee-table tr.you td { background: color-mix(in srgb, var(--risk) 9%, transparent); }
+  .fee-table .venue { color: var(--ink); }
+
+  .target-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    margin: 14px 0 4px; border-radius: 3px; overflow: hidden;
+  }
+  .target-cell { background: var(--ground); padding: 12px 14px; min-width: 0; }
+  .target-cell .l {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 5px;
+  }
+  .target-cell .n { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--ink); }
+  .target-cell .n.bad { color: var(--risk); }
+  .target-cell .sub { font-size: 11px; color: var(--ink-3); margin-top: 3px; line-height: 1.4; }
+
+  .coin-card {
+    display: grid; grid-template-columns: 42px 1fr auto; gap: 14px; align-items: start;
+    border: 1px solid var(--rule); border-radius: 4px; padding: 15px 16px; margin-bottom: 10px;
+    background: var(--ground); cursor: pointer; transition: border-color .18s, transform .18s;
+    min-width: 0;
+  }
+  .coin-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .coin-card.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .coin-card .rank {
+    font-family: var(--serif); font-style: italic; font-size: 20px; color: var(--accent); line-height: 1;
+  }
+  .coin-card .sym {
+    font-family: var(--mono); font-size: 15px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--ink); margin-bottom: 2px; overflow-wrap: anywhere;
+  }
+  .coin-card .nm { font-size: 12px; color: var(--ink-3); margin-bottom: 7px; overflow-wrap: anywhere; }
+  .coin-card .why { font-size: 12.5px; color: var(--ink-2); line-height: 1.55; margin-top: 6px; }
+  .coin-right { text-align: right; min-width: 0; }
+  .coin-right .score-label {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .coin-right .score { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--ink); line-height: 1.1; }
+
+  .verdict-pill {
+    display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 0.1em; padding: 4px 9px; border: 1px solid; border-radius: 3px;
+  }
+  .verdict-BUY   { color: var(--signal); border-color: var(--signal); background: color-mix(in srgb, var(--signal) 14%, transparent); }
+  .verdict-HOLD  { color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 14%, transparent); }
+  .verdict-AVOID { color: var(--ink-3); border-color: var(--rule); }
+  .verdict-SELL  { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 14%, transparent); }
+
+  .filter-bar {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    padding: 12px 0 16px; border-bottom: 1px solid var(--rule-soft); margin-bottom: 18px;
+  }
+  .filter-group { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .flbl {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-3); white-space: nowrap;
+  }
+  .seg { display: flex; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+  .seg button {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; padding: 6px 11px;
+    background: transparent; border: none; border-right: 1px solid var(--rule);
+    color: var(--ink-3); cursor: pointer; white-space: nowrap;
+  }
+  .seg button:last-child { border-right: none; }
+  .seg button.on { background: var(--accent); color: var(--ground); font-weight: 600; }
+
+  .hours-grid { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; margin: 12px 0 8px; }
+  .hour-bar {
+    position: relative; height: 46px; background: var(--ground-2);
+    border-radius: 2px; display: flex; align-items: flex-end; overflow: hidden;
+  }
+  .hour-bar i { display: block; width: 100%; background: var(--ink-3); }
+  .hour-bar.pos i { background: var(--signal); }
+  .hour-bar.neg i { background: var(--risk); }
+  .hour-bar.sig { outline: 1px solid var(--accent); }
+  .hours-axis {
+    display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px;
+    font-family: var(--mono); font-size: 8px; color: var(--ink-3); text-align: center;
+  }
+
+  /* pump.fun section — deliberately styled as a hazard panel, not a pick list */
+  .pf-wrap { margin: 40px 0 0; }
+  .pf-warn {
+    border: 1px solid var(--risk); border-left: 3px solid var(--risk);
+    background: color-mix(in srgb, var(--risk) 8%, transparent);
+    padding: 18px 20px; border-radius: 4px; margin-bottom: 18px;
+  }
+  .pf-warn h3 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--risk); margin: 0 0 10px; font-weight: 600;
+  }
+  .pf-warn p { font-size: 13px; line-height: 1.65; color: var(--ink-2); margin: 0 0 9px; }
+  .pf-warn strong { color: var(--ink); }
+  .pf-warn .big { font-family: var(--mono); font-weight: 600; color: var(--risk); }
+  .pf-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    margin: 14px 0 4px; border-radius: 3px; overflow: hidden;
+  }
+  .pf-stat { background: var(--ground); padding: 11px 13px; min-width: 0; }
+  .pf-stat .l {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.11em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px;
+  }
+  .pf-stat .n { font-family: var(--mono); font-size: 17px; font-weight: 600; color: var(--ink); }
+  .pf-stat .n.bad { color: var(--risk); }
+  .pf-stat .s { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
+
+  .pf-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .pf-table { width: 100%; min-width: 720px; border-collapse: collapse; font-family: var(--mono); font-size: 11.5px; }
+  .pf-table th {
+    text-align: left; padding: 8px; border-bottom: 1px solid var(--rule); color: var(--ink-3);
+    font-weight: 500; letter-spacing: 0.08em; font-size: 9.5px; text-transform: uppercase; white-space: nowrap;
+  }
+  .pf-table td { padding: 8px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-2); white-space: nowrap; }
+  .pf-table td.sym { color: var(--ink); font-weight: 600; }
+  .pf-table td.flags { white-space: normal; font-family: var(--sans); font-size: 11px; color: var(--ink-3); min-width: 200px; }
+  .risk-pill {
+    display: inline-block; font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em;
+    padding: 3px 7px; border: 1px solid; border-radius: 3px;
+  }
+  .risk-MODERATE { color: var(--caution); border-color: var(--caution); }
+  .risk-ELEVATED { color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 12%, transparent); }
+  .risk-HIGH     { color: var(--risk); border-color: var(--risk); }
+  .risk-EXTREME  { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 18%, transparent); }
+
+  .empty-note {
+    border: 1px dashed var(--rule); border-radius: 4px; padding: 26px 20px;
+    text-align: center; color: var(--ink-3); font-size: 13px;
+  }
+
+  @media (max-width: 640px) {
+    .reality { padding: 15px 14px; }
+    .reality .headline { font-size: 17px; }
+    .coin-card { grid-template-columns: 28px 1fr; gap: 10px; padding: 13px 12px; }
+    .coin-right { grid-column: 1 / -1; text-align: left; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .coin-right .score { font-size: 21px; }
+    .filter-bar { gap: 10px; }
+    .filter-group { width: 100%; }
+    .seg { overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
+    .seg::-webkit-scrollbar { display: none; }
+    .seg button { min-height: 40px; scroll-snap-align: start; }
+    .fee-table { font-size: 10.5px; }
+    .fee-table th, .fee-table td { padding: 6px 5px; }
+    .hours-grid { grid-template-columns: repeat(12, 1fr); }
+    .hours-axis { grid-template-columns: repeat(12, 1fr); }
+  }
+
+  /* ---- Today page ---- */
+  .light {
+    display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: center;
+    border: 1px solid var(--rule); border-radius: 6px; padding: 22px 24px; margin: 0 0 22px;
+    background: var(--panel);
+  }
+  .light .dot { width: 44px; height: 44px; border-radius: 50%; box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 18%, transparent); }
+  .light.go   .dot { background: var(--signal); color: var(--signal); }
+  .light.half .dot { background: var(--caution); color: var(--caution); }
+  .light.stop .dot { background: var(--risk); color: var(--risk); }
+  .light h2 { font-family: var(--serif); font-size: 24px; margin: 0 0 6px; line-height: 1.2; }
+  .light p { margin: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.6; }
+  .light .why { font-family: var(--mono); font-size: 11px; color: var(--ink-3); margin-top: 8px; letter-spacing: 0.04em; }
+
+  .capital { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 22px; font-size: 13px; color: var(--ink-2); }
+  .capital input {
+    font-family: var(--mono); font-size: 14px; width: 120px; padding: 7px 10px;
+    background: var(--ground-2); border: 1px solid var(--rule); border-radius: 4px; color: var(--ink);
+  }
+  .capital .hint { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+
+  .step { margin: 30px 0 12px; display: flex; align-items: baseline; gap: 12px; }
+  .step .n { font-family: var(--serif); font-style: italic; font-size: 26px; color: var(--accent); line-height: 1; }
+  .step h3 { font-family: var(--serif); font-size: 20px; margin: 0; }
+  .step .sub { font-size: 12.5px; color: var(--ink-3); }
+
+  .pick {
+    border: 1px solid var(--rule); border-radius: 6px; padding: 18px 20px; margin-bottom: 12px;
+    background: var(--ground); display: grid; grid-template-columns: 1fr auto; gap: 14px; min-width: 0;
+  }
+  .pick .kind {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 4px;
+  }
+  .pick .name { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+  .pick .name small { font-size: 12px; font-weight: 400; color: var(--ink-3); }
+  .pick .plain { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin: 8px 0 0; }
+  .pick .plain strong { color: var(--ink); }
+  .pick .grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1px;
+    background: var(--rule); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; margin: 12px 0 0;
+  }
+  .pick .cell { background: var(--ground-2); padding: 9px 11px; min-width: 0; }
+  .pick .cell .l { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 3px; }
+  .pick .cell .v { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--ink); }
+  .pick .cell .v.stop { color: var(--risk); }
+  .pick .cell .v.tgt { color: var(--signal); }
+  .pick .sell { font-size: 12.5px; color: var(--ink-2); margin: 12px 0 0; line-height: 1.6; padding-left: 12px; border-left: 2px solid var(--accent); }
+  .pick .caveat { font-size: 12px; color: var(--caution); margin: 10px 0 0; line-height: 1.5; }
+  .pick .score { text-align: right; font-family: var(--mono); }
+  .pick .score .big { font-size: 26px; font-weight: 600; color: var(--ink); line-height: 1; }
+  .pick .score .lbl { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+  .pick .score a { display: inline-block; margin-top: 10px; font-size: 10.5px; color: var(--accent); text-decoration: none; letter-spacing: 0.06em; }
+
+  .none {
+    border: 1px dashed var(--rule); border-radius: 6px; padding: 26px 22px; text-align: center;
+    color: var(--ink-2); font-size: 14px; line-height: 1.65;
+  }
+  .none strong { color: var(--ink); font-family: var(--serif); font-size: 19px; display: block; margin-bottom: 6px; }
+
+  .avoid-list { list-style: none; padding: 0; margin: 0; }
+  .avoid-list li { padding: 10px 0; border-bottom: 1px solid var(--rule-soft); font-size: 13px; color: var(--ink-2); line-height: 1.55; }
+  .avoid-list li strong { color: var(--ink); }
+
+  .status-line { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.04em; margin: 6px 0 0; }
+
+  @media (max-width: 640px) {
+    .light { grid-template-columns: 40px 1fr; gap: 12px; padding: 16px; }
+    .light .dot { width: 32px; height: 32px; }
+    .light h2 { font-size: 19px; }
+    .pick { grid-template-columns: 1fr; }
+    .pick .score { text-align: left; display: flex; align-items: baseline; gap: 12px; }
+    .pick .grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+
+<div class="shell">
+
+  <nav class="tabbar" role="tablist" aria-label="Views">
+    <div class="tabbar-tabs">
+      <a href="/today" class="tab on" data-view="today" role="tab" aria-selected="true">Today</a>
+      <a href="/dashboard" class="tab" data-view="dashboard" role="tab" aria-selected="false">Dashboard</a>
+      <a href="/" class="tab" data-view="stocks" role="tab" aria-selected="false">Stocks</a>
+      <a href="/options" class="tab" data-view="options" role="tab" aria-selected="false">Options</a>
+      <a href="/crypto" class="tab" data-view="crypto" role="tab" aria-selected="false">Crypto</a>
+      <a href="/metals" class="tab" data-view="metals" role="tab" aria-selected="false">Metals</a>
+    </div>
+    <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
+      <span class="hb-glyph" aria-hidden="true"></span>
+      Handbook
+    </button>
+  </nav>
+
+  <header class="masthead">
+    <div>
+      <div class="kicker">The Signal Desk · Today · One answer, all four markets</div>
+      <h1 class="brand">
+        <svg class="brand-mark" width="42" height="42" viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs><radialGradient id="lg-t" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="var(--accent)" stop-opacity="0.9"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></radialGradient></defs>
+          <circle cx="21" cy="21" r="20" fill="url(#lg-t)"/><circle cx="21" cy="21" r="14" fill="none" stroke="var(--accent)" stroke-width="1.1" opacity="0.75"/><circle cx="21" cy="21" r="8" fill="none" stroke="var(--accent)" stroke-width="1.1" opacity="0.5"/><circle cx="21" cy="21" r="3" fill="var(--accent)"/>
+        </svg>
+        What the rulebook <em>says today.</em>
+      </h1>
+    </div>
+    <div class="meta">
+      <div>RUN · <span id="run-ts">—</span></div>
+      <div class="feed">FEED · <span class="dot" id="feed-dot"></span> <span id="feed-label">reading all four markets…</span></div>
+      <button class="refresh-btn" id="refresh-now">↻ Refresh</button>
+      <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
+    </div>
+  </header>
+
+  <!-- STEP 1: can I trade today at all -->
+  <div class="step"><span class="n">1</span><h3>Should I trade today?</h3><span class="sub">the gates decide this, nothing else</span></div>
+  <div class="light half" id="light">
+    <div class="dot"></div>
+    <div>
+      <h2 id="light-title">Checking the gates…</h2>
+      <p id="light-text">Reading the macro calendar and the volatility regime.</p>
+      <div class="why" id="light-why"></div>
+    </div>
+  </div>
+
+  <div class="capital">
+    <label for="capital">My trading capital</label>
+    <input id="capital" type="number" min="500" step="500" value="10000" inputmode="numeric" />
+    <span class="hint">every position below is sized from this · saved on this device</span>
+  </div>
+
+  <!-- STEP 2: what qualifies -->
+  <div class="step"><span class="n">2</span><h3>What qualifies right now</h3><span class="sub" id="qual-sub">across stocks, options, crypto and metals</span></div>
+  <div id="picks"><div class="none"><strong>Scanning…</strong>Reading ~500 stocks, 40 coins, gold, silver and the options chains.</div></div>
+  <div class="status-line" id="scan-status"></div>
+
+  <!-- STEP 3: what to leave alone -->
+  <div class="step"><span class="n">3</span><h3>Leave these alone</h3><span class="sub">measured, not opinion</span></div>
+  <ul class="avoid-list" id="avoid"></ul>
+
+  <div class="disclosure" style="margin-top: 34px;">
+    <strong>This is what a mechanical rulebook outputs, not advice.</strong> Every figure is computed from live data by rules
+    written down in the Handbook. It is a starting point for your own decision. You can lose money on any of it; on crypto
+    and pump.fun the measured edge is negative or unmeasurable. Nothing here knows your situation.
+  </div>
+
+</div>
+<div class="hb-backdrop" id="hb-backdrop" hidden></div>
+<aside class="hb-drawer" id="hb-drawer" hidden aria-modal="true" role="dialog" aria-labelledby="hb-title">
+  <header class="hb-header">
+    <span class="hb-title" id="hb-title"><strong>Handbook</strong> — click any chapter to jump</span>
+    <button class="hb-close" id="hb-close" aria-label="Close handbook">Close ✕</button>
+  </header>
+  <iframe class="hb-frame" id="hb-frame" title="Signal Desk Handbook" src="about:blank" loading="lazy"></iframe>
+</aside>
+
+<script>
+(function () {
+  const btn = document.getElementById('open-handbook');
+  const drawer = document.getElementById('hb-drawer');
+  const backdrop = document.getElementById('hb-backdrop');
+  const closeBtn = document.getElementById('hb-close');
+  const frame = document.getElementById('hb-frame');
+  if (!btn || !drawer || !frame) return;
+  let loaded = false;
+  function open() {
+    if (!loaded) { frame.src = '/handbook'; loaded = true; }
+    drawer.classList.add('open');
+    backdrop.classList.add('open');
+    drawer.removeAttribute('hidden');
+    backdrop.removeAttribute('hidden');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => closeBtn.focus(), 100);
+  }
+  function close() {
+    drawer.classList.remove('open');
+    backdrop.classList.remove('open');
+    drawer.setAttribute('hidden', '');
+    backdrop.setAttribute('hidden', '');
+    document.body.style.overflow = '';
+    btn.focus();
+  }
+  btn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  backdrop.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawer.classList.contains('open')) close(); });
+})();
+</script>
+
+<script>
+// Theme toggle. The early inline script in <head> already applied the stored
+// choice before first paint; this only handles switching and iframe sync.
+(function () {
+  const root = document.documentElement;
+  const mql = window.matchMedia('(prefers-color-scheme: dark)');
+  function applyTheme(next) {
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('sd-theme', next); } catch (e) {}
+    const frame = document.getElementById('hb-frame');
+    if (frame && frame.contentWindow) {
+      try { frame.contentWindow.postMessage({ type: 'sd-theme', theme: next }, '*'); } catch (e) {}
+    }
+  }
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme') || (mql.matches ? 'dark' : 'light');
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'sd-theme' && (e.data.theme === 'dark' || e.data.theme === 'light')) {
+      applyTheme(e.data.theme);
+    }
+  });
+})();
+</script>
+
+
+<script type="module">
+import { analyze, regime, cryptoRegime } from '/analyze.js';
+
+(() => {
+  'use strict';
+
+  // ══════════════════════════════════════════════════════════════════════
+  // TODAY — one page that reads every market and answers three questions in
+  // plain language: should I trade, what qualifies, what do I leave alone.
+  //
+  // No new data source. It calls the same endpoints the other tabs use and
+  // applies the same rulebook; the only thing it adds is the order and the
+  // wording. Everything else on the desk exists to let you check its work.
+  // ══════════════════════════════════════════════════════════════════════
+  const RISK_PCT = 1.0;                        // % of capital risked per position
+  const REFRESH_MS = 60 * 1000;
+  const OPTION_TICKERS = ['NVDA','PLTR','CRWD','HOOD','ASML','AMD','META','MSFT','GOOGL','TSLA',
+    'AAPL','AMZN','NFLX','COIN','ORCL','AVGO','MU','MRVL','SNOW','NET',
+    'PANW','PYPL','SQ','SHOP','SOFI','RIVN','SMCI','LLY','JPM','BAC'];
+
+  const $ = (id) => document.getElementById(id);
+  const money = (x, d = 2) => (x == null || !isFinite(x) ? '—' : '$' + Number(x).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }));
+  const px = (p) => (p == null ? '—' : p >= 1000 ? money(p, 0) : p >= 1 ? money(p, 2) : '$' + Number(p).toPrecision(3));
+  const pct = (x, d = 1) => (x == null ? '—' : `${x >= 0 ? '+' : ''}${Number(x).toFixed(d)}%`);
+
+  // ?preview=open forces the gates open FOR DISPLAY ONLY, so the candidate cards
+  // can be seen on a day the real gate is closed. A banner says so; nothing is
+  // sized differently and the real verdict is still shown in the light's footer.
+  const PREVIEW = new URLSearchParams(location.search).get('preview') === 'open';
+
+  const SHOW_FIRST = 6;                       // cards visible before "show all"
+  let showAll = false;
+
+  let capital = 10000;
+  try { const c = parseFloat(localStorage.getItem('sd-capital')); if (c >= 500) capital = c; } catch {}
+
+  // ---- shared verdict rule (identical to the Stocks and Crypto tabs) ----
+  function verdict(setup, score, regimeBad) {
+    const s = score || 0;
+    if (setup === 'EARNINGS') return 'AVOID';
+    if (regimeBad) return 'AVOID';
+    if (setup === 'BROKEN' && s < 30) return 'SELL';
+    if (setup === 'BROKEN' || setup === 'AVOID') return 'AVOID';
+    if (setup === 'EXTENDED') return 'HOLD';
+    if (setup === 'BREAKOUT' && s >= 65) return 'BUY';
+    if (setup === 'PULLBACK' && s >= 60) return 'BUY';
+    if (setup === 'EARLY' && s >= 50) return 'HOLD';
+    if (s >= 70) return 'BUY';
+    return 'HOLD';
+  }
+  const bad = (r) => !!r && ['stress', 'crisis', 'divergent'].includes(r.level);
+
+  // Plain-English reason per setup — the card should read like a sentence, not a chart
+  const WHY = {
+    BREAKOUT: 'It just pushed to a new 20-day high on rising volume with momentum that is strong but not exhausted. That is the cleanest entry the rulebook has.',
+    PULLBACK: 'It is in an uptrend and has pulled back to its 10-day average with momentum cooled. That is buying a dip inside a trend, not catching a falling knife.',
+    EARLY: 'An uptrend is forming but there is no confirmed entry yet.',
+  };
+  const SELL_STOCK = (stop, tgt, entry) =>
+    `<strong>Sell if it closes below ${px(stop)}</strong> — no averaging down. ` +
+    `When it reaches ${px(tgt)}, sell half and move the stop on the rest up to ${px(entry)} so the worst case is breakeven. ` +
+    `If it has gone nowhere after <strong>15 trading days</strong>, sell it and free the capital.`;
+
+  // ---- fetch helpers ----
+  async function j(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(`${url.split('?')[0]} ${r.status}`); return r.json(); }
+  async function pooled(items, limit, fn) {
+    const out = []; let i = 0;
+    async function run() { while (i < items.length) { const k = i++; try { out[k] = await fn(items[k]); } catch { out[k] = null; } } }
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
+    return out;
+  }
+
+  // ---- state ----
+  let macro = null, stockRegime = null, cryptoReg = null;
+  let stocks = [], coins = [], metals = [], options = [];
+  let pfStats = null, btStats = null;
+  let scanNote = '';
+
+  function sizeMult() {
+    const m = macro ? macro.sizeMult : 1;
+    const r = stockRegime ? stockRegime.sizeMult : 1;
+    return Math.min(m, r);
+  }
+  function riskDollars(mult) { return capital * (RISK_PCT / 100) * mult; }
+
+  // ═══ STEP 1 · the light ═══
+  function renderLight() {
+    const el = $('light');
+    const macroBlocked = !PREVIEW && macro && macro.level === 'blocked';
+    const stocksBad = bad(stockRegime);
+    const cryptoBad = bad(cryptoReg);
+    const half = (macro && macro.level === 'caution') || (stockRegime && stockRegime.sizeMult < 1) || (cryptoReg && cryptoReg.sizeMult < 1);
+
+    let cls, title, text;
+    if (macroBlocked) {
+      cls = 'stop'; title = 'No new trades today.';
+      text = `${macro.note} Manage what you already hold; do not open anything new until it has printed.`;
+    } else if (stocksBad && cryptoBad) {
+      cls = 'stop'; title = 'No new trades today.';
+      text = `Both the stock and crypto regimes are risk-off. ${stockRegime.note}`;
+    } else if (half) {
+      cls = 'half'; title = `Trade — but at ${Math.round(sizeMult() * 100)}% of normal size.`;
+      text = macro && macro.level === 'caution'
+        ? `${macro.note} Every position below is already sized for that.`
+        : `Volatility is elevated. Every position below is already sized down for it.`;
+    } else {
+      cls = 'go'; title = 'Clear to trade at full size.';
+      text = 'No major release inside 48 hours and volatility is normal. The candidates below are sized at full risk.';
+    }
+    if (!macro && !stockRegime) { cls = 'half'; title = 'Checking the gates…'; text = 'Reading the macro calendar and the volatility regime.'; }
+
+    if (PREVIEW) { cls = 'half'; title = 'PREVIEW — gates forced open so you can see the cards.'; text = `The real verdict right now is: ${macro && macro.level === 'blocked' ? 'no new trades (' + macro.note + ')' : 'shown in the footer below'}. Remove ?preview=open from the address to return to it.`; }
+    el.className = `light ${cls}`;
+    $('light-title').textContent = title;
+    $('light-text').textContent = text;
+    $('light-why').textContent = [
+      macro ? `macro ${macro.level.toUpperCase()}` : null,
+      stockRegime ? `stocks ${stockRegime.level.toUpperCase()}${stockRegime.vix != null ? ' · VIX ' + stockRegime.vix.toFixed(1) : ''}` : null,
+      cryptoReg ? `crypto ${cryptoReg.level.toUpperCase()}` : null,
+      stocksBad && !cryptoBad ? 'stocks closed, crypto open' : (!stocksBad && cryptoBad ? 'crypto closed, stocks open' : null),
+    ].filter(Boolean).join('  ·  ');
+  }
+
+  // ═══ STEP 2 · what qualifies ═══
+  function card({ kind, name, sub, score, entry, stop, tgt, why, sell, caveat, link, sizing }) {
+    return `
+      <div class="pick">
+        <div style="min-width:0;">
+          <div class="kind">${kind}</div>
+          <div class="name">${name} ${sub ? `<small>· ${sub}</small>` : ''}</div>
+          <p class="plain">${why}</p>
+          <div class="grid">
+            <div class="cell"><div class="l">Buy near</div><div class="v">${entry}</div></div>
+            <div class="cell"><div class="l">Sell if it falls to</div><div class="v stop">${stop}</div></div>
+            <div class="cell"><div class="l">Take profit at</div><div class="v tgt">${tgt}</div></div>
+            ${sizing}
+          </div>
+          <p class="sell">${sell}</p>
+          ${caveat ? `<p class="caveat">⚠ ${caveat}</p>` : ''}
+        </div>
+        <div class="score">
+          <div class="lbl">score</div><div class="big">${score}</div>
+          <a href="${link}">full detail →</a>
+        </div>
+      </div>`;
+  }
+
+  function renderPicks() {
+    const el = $('picks');
+    const mult = sizeMult();
+    const macroBlocked = !PREVIEW && macro && macro.level === 'blocked';
+    const stocksBad = !PREVIEW && bad(stockRegime);
+    const cryptoBad = !PREVIEW && bad(cryptoReg);
+
+    const out = [];
+
+    // Stocks + metals share the equity rulebook
+    for (const r of stocks) {
+      if (macroBlocked || stocksBad) break;
+      if (verdict(r.su, r.sc, false) !== 'BUY') continue;
+      const risk = riskDollars(mult);
+      const perShare = r.p - r.stop;
+      const shares = perShare > 0 ? Math.floor(risk / perShare) : 0;
+      if (!shares) continue;
+      out.push(card({
+        kind: r.kind || 'Stock',
+        name: r.t, sub: r.name, score: r.sc,
+        entry: px(r.p), stop: `${px(r.stop)} (${pct(((r.stop - r.p) / r.p) * 100)})`, tgt: `${px(r.tgt)} (${pct(((r.tgt - r.p) / r.p) * 100)})`,
+        why: `<strong>${r.su === 'BREAKOUT' ? 'Breaking out.' : 'Pulling back in an uptrend.'}</strong> ${WHY[r.su] || r.reason}${r.rs != null ? ` It is beating the market by ${pct(r.rs)} over 20 days.` : ''}`,
+        sell: SELL_STOCK(r.stop, r.tgt, r.p),
+        sizing: `<div class="cell"><div class="l">Buy this many</div><div class="v">${shares} sh</div></div>
+                 <div class="cell"><div class="l">Max you can lose</div><div class="v stop">${money(shares * perShare, 0)}</div></div>`,
+        link: r.kind === 'Metal' ? '/metals' : '/',
+      }));
+    }
+
+    // Options — its own BUY rule from the Options tab
+    for (const o of options) {
+      if (macroBlocked || stocksBad) break;
+      const risk = riskDollars(mult);
+      const contracts = o.maxLoss > 0 ? Math.floor(risk / o.maxLoss) : 0;
+      const t1 = o.exitTargets?.[0], t2 = o.exitTargets?.[1];
+      out.push(card({
+        kind: `Option · ${o.direction} · ${o.horizon}-term`,
+        name: `${o.underlying} ${money(o.strike, 0)} ${o.direction}`, sub: `expires ${o.expiration} (${o.dte}d)`, score: o.score,
+        entry: `${money(o.mid)} / contract`, stop: `${money(o.stopPremium)} premium`, tgt: t1 ? `${money(t1.premium)} (+${t1.pct}%)` : '—',
+        why: `<strong>${o.direction === 'CALL' ? 'Betting it goes up' : 'Betting it goes down'}.</strong> ${o.underlying} is at ${px(o.underlyingPrice)}; this ${o.moneyness} contract breaks even at ${px(o.breakeven)} by ${o.expiration}. Spread is tight (${o.spreadPct}%) and it trades actively, so you can get out.`,
+        sell: `<strong>Sell if the premium drops to ${money(o.stopPremium)}</strong> — that is half your money, and it is the line. Take profit on half at ${t1 ? money(t1.premium) : '—'} and the rest at ${t2 ? money(t2.premium) : '—'}. <strong>Never hold inside 7 days of expiry</strong> — time decay accelerates and the rulebook flips to AVOID.`,
+        sizing: contracts
+          ? `<div class="cell"><div class="l">Buy this many</div><div class="v">${contracts} contract${contracts > 1 ? 's' : ''}</div></div>
+             <div class="cell"><div class="l">Max you can lose</div><div class="v stop">${money(contracts * o.maxLoss, 0)}</div></div>`
+          : `<div class="cell"><div class="l">Buy this many</div><div class="v stop">0</div></div>
+             <div class="cell"><div class="l">Why</div><div class="v" style="font-size:11px;font-weight:400;">one contract (${money(o.maxLoss, 0)}) is more than your ${money(risk, 0)} risk budget</div></div>`,
+        caveat: 'Options can go to zero. The max-loss figure is real money, not a worst case.',
+        link: '/options',
+      }));
+    }
+
+    // Crypto — same rulebook, but carries its measured caveat on every card
+    for (const c of coins) {
+      if (macroBlocked || cryptoBad) break;
+      if (verdict(c.su, c.sc, false) !== 'BUY') continue;
+      const cm = Math.min(mult, cryptoReg ? cryptoReg.sizeMult : 1);
+      const risk = riskDollars(cm);
+      const perUnit = c.p - c.stop;
+      const units = perUnit > 0 ? risk / perUnit : 0;
+      out.push(card({
+        kind: 'Crypto', name: c.t, sub: c.name, score: c.sc,
+        entry: px(c.p), stop: `${px(c.stop)} (−${c.stopPct}%)`, tgt: `${px(c.tgt)} (+${c.tgtPct}%)`,
+        why: `<strong>${c.su === 'BREAKOUT' ? 'Breaking out.' : 'Pulling back in an uptrend.'}</strong> ${WHY[c.su] || c.reason}${c.rs != null ? ` It is beating Bitcoin by ${pct(c.rs)} over 20 days.` : ''}`,
+        sell: SELL_STOCK(c.stop, c.tgt, c.p),
+        sizing: `<div class="cell"><div class="l">Buy about</div><div class="v">${money(units * c.p, 0)}</div></div>
+                 <div class="cell"><div class="l">Max you can lose</div><div class="v stop">${money(risk, 0)}</div></div>`,
+        caveat: btStats && btStats.expectancy != null
+          ? `Measured over ${btStats.years} years, this exact strategy lost money on crypto after Coinbase's retail fee (${btStats.expectancy}R per trade). The chart qualifies; the track record does not. If you trade it, trade it on a lower-fee venue and small.`
+          : 'This strategy measured negative on crypto after retail exchange fees — see the Crypto tab before acting.',
+        link: '/crypto',
+      }));
+    }
+
+    const qualifying = out.length;
+    $('qual-sub').textContent = qualifying
+      ? `${qualifying} candidate${qualifying > 1 ? 's' : ''} across stocks, options, crypto and metals — sized for ${money(capital, 0)}`
+      : 'across stocks, options, crypto and metals';
+
+    if (macroBlocked || (stocksBad && cryptoBad)) {
+      el.innerHTML = `<div class="none"><strong>Nothing to buy today — by design.</strong>The gate above is closed. Anything that looks good on a chart is still a no while it is.</div>`;
+    } else if (!qualifying) {
+      el.innerHTML = `<div class="none"><strong>Nothing qualifies right now.</strong>That is the screen doing its job, not a bug. Most days there is no clean entry; the money is made by waiting for one and then following the plan.${scanNote ? `<br/><span style="font-size:12px;color:var(--ink-3);">${scanNote}</span>` : ''}</div>`;
+    } else if (out.length > SHOW_FIRST && !showAll) {
+      el.innerHTML = out.slice(0, SHOW_FIRST).join('') +
+        `<button class="refresh-btn" id="show-all" style="width:100%;margin-top:4px;padding:12px;">Show all ${out.length} candidates</button>`;
+      $('show-all').addEventListener('click', () => { showAll = true; renderPicks(); });
+    } else {
+      el.innerHTML = out.join('') + (out.length > SHOW_FIRST
+        ? `<button class="refresh-btn" id="show-less" style="width:100%;margin-top:4px;padding:12px;">Show top ${SHOW_FIRST} only</button>` : '');
+      $('show-less')?.addEventListener('click', () => { showAll = false; renderPicks(); window.scrollTo({ top: $('picks').offsetTop - 80, behavior: 'smooth' }); });
+    }
+  }
+
+  // ═══ STEP 3 · leave these alone ═══
+  function renderAvoid() {
+    const items = [];
+    const ext = stocks.filter(r => r.su === 'EXTENDED').length;
+    if (ext) items.push(`<strong>${ext} strong stocks that have run too far.</strong> They score well but are more than 6% above their 20-day average. Chasing here has poor odds — the rulebook says wait for them to pull back, then they may show up above.`);
+    if (pfStats) items.push(`<strong>pump.fun tokens.</strong> Only ${pfStats.exitablePct}% of live pairs have enough depth to sell into, and trading volume collapses ~99% within a week. If you must, the Crypto tab sizes each one to 1% of its pool. Most of them you cannot get out of.`);
+    if (btStats && btStats.expectancy != null) items.push(`<strong>Trading crypto actively at retail fees.</strong> Over ${btStats.years} years and ${btStats.trades} trades this strategy returned ${btStats.expectancy}R per trade after Coinbase's fee — it loses. Bitcoin held over the same window did better than trading it.`);
+    items.push(`<strong>Following congressional trades.</strong> Tested on 2,379 disclosed transactions: buys underperformed the market by 0.49% at 20 days, because the median filing arrives 18 days late. Shown as badges on the Stocks tab for context — never as a reason to buy.`);
+    items.push(`<strong>Timing crypto by hour of day.</strong> Across 100 days of hourly candles no hour beats noise once you correct for testing all 24. Trade the setup, not the clock.`);
+    $('avoid').innerHTML = items.map(i => `<li>${i}</li>`).join('');
+  }
+
+  // ═══ data ═══
+  async function loadAll() {
+    $('feed-label').textContent = 'reading all four markets…';
+    const t0 = Date.now();
+
+    // 1. gates + benchmark bars + metals in one quotes call
+    const [mc, q] = await Promise.allSettled([
+      j('/api/macro-calendar?hours=96'),
+      j('/api/quotes?tickers=SPY,%5EVIX,GC%3DF,SI%3DF&range=1y'),
+    ]);
+    macro = mc.status === 'fulfilled' ? mc.value.macroRisk : null;
+    const quotes = q.status === 'fulfilled' ? (q.value.quotes || {}) : {};
+    const vix = quotes['^VIX']?.price ?? null;
+    const spyBars = quotes['SPY']?.bars || null;
+    renderLight();
+
+    // 2. stocks — full S&P 500, server-scored
+    let breadth = null;
+    try {
+      const uni = (await j('/api/universe')).constituents || [];
+      const batches = []; for (let i = 0; i < uni.length; i += 50) batches.push(uni.slice(i, i + 50));
+      const meta = Object.fromEntries(uni.map(c => [c.symbol, c]));
+      const res = await pooled(batches, 6, async (b) => {
+        const tickers = b.map(c => c.symbol).join(',');
+        const sectors = b.filter(c => c.sectorEtf).map(c => `${c.symbol}:${c.sectorEtf}`).join(',');
+        return (await j(`/api/scan?tickers=${encodeURIComponent(tickers)}&sectors=${encodeURIComponent(sectors)}`)).rows || [];
+      });
+      stocks = res.flat().filter(Boolean).map(r => ({ ...r, kind: 'Stock', name: meta[r.t]?.name || '' }));
+      const withMa = stocks.filter(r => r.a50 != null);
+      if (withMa.length > 50) breadth = { pctAbove50: (withMa.filter(r => r.a50).length / withMa.length) * 100 };
+      scanNote = `${stocks.length} S&P 500 names scanned`;
+    } catch (e) { scanNote = 'stock scan unavailable'; }
+    stockRegime = vix != null ? Object.assign(regime(vix, breadth), { vix }) : null;
+
+    // 3. metals — same engine, same rulebook, gold and silver
+    metals = [];
+    for (const [sym, label] of [['GC=F', 'Gold'], ['SI=F', 'Silver']]) {
+      const bars = quotes[sym]?.bars;
+      if (!bars || bars.length < 60) continue;
+      const a = analyze(bars);
+      if (a.insufficient || !a.plan) continue;
+      metals.push({ t: label, name: sym === 'GC=F' ? 'XAU/USD' : 'XAG/USD', kind: 'Metal', p: quotes[sym].price ?? a.price,
+        sc: a.score, su: a.setup, reason: a.setupReason, stop: a.plan.stop, tgt: a.plan.target, rs: null });
+    }
+    stocks.push(...metals);
+    stocks.sort((a, b) => (b.sc || 0) - (a.sc || 0));
+    renderLight(); renderPicks();
+
+    // 4. crypto
+    try {
+      const cu = (await j('/api/crypto?op=universe&limit=40')).constituents || [];
+      const cs = await j(`/api/crypto?op=scan&coins=${encodeURIComponent(cu.map(c => c.symbol).join(','))}`);
+      const cmeta = Object.fromEntries(cu.map(c => [c.symbol, c]));
+      coins = (cs.rows || []).map(r => ({ ...r, name: cmeta[r.t]?.name || '' }));
+      const withMa = coins.filter(r => r.a50 != null);
+      const cb = withMa.length ? { pctAbove50: (withMa.filter(r => r.a50).length / withMa.length) * 100 } : null;
+      cryptoReg = cs.btc ? cryptoRegime(cs.btc, cb) : null;
+    } catch {}
+    renderLight(); renderPicks();
+
+    // 5. options
+    try {
+      const od = await j(`/api/options?tickers=${encodeURIComponent(OPTION_TICKERS.join(','))}&limit=25&perTicker=2`);
+      options = (od.recommendations || []).filter(o =>
+        !(o.liquidity === 'thin' || o.spreadPct > 15 || o.dte < 7) && o.score >= 85 && o.liquidity === 'good'
+      ).slice(0, 4);
+    } catch {}
+    renderPicks();
+
+    $('run-ts').textContent = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+    $('feed-dot').style.background = 'var(--signal)';
+    $('feed-label').textContent = `live · read in ${((Date.now() - t0) / 1000).toFixed(1)}s`;
+    $('scan-status').textContent = scanNote + (coins.length ? ` · ${coins.length} coins` : '') + (options.length ? ` · ${options.length} option contracts pass` : ' · no option contract passes right now') + ` · refreshes every minute`;
+
+    // 6. the measured "leave alone" facts — slow endpoints, never block the page
+    renderAvoid();
+    j('/api/crypto?op=pumpfun').then(d => { pfStats = d.stats; renderAvoid(); }).catch(() => {});
+    j('/api/crypto?op=backtest').then(d => {
+      const s = (d.sweep || []).find(x => x.bps === d.defaultFeeBps);
+      if (s) { btStats = s; renderAvoid(); renderPicks(); }
+    }).catch(() => {});
+  }
+
+  // ---- capital input ----
+  const capEl = $('capital');
+  capEl.value = capital;
+  capEl.addEventListener('change', () => {
+    const v = parseFloat(capEl.value);
+    if (v >= 500) { capital = v; try { localStorage.setItem('sd-capital', String(v)); } catch {} renderPicks(); }
+  });
+
+  $('refresh-now')?.addEventListener('click', async (e) => {
+    const b = e.currentTarget; b.disabled = true; b.textContent = '↻ Reading…';
+    try { await loadAll(); } finally { setTimeout(() => { b.disabled = false; b.textContent = '↻ Refresh'; }, 600); }
+  });
+
+  loadAll().catch(e => { $('feed-label').textContent = `feed unavailable · ${e.message}`; $('feed-dot').style.background = 'var(--risk)'; });
+  setInterval(() => loadAll().catch(() => {}), REFRESH_MS);
+})();
+</script>
