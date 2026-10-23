@@ -481,7 +481,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.11</div>
+      <div class="kicker">Signal Desk · Handbook · v3.12</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -563,6 +563,7 @@
         <li><a href="#simulate">Simulate — paper auto-trading</a></li>
         <li><a href="#alerts">Alerts — the seven things that move a stock</a></li>
         <li><a href="#exits">When to sell what you hold</a></li>
+        <li><a href="#phone">Alerts on your phone — Telegram, WhatsApp, ntfy</a></li>
       </ul>
     </div>
 
@@ -1284,9 +1285,45 @@
       </div>
     </section>
 
+    <section id="phone">
+      <h2><span class="chnum">Chapter 21</span>Alerts on your phone — Telegram, WhatsApp, ntfy</h2>
+      <p>Until now alerts only reached you while an Alerts tab was open. Now the <strong>same engine</strong> runs on the server every 5 minutes in market hours and every 30 minutes around the clock, and sends what fires to your phone — browser closed.</p>
+      <h3>One-time server step (whoever owns the Vercel project)</h3>
+      <p>The runner needs somewhere to keep your watchlist, positions and dedup state. In the Vercel dashboard: <strong>Storage → Create → Blob → connect to signal-desk</strong>. Also set a <code>RUN_KEY</code> environment variable matching the repo secret. The Alerts tab tells you if either is missing.</p>
+      <h3>Telegram — recommended, free, official, three minutes</h3>
+      <ol>
+        <li>In Telegram, open <strong>@BotFather</strong>, send <code>/newbot</code>, give it any name and a username ending in <em>bot</em>. BotFather replies with a <strong>token</strong> like <code>123456789:AAH…</code>.</li>
+        <li>Open <strong>@userinfobot</strong> and send it anything. It replies with your numeric <strong>id</strong>.</li>
+        <li>Open your new bot (BotFather gave you a link) and press <strong>Start</strong>. A bot cannot message you until you have done this.</li>
+        <li>On the Alerts tab, paste the token and the id into <em>Phone alerts</em>, press <strong>Save &amp; sync</strong>, then <strong>Send a test</strong>. It should land within seconds.</li>
+      </ol>
+      <h3>WhatsApp via CallMeBot — optional</h3>
+      <p>An unofficial free gateway, so treat it as best-effort. Save the CallMeBot number (current one on callmebot.com) as a contact, send it <em>I allow callmebot to send me messages</em> on WhatsApp, and paste the API key it replies with. Messages are rate-limited; the runner sends at most six per cycle and summarises the rest.</p>
+      <h3>ntfy — optional, no account at all</h3>
+      <p>Install the ntfy app, subscribe to a long random topic name, type the same name on the Alerts tab. Anyone who guesses the topic can read it, so make it long.</p>
+      <div class="callout">
+        <span class="callout-label">What is sent, and what is not</span>
+        <p>Every alert type you have switched on, plus SELL / TRIM / "move your stop" verdicts on positions you track — one message each, highest severity first, at most six per cycle. Nothing is ever sent twice: the server keeps the same seen-list the browser does. Your bot token and API keys live only in the private server store and are never shown back, not even to you — if you lose one, paste a new one.</p>
+      </div>
+      <p>Your watchlist, settings and positions sync to the server automatically whenever you change them on the Alerts or Dashboard tabs. The first device to sync owns the server configuration; another device is refused rather than silently overwriting it.</p>
+    </section>
+
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 21</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 22</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.12<br/>2026-10-23</div>
+        <div class="what">
+          <h4>Phone alerts — Telegram, WhatsApp (CallMeBot), ntfy</h4>
+          <ul>
+            <li>The alert engine now also runs <strong>on the server</strong> on a schedule (GitHub Actions: every 5 min in US market hours, every 30 min otherwise) and delivers to your phone with the browser closed. The engine code is unchanged — <code>alerts.js</code> gained a pluggable store so one module runs in both places.</li>
+            <li>New <strong>Phone alerts</strong> panel on the Alerts tab: Telegram first, WhatsApp via CallMeBot and ntfy optional. Save &amp; sync, Send a test, and a status line that names exactly what is missing.</li>
+            <li>Watchlist, settings and positions sync to the server automatically on change; the first device to sync owns the configuration.</li>
+            <li>Requires one server step by the project owner — a Vercel Blob store and a RUN_KEY variable (Chapter 21). Until then the panel says so instead of failing quietly.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.11<br/>2026-10-23</div>

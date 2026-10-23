@@ -39,6 +39,14 @@ store this app does not have. First run captures a baseline and fires nothing
 old. Insider trades were measured before shipping (see handbook ch. 19): sells
 were followed by outperformance, buys were not significant on n=22.
 
+## Phone alerts
+
+`/api/notify` runs the same alert engine server-side on a GitHub Actions
+schedule (`.github/workflows/alerts.yml`) and sends to Telegram, WhatsApp
+(CallMeBot) or ntfy. State lives in a private Vercel Blob (connect a Blob
+store to the project → `BLOB_READ_WRITE_TOKEN`); the scheduler authenticates
+with `RUN_KEY` (Vercel env + repo secret). User steps: handbook ch. 21.
+
 ## Sell alerts for what you hold
 
 Track from any card (Today, Stocks, Options, Crypto, Metals) and the position is
@@ -83,6 +91,7 @@ signal-desk/
 │   ├── option-quote.js  Live per-contract premiums by OCC symbol
 │   ├── fundamentals.js  Market cap, P/E, earnings dates
 │   ├── intel.js            Router: ?op=macro|congress|earnings|analyst|insider
+│   ├── notify.js           Phone alerts: sync | run | test | status (Blob state)
 │   ├── _macro-calendar.js    ForexFactory calendar (FairEconomy feed) — event gate
 │   ├── _congress.js          STOCK Act PTRs from the Clerk of the House
 │   ├── _earnings.js          NASDAQ actual-vs-consensus results

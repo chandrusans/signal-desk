@@ -988,22 +988,23 @@
 
   <div class="al-grid">
     <aside class="side">
-      <h3>Phone alerts · WhatsApp</h3>
+      <h3>Phone alerts · Telegram</h3>
       <div class="push" id="phone-panel">
         <div class="st off" id="phone-st">checking server…</div>
-        <div class="f" style="display:grid;grid-template-columns:1fr;gap:6px;margin:6px 0;">
-          <input id="cb-phone" placeholder="WhatsApp number, e.g. +14155551234" inputmode="tel" style="font-family:var(--mono);font-size:12px;padding:7px 9px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
-          <input id="cb-key" placeholder="CallMeBot API key" type="password" autocomplete="off" style="font-family:var(--mono);font-size:12px;padding:7px 9px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
+        <div style="display:grid;grid-template-columns:1fr;gap:6px;margin:6px 0;">
+          <input id="tg-token" placeholder="Telegram bot token (from @BotFather)" type="password" autocomplete="off" style="font-family:var(--mono);font-size:12px;padding:7px 9px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
+          <input id="tg-chat" placeholder="Your chat id (from @userinfobot)" inputmode="numeric" style="font-family:var(--mono);font-size:12px;padding:7px 9px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
         </div>
         <button class="primary" id="phone-save">Save &amp; sync to server</button>
         <button id="phone-test">Send a test to my phone</button>
-        <p id="phone-note">One-time setup: save the CallMeBot number from <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener" style="color:var(--accent);">callmebot.com</a> as a contact, send it the message <em>I allow callmebot to send me messages</em> on WhatsApp, and paste the API key it replies with. Alerts are then sent from the server every 5 minutes in market hours and every 30 minutes otherwise — with your browser closed.</p>
-        <details style="margin-top:8px;"><summary style="font-family:var(--mono);font-size:10px;color:var(--ink-3);cursor:pointer;letter-spacing:0.08em;">OTHER CHANNELS (optional)</summary>
+        <p id="phone-note">Three-minute setup, all inside Telegram: message <strong>@BotFather</strong> → <em>/newbot</em> → copy the token here. Message <strong>@userinfobot</strong> → copy your id here. Then open your new bot and press <em>Start</em> (a bot cannot message you until you do). Alerts are sent from the server every 5 minutes in market hours and every 30 minutes otherwise — with your browser closed. Full steps in the Handbook, Chapter 21.</p>
+        <details style="margin-top:8px;"><summary style="font-family:var(--mono);font-size:10px;color:var(--ink-3);cursor:pointer;letter-spacing:0.08em;">WHATSAPP (CallMeBot) · NTFY — optional</summary>
           <div style="display:grid;gap:6px;margin-top:6px;">
+            <input id="cb-phone" placeholder="WhatsApp number, e.g. +14155551234" inputmode="tel" style="font-family:var(--mono);font-size:11px;padding:6px 8px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
+            <input id="cb-key" placeholder="CallMeBot API key" type="password" autocomplete="off" style="font-family:var(--mono);font-size:11px;padding:6px 8px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
             <input id="ntfy-topic" placeholder="ntfy.sh topic (install the ntfy app, subscribe to this)" style="font-family:var(--mono);font-size:11px;padding:6px 8px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
-            <input id="tg-token" placeholder="Telegram bot token" type="password" autocomplete="off" style="font-family:var(--mono);font-size:11px;padding:6px 8px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
-            <input id="tg-chat" placeholder="Telegram chat id" style="font-family:var(--mono);font-size:11px;padding:6px 8px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
           </div>
+          <p style="font-size:11px;color:var(--ink-3);margin:6px 0 0;">WhatsApp via CallMeBot is an unofficial gateway: save its number as a contact, send it <em>I allow callmebot to send me messages</em>, paste the key it replies with.</p>
         </details>
       </div>
 
@@ -1282,7 +1283,7 @@ import { classOf } from '/exits.js';
       if (d.ok === false && /mismatch/.test(d.error || '')) { st.textContent = '✕ another device owns the server config'; st.className = 'st no'; return; }
       const wa = d.channels?.whatsapp; const any = wa || d.channels?.ntfy || d.channels?.telegram;
       const last = d.lastRun ? ` · last run ${Math.round((Date.now() - d.lastRun.at) / 60000)}m ago, ${d.lastRun.fired} fired` : ' · runner has not run yet';
-      st.textContent = any ? `● ${wa ? 'WhatsApp ' + wa.phone : ''}${d.channels?.ntfy ? ' ntfy' : ''}${d.channels?.telegram ? ' telegram' : ''} · ${d.watch} tickers, ${d.positions} positions synced${last}` : `○ synced (${d.watch} tickers, ${d.positions} positions) — no phone channel yet`;
+      st.textContent = any ? `● ${d.channels?.telegram ? 'Telegram ' + d.channels.telegram.chatId + ' ' : ''}${wa ? 'WhatsApp ' + wa.phone + ' ' : ''}${d.channels?.ntfy ? 'ntfy ' : ''}· ${d.watch} tickers, ${d.positions} positions synced${last}` : `○ synced (${d.watch} tickers, ${d.positions} positions) — no phone channel yet`;
       st.className = 'st ' + (any ? 'on' : 'off');
       if (!d.runnerConfigured) st.textContent += ' · RUN_KEY not set on Vercel';
       if (wa) $('cb-phone').value = $('cb-phone').value || '';
@@ -1293,7 +1294,7 @@ import { classOf } from '/exits.js';
     const channels = {};
     if (phone || apikey) { if (!/^\+\d{8,15}$/.test(phone)) { alert('Enter the WhatsApp number in international format, e.g. +14155551234'); return; } if (!apikey) { alert('Paste the API key CallMeBot sent you.'); return; } channels.callmebot = { phone, apikey }; }
     const topic = $('ntfy-topic').value.trim(); if (topic) channels.ntfy = { topic };
-    const token = $('tg-token').value.trim(), chat = $('tg-chat').value.trim(); if (token && chat) channels.telegram = { token, chatId: chat };
+    const token = $('tg-token').value.trim(), chat = $('tg-chat').value.trim(); if (token || chat) { if (!/^\d{6,}:[\w-]{30,}$/.test(token)) { alert('That does not look like a BotFather token (digits:letters).'); return; } if (!/^-?\d{5,}$/.test(chat)) { alert('Chat id should be a number — message @userinfobot to get it.'); return; } channels.telegram = { token, chatId: chat }; }
     const b = $('phone-save'); b.disabled = true; b.textContent = 'Syncing…';
     const d = await syncToServer({ channels });
     b.disabled = false; b.textContent = 'Save & sync to server';
