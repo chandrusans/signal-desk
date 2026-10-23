@@ -34,4 +34,5 @@ jobs:
           if [ -z "$RUN_KEY" ] || [ -z "$APP_URL" ]; then echo "RUN_KEY secret or APP_URL variable missing"; exit 1; fi
           out=$(curl -sS --max-time 90 "$APP_URL/api/notify?op=run&key=$RUN_KEY")
           echo "$out" | head -c 2000; echo
-          echo "$out" | grep -q '"ok":true' || { echo "runner did not report ok"; exit 1; }
+          # "nothing synced yet" is a valid state before the user's first sync, not a failure
+          echo "$out" | grep -Eq '"ok":true|nothing synced yet' || { echo "runner did not report ok"; exit 1; }
