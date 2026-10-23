@@ -59,12 +59,18 @@ export function positionVerdict(pos, ctx = {}) {
 
   // ── Options: the contract has its own clock ─────────────────────────────
   if (cls === 'option') {
-    const dte = pos.expiration ? Math.ceil((Date.parse(pos.expiration + 'T21:00:00Z') - Date.now()) / DAY) : null;
+    // Days to expiry by CALENDAR DATE, not hours: with hours, "6 days left"
+    // read as 7 until after the close, so the 7-day sell fired a day late.
+    const dte = pos.expiration ? Math.round((Date.parse(pos.expiration + 'T00:00:00Z') - Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z')) / DAY) : null;
     if (dte != null && dte <= 0) return V('SELL', 'high', `Expired ${pos.expiration}. Whatever is left is gone.`, 'option_expired');
     if (price <= stop) return V('SELL', 'high', `Premium $${price.toFixed(2)} is at or below the $${stop.toFixed(2)} stop (−${((1 - price / buy) * 100).toFixed(0)}%). That is half your money and it is the line — sell.`, 'option_stop');
     if (dte != null && dte < 7) return V('SELL', 'high', `${dte} day${dte === 1 ? '' : 's'} to expiry. Time decay accelerates from here; the rulebook never holds inside 7 days. Sell today.`, 'option_dte');
-    if (gainPct >= 100) return V('TRIM', 'high', `Premium up ${gainPct.toFixed(0)}% (+100% target). Sell the rest, or at minimum the second half.`, 'option_target_2');
-    if (gainPct >= 50) return V('TRIM', 'medium', `Premium up ${gainPct.toFixed(0)}% (+50% target). Sell half; raise the stop on the rest to your entry $${buy.toFixed(2)}.`, 'option_target_1');
+    // Targets honour the stored card level when present (the card prints a
+    // rounded premium, e.g. $10.27 for +50% on $6.85, which is 49.93% — a
+    // strict >= 50 would never fire at the printed level), with a half-point
+    // tolerance otherwise.
+    if (gainPct >= 99.5) return V('TRIM', 'high', `Premium up ${gainPct.toFixed(0)}% (+100% target). Sell the rest, or at minimum the second half.`, 'option_target_2');
+    if (gainPct >= 49.5 || (pos.target > 0 && price >= pos.target)) return V('TRIM', 'medium', `Premium up ${gainPct.toFixed(0)}% (+50% target${pos.target > 0 ? `, $${pos.target.toFixed(2)}` : ''}). Sell half; raise the stop on the rest to your entry $${buy.toFixed(2)}.`, 'option_target_1');
     if (dte != null && dte <= 10) return V('WATCH', 'medium', `${dte} days to expiry. Plan the exit — the 7-day rule is close.`, 'option_dte_near');
     if (price < buy && price - stop < R * 0.3) return V('WATCH', 'medium', `Premium $${price.toFixed(2)}, ${(((price - stop) / stop) * 100).toFixed(0)}% above the stop. Decision close.`, 'option_near_stop');
     return V('HOLD', 'low', `${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(0)}% on the premium${dte != null ? `, ${dte} days left` : ''}. Hold; sell half at +50%.`, 'option_hold');

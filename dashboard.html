@@ -1242,7 +1242,8 @@ import { positionVerdict, defaultStop, classOf } from './exits.js';
       const portValueForRow = totalNow || 0;
       const posSharePct = portValueForRow > 0 ? (r.price * r.pos.qty * r.mult / portValueForRow) * 100 : 0;
       const isOpt = !!r.pos.isOption;
-      const dteOpt = isOpt && r.pos.expiration ? Math.floor((Date.parse(r.pos.expiration) - Date.now()) / (24*3600*1000)) : null;
+      // Calendar days to expiry — same arithmetic as exits.js so the badge and the verdict agree
+      const dteOpt = isOpt && r.pos.expiration ? Math.round((Date.parse(r.pos.expiration + 'T00:00:00Z') - Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z')) / (24*3600*1000)) : null;
       const ret20 = r.analysis?.indicators?.ret20;
       const ret60 = r.analysis?.indicators?.ret60;
       const rsi = r.analysis?.indicators?.rsi14;

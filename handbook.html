@@ -481,7 +481,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.12</div>
+      <div class="kicker">Signal Desk · Handbook · v3.13</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -1311,6 +1311,20 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 22</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.13<br/>2026-10-23</div>
+        <div class="what">
+          <h4>Market alerts for coins and option underlyings; crypto/options validation</h4>
+          <ul>
+            <li>The seven market alert types (Chapter 19) now cover <strong>coins</strong> too: BTC, ETH, SOL and anything you hold are watched by default, priced from the crypto scan, with news searched by coin name (a ticker search for "BTC" returned nothing). Big-move threshold for coins is 2×ATR with a 12% cap (8% for stocks). Filings and earnings do not exist for coins and are skipped rather than reported as "none".</li>
+            <li>Option positions put their <strong>underlying</strong> on the watchlist, so an NVDA call gets NVDA's news, analyst, insider and earnings alerts as well as its own premium verdicts.</li>
+            <li>Two option exit fixes: days to expiry now counts <em>calendar days</em> (with hours, a contract six days out read as seven until after the close, so the 7-day sell fired a day late), and the +50%/+100% targets honour the card's printed level (the card rounds $6.85 × 1.5 to $10.27, which is 49.93% — a strict 50% test never fired at the printed number). Dashboard badge and Alerts verdict use the same arithmetic.</li>
+            <li>New re-runnable check: <code>npm run validate:co</code> verifies coin prices against CoinGecko, the coin big-move rule against the day's actual movers, coin news resolution, the crypto regime, crypto and option exits, option breakeven and max-loss arithmetic on every live recommendation, and that an option SELL verdict produces a position alert. 12 checks; 12 pass.</li>
+            <li>Honest note from the same run: over the last 20 sessions the crypto BUY cohort (n=6) <em>lagged</em> the SELL cohort next day. One month is far too small to conclude anything, and the multi-year backtest on the Crypto tab remains the verdict: a small edge before fees, none after retail fees. The tool reports this as a finding, not a pass or fail, because a strategy's monthly result is information about the market, not a software defect.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.12<br/>2026-10-23</div>

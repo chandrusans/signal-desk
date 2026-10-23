@@ -168,6 +168,18 @@ and tests point-in-time verdicts against next-day returns over 20 sessions.
 11 checks; the 2026-10-22 run found and fixed one rule gap (high-ATR names
 slipping under a pure 2×ATR big-move bar).
 
+```bash
+npm run validate:co
+```
+
+The same for crypto and options: coin prices against CoinGecko, the coin
+big-move rule against the day's actual movers, coin news resolution, the
+crypto regime, crypto and option exit rules, breakeven and max-loss
+arithmetic on every live option recommendation, and that an option SELL
+verdict produces a position alert. 12 checks. The 20-session crypto BUY/SELL
+cohort comparison is printed as a finding, not a pass/fail — a month is too
+small a sample, and the multi-year backtest on the Crypto tab is the verdict.
+
 ### Checks before committing
 
 ```bash
