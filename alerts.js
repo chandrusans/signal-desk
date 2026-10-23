@@ -11,10 +11,10 @@
 //               headline tagged earnings / deal / lawsuit.
 //   earnings    the last report landed inside 3 days: BEAT or MISS with the
 //               surprise %. (The pre-earnings gate is a separate thing.)
-//   rating      analyst CONSENSUS moved since the prior monthly snapshot —
-//               majority class flipped, counts moved >= 2, or mean target
-//               moved >= 5%. Individual upgrade events are not in any free
-//               feed; the Alerts page says so.
+//   rating      a named firm UPGRADED, DOWNGRADED or INITIATED coverage, or
+//               moved its price target >= 5% (per-firm events from the
+//               stockanalysis.com ratings page, dated to the day). Secondary:
+//               the NASDAQ consensus moved since the prior monthly snapshot.
 //   insider     a Form 4 open-market BUY or SELL not seen before, by an
 //               officer or director, worth >= $100k.
 //   deal        a new headline tagged deal or lawsuit.
@@ -136,7 +136,18 @@ export function evaluate(tickers, data, settings = getSettings()) {
         { severity: Math.abs(e.surprisePct || 0) >= 10 ? 'high' : 'medium' });
     }
 
-    // 4. rating — once per prior-snapshot date (i.e. once a month per ticker)
+    // 4a. rating EVENTS — "Apple gets upgraded to Buy": one alert per firm action
+    if (a?.events) {
+      for (const ev of a.events) {
+        if (!ev.isEvent) continue;
+        const verb = ev.kind === 'upgrade' ? 'upgraded' : ev.kind === 'downgrade' ? 'downgraded' : ev.kind === 'initiate' || ev.kind === 'assume' || ev.kind === 'resume' ? 'initiated coverage on' : ev.kind === 'target_raised' ? 'raised its target on' : 'cut its target on';
+        const tgt = ev.targetFrom && ev.targetTo ? ` (${money(ev.targetFrom)} → ${money(ev.targetTo)}, ${pct(ev.targetChangePct)})` : ev.targetTo ? ` (target ${money(ev.targetTo)})` : '';
+        fire('rating', t, ev.id, `${t}: ${ev.firm} ${verb} ${t}${ev.kind.startsWith('target') ? '' : ' — ' + ev.rating}`,
+          `${ev.analyst ? ev.analyst + ' at ' : ''}${ev.firm}: ${ev.action} ${ev.rating}${tgt}${ev.upside != null ? `, ${pct(ev.upside)} to target` : ''}. ${ev.date}.`,
+          { severity: ev.kind === 'upgrade' || ev.kind === 'downgrade' ? 'high' : 'medium', date: ev.date });
+      }
+    }
+    // 4b. rating CONSENSUS — once per prior-snapshot date (i.e. once a month per ticker)
     if (a?.changed && a.prior) {
       const parts = a.change.map((c) => c.kind === 'consensus' ? `consensus ${c.from} → ${c.to}`
         : c.kind === 'counts' ? `buys ${c.buy >= 0 ? '+' : ''}${c.buy}, sells ${c.sell >= 0 ? '+' : ''}${c.sell}`

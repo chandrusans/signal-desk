@@ -77,7 +77,7 @@ signal-desk/
 │   ├── _macro-calendar.js    ForexFactory calendar (FairEconomy feed) — event gate
 │   ├── _congress.js          STOCK Act PTRs from the Clerk of the House
 │   ├── _earnings.js          NASDAQ actual-vs-consensus results
-│   ├── _analyst.js           NASDAQ consensus + targets, monthly history
+│   ├── _analyst.js           per-firm rating events (stockanalysis.com) + NASDAQ consensus
 │   ├── _insider.js           SEC EDGAR Form 4 open-market insider trades
 │   ├── crypto.js           Router: ?op=universe|scan|hours|backtest|pumpfun
 │   ├── _crypto-universe.js   Top coins by mcap ∩ Coinbase USD pairs
@@ -218,7 +218,7 @@ survives it.
 - Economic calendar → `/api/intel?op=macro` (FairEconomy feed behind ForexFactory)
 - Congressional trades → `/api/intel?op=congress` (House Clerk STOCK Act PTRs, PDF-parsed)
 - Earnings results → `/api/intel?op=earnings` (NASDAQ actual vs consensus)
-- Analyst consensus + targets → `/api/intel?op=analyst` (NASDAQ; upgrade events are NOT in the free feed)
+- Analyst per-firm events + consensus → `/api/intel?op=analyst` (stockanalysis.com ratings page for events; NASDAQ for consensus)
 - Insider trades → `/api/intel?op=insider` (SEC EDGAR Form 4, open-market P/S only)
 - pump.fun tokens → `/api/crypto?op=pumpfun` (DexScreener public API, pumpswap pairs)
 
