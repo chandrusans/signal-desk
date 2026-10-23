@@ -879,7 +879,9 @@
 
   /* ---- Alerts page ---- */
   .al-grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 22px; align-items: start; }
-  @media (max-width: 900px) { .al-grid { grid-template-columns: 1fr; } }
+  /* On a phone the feed is the product; settings go below it. */
+  @media (max-width: 900px) { .al-grid { grid-template-columns: minmax(0, 1fr); } .al-grid > main { order: 0; } .al-grid > .side { order: 1; } }
+  .snap-scroll { max-width: 100%; }
   .side { border: 1px solid var(--rule); border-radius: 6px; background: var(--panel); padding: 16px 16px 12px; position: sticky; top: 16px; }
   @media (max-width: 900px) { .side { position: static; } }
   .side h3 { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin: 14px 0 8px; font-weight: 500; }
@@ -921,8 +923,25 @@
   .empty-al { border: 1px dashed var(--rule); border-radius: 6px; padding: 28px 20px; text-align: center; color: var(--ink-3); font-size: 13.5px; line-height: 1.6; }
   .empty-al strong { color: var(--ink); font-family: var(--serif); font-size: 18px; display: block; margin-bottom: 6px; }
 
-  .edge { border: 1px solid var(--rule); border-left: 3px solid var(--caution); border-radius: 5px; padding: 14px 16px; margin: 22px 0 0; background: color-mix(in srgb, var(--caution) 5%, transparent); }
-  .edge h4 { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--caution); margin: 0 0 8px; }
+  /* Watchlist snapshot — the current state of every name on all seven dimensions */
+  .snap-wrap { margin: 0 0 18px; }
+  .snap-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .snap-head h3 { font-family: var(--serif); font-size: 17px; margin: 0; }
+  .snap-head .st { font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.05em; }
+  .snap-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--rule); border-radius: 5px; }
+  .snap { width: 100%; min-width: 820px; border-collapse: collapse; font-family: var(--mono); font-size: 11px; }
+  .snap th { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--rule); color: var(--ink-3); font-weight: 500; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; background: var(--ground-2); position: sticky; top: 0; }
+  .snap td { padding: 7px 9px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-2); white-space: nowrap; vertical-align: top; }
+  .snap td.t { color: var(--ink); font-weight: 600; }
+  .snap .pos { color: var(--signal); } .snap .neg { color: var(--risk); } .snap .dim { color: var(--ink-3); }
+  .snap td small { display: block; font-size: 9.5px; color: var(--ink-3); margin-top: 2px; white-space: normal; max-width: 210px; }
+
+  .edge { border: 1px solid var(--rule); border-left: 3px solid var(--caution); border-radius: 5px; padding: 0; margin: 22px 0 0; background: color-mix(in srgb, var(--caution) 5%, transparent); }
+  .edge summary { list-style: none; cursor: pointer; padding: 12px 16px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--caution); display: flex; justify-content: space-between; align-items: center; }
+  .edge summary::-webkit-details-marker { display: none; }
+  .edge summary::after { content: 'show'; color: var(--ink-3); letter-spacing: 0.08em; }
+  .edge[open] summary::after { content: 'hide'; }
+  .edge > div { padding: 0 16px 14px; }
   .edge p { font-size: 12.5px; color: var(--ink-2); line-height: 1.6; margin: 0 0 6px; }
   .edge table { font-family: var(--mono); font-size: 11px; border-collapse: collapse; margin: 8px 0 4px; }
   .edge td, .edge th { padding: 4px 10px 4px 0; text-align: left; color: var(--ink-2); }
@@ -992,13 +1011,19 @@
         <h2>Alert feed</h2>
         <span class="st" id="feed-st">—</span>
       </div>
+      <div class="snap-wrap" id="snap-wrap" hidden>
+        <div class="snap-head"><h3>Your watchlist right now</h3><span class="st" id="snap-st"></span></div>
+        <div class="snap-scroll"><table class="snap"><thead><tr>
+          <th>Ticker</th><th>Price · today</th><th>Setup · score</th><th>Last earnings</th><th>Street consensus</th><th>Latest firm action</th><th>Latest insider</th><th>Headline tone 24h</th>
+        </tr></thead><tbody id="snap"></tbody></table></div>
+      </div>
       <div class="fil" id="fil"></div>
       <div id="feed"><div class="empty-al"><strong>Checking your watchlist…</strong>First pass reads prices, headlines, earnings, analyst consensus and SEC filings.</div></div>
 
-      <div class="edge" id="edge" hidden>
-        <h4>What these alerts are worth — measured</h4>
+      <details class="edge" id="edge" hidden>
+        <summary>What these alerts are worth — measured</summary>
         <div id="edge-body"></div>
-      </div>
+      </details>
     </main>
   </div>
 
@@ -1093,6 +1118,7 @@ import { TYPES, evaluate, notify, requestPermission, registerWorker, getSettings
   let watch = getWatch();
   let filter = 'ALL';
   let slow = { at: 0, earnings: {}, analyst: {}, insider: {} };
+  let snap = { scan: {}, news: {} };
   let inFlight = false;
 
   async function j(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(`${url.split('?')[0]} ${r.status}`); return r.json(); }
@@ -1163,7 +1189,7 @@ import { TYPES, evaluate, notify, requestPermission, registerWorker, getSettings
       Object.entries(TYPES).map(([k, v]) => `<button data-f="${k}" class="${filter === k ? 'on' : ''}">${v.icon} ${v.label} ${counts[k] || 0}</button>`).join('');
     $('fil').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { filter = b.dataset.f; renderFeed(); }));
     if (!hist.length) {
-      $('feed').innerHTML = `<div class="empty-al"><strong>Nothing has fired yet.</strong>That is normal — these rules are deliberately strict so that when one fires it means something. The watchlist is checked every minute while this tab is open.</div>`;
+      $('feed').innerHTML = `<div class="empty-al"><strong>Nothing new since you started watching.</strong>The table above is where every name stands right now. The rules are strict on purpose — when one fires it means something. Checked every minute while this tab is open.</div>`;
       return;
     }
     const fresh = Date.now() - 10 * 60 * 1000;
@@ -1177,6 +1203,33 @@ import { TYPES, evaluate, notify, requestPermission, registerWorker, getSettings
         </div>
         <div class="when">${ago(a.ts)} ago<br/><span style="opacity:.7">${new Date(a.ts).toISOString().slice(5, 16).replace('T', ' ')}Z</span></div>
       </div>`).join('');
+  }
+
+  // ---- watchlist snapshot: current state on every dimension, even when nothing new fired ----
+  const money = (x) => (x == null ? '—' : '$' + Math.round(x).toLocaleString('en-US'));
+  const pctf = (x, d = 1) => (x == null ? '—' : `${x >= 0 ? '+' : ''}${Number(x).toFixed(d)}%`);
+  const cls = (x) => (x == null ? 'dim' : x > 0 ? 'pos' : x < 0 ? 'neg' : '');
+  function renderSnapshot(tk) {
+    const wrap = $('snap-wrap'); const body = $('snap');
+    if (!tk.length) { wrap.hidden = true; return; }
+    body.innerHTML = tk.map((t) => {
+      const s = snap.scan[t], n = snap.news[t], e = slow.earnings[t], a = slow.analyst[t], ins = slow.insider[t];
+      const ev = a?.events?.find((x) => x.isEvent) || a?.events?.[0];
+      const tr = ins?.trades?.find((x) => x.insider) || ins?.trades?.[0];
+      const top = n?.items?.find((i) => i.primary !== false);
+      return `<tr>
+        <td class="t">${esc(t)}</td>
+        <td>${s?.p != null ? (s.p >= 1000 ? money(s.p) : '$' + s.p.toFixed(2)) : '—'} <span class="${cls(s?.c)}">${pctf(s?.c, 2)}</span>${s?.atr != null ? `<small>ATR ${s.atr}% · vol ${s.vr ?? '—'}×</small>` : ''}</td>
+        <td>${s?.su ? `${esc(s.su)} · ${s.sc}` : '—'}</td>
+        <td>${e?.result ? `<span class="${e.result === 'BEAT' ? 'pos' : e.result === 'MISS' ? 'neg' : ''}">${e.result}</span> ${pctf(e.surprisePct)}<small>${e.dateReported}${e.recent ? ' · fresh' : ''}</small>` : '<span class="dim">—</span>'}</td>
+        <td>${a ? `${esc(a.consensus || '—')} ${a.buy}B/${a.hold}H/${a.sell}S<small>target ${money(a.target)}${a.changed ? ' · moved' : ''}</small>` : '<span class="dim">—</span>'}</td>
+        <td>${ev ? `${esc(ev.action)} ${esc(ev.rating)}<small>${esc(ev.firm)} · ${ev.date}${ev.targetTo ? ' · ' + money(ev.targetTo) : ''}</small>` : '<span class="dim">—</span>'}</td>
+        <td>${tr ? `<span class="${tr.type === 'BUY' ? 'pos' : 'dim'}">${tr.type}</span> ${money(tr.value)}<small>${esc(tr.role)} · ${tr.filingDate}</small>` : '<span class="dim">none 30d</span>'}</td>
+        <td>${n ? `<span class="${cls(n.avgSentiment)}">${n.avgSentiment >= 0 ? '+' : ''}${n.avgSentiment}</span> · ${n.count24h} items${top ? `<small>${esc(top.title.slice(0, 70))}</small>` : ''}` : '<span class="dim">—</span>'}</td>
+      </tr>`;
+    }).join('');
+    $('snap-st').textContent = `${tk.length} tickers · ${slow.at ? 'filings as of ' + new Date(slow.at).toISOString().slice(11, 16) + 'Z' : 'filings loading…'}`;
+    wrap.hidden = false;
   }
 
   // ---- the poll ----
@@ -1202,6 +1255,8 @@ import { TYPES, evaluate, notify, requestPermission, registerWorker, getSettings
         if (insR.status === 'fulfilled' && insR.value?.results) slow.insider = insR.value.results;
         slow.at = Date.now();
       }
+      snap = { scan, news };
+      renderSnapshot(tk);
       const fresh = evaluate(tk, { scan, news, earnings: slow.earnings, analyst: slow.analyst, insider: slow.insider }, settings);
       const shown = await notify(fresh);
       renderFeed();
