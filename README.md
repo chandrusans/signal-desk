@@ -134,8 +134,14 @@ NODE_EXTRA_CA_CERTS=/tmp/ca.pem node tools/devserver.mjs 3000
 ### Validate against the last session
 
 ```bash
-node tools/validate.mjs
+npm run validate
 ```
+
+(`sh tools/validate.sh` does the same.) On macOS the wrapper exports your
+keychain to `~/.config/signal-desk/ca.pem` once and points Node at it — without
+that, Node ignores the system keychain and every HTTPS fetch fails with
+`unable to get local issuer certificate` behind a TLS-inspecting proxy. The app
+on Vercel is unaffected; only local Node runs are.
 
 Runs the deployed app against independent sources — NASDAQ historical closes,
 NASDAQ's earnings calendar, CoinGecko — recomputes ATR/stop/target from raw
