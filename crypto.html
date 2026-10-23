@@ -883,6 +883,7 @@
   <nav class="tabbar" role="tablist" aria-label="Views">
     <div class="tabbar-tabs">
       <a href="/today" class="tab" data-view="today" role="tab" aria-selected="false">Today</a>
+      <a href="/alerts" class="tab" data-view="alerts" role="tab" aria-selected="false">Alerts</a>
       <a href="/simulate" class="tab" data-view="simulate" role="tab" aria-selected="false">Simulate</a>
       <a href="/dashboard" class="tab" data-view="dashboard" role="tab" aria-selected="false">Dashboard</a>
       <a href="/" class="tab" data-view="stocks" role="tab" aria-selected="false">Stocks</a>
@@ -1092,7 +1093,7 @@ import { cryptoRegime } from '/analyze.js';
   let rows = [];                    // scored rows from /api/crypto?op=scan
   let backtest = null;              // /api/crypto?op=backtest
   let regimeNow = null;
-  let macroRisk = null;             // /api/macro-calendar — event-risk gate
+  let macroRisk = null;             // /api/intel?op=macro — event-risk gate
   let activeCoin = null;
   let hourCache = {};
   let lastOk = 0, inFlight = false, nextAt = 0;
@@ -1521,7 +1522,7 @@ import { cryptoRegime } from '/analyze.js';
   // Macro event gate — ForexFactory calendar via the FairEconomy feed.
   async function loadMacro() {
     try {
-      const r = await fetch('/api/macro-calendar?hours=96', { cache: 'no-store' });
+      const r = await fetch('/api/intel?op=macro&hours=96', { cache: 'no-store' });
       if (!r.ok) return;
       macroRisk = (await r.json()).macroRisk || null;
       renderPulse(); renderCoins();

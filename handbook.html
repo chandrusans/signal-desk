@@ -481,12 +481,12 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.7</div>
+      <div class="kicker">Signal Desk · Handbook · v3.8</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
-      <div id="hb-topnav"><a href="/today">← today</a> · <a href="/simulate">simulate</a> · <a href="/">stocks</a> · <a href="/crypto">crypto</a> · <a href="/metals">metals →</a></div>
-      <div>LAST UPDATED · 2026-09-04</div>
+      <div id="hb-topnav"><a href="/today">← today</a> · <a href="/alerts">alerts</a> · <a href="/simulate">simulate</a> · <a href="/">stocks</a> · <a href="/crypto">crypto</a> · <a href="/metals">metals →</a></div>
+      <div>LAST UPDATED · 2026-10-22</div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
   </header>
@@ -561,6 +561,7 @@
         <li><a href="#howtoread">How to read the desk &amp; refresh rates</a></li>
         <li><a href="#today">The Today tab — the simple version</a></li>
         <li><a href="#simulate">Simulate — paper auto-trading</a></li>
+        <li><a href="#alerts">Alerts — the seven things that move a stock</a></li>
       </ul>
     </div>
 
@@ -834,8 +835,8 @@
         <li><strong>Index-wide composite scores</strong> — <code>/api/scan</code>, scored server-side in batches of 50. Cached 60 seconds at the edge.</li>
         <li><strong>Sector-relative strength</strong> — each batch fetches the SPDR sector ETFs it needs (XLK, XLV, XLF, XLY, XLC, XLI, XLP, XLE, XLU, XLRE, XLB) over the same window as the tickers being scored.</li>
         <li><strong>Market breadth</strong> — percentage of the full S&amp;P 500 above its own 50-day MA, computed from the scan rather than from a handful of polled names.</li>
-        <li><strong>Economic calendar</strong> — <code>/api/macro-calendar</code>, from the FairEconomy JSON feed that powers ForexFactory's own calendar widget. Drives the macro event gate.</li>
-        <li><strong>Congressional trades</strong> — <code>/api/congress</code>, parsed from Periodic Transaction Reports published by the Clerk of the House (the primary STOCK Act filings behind sites like CapitolTrades). <strong>Context badge only — deliberately not scored</strong>, see Chapter 16.</li>
+        <li><strong>Economic calendar</strong> — <code>/api/intel?op=macro</code>, from the FairEconomy JSON feed that powers ForexFactory's own calendar widget. Drives the macro event gate.</li>
+        <li><strong>Congressional trades</strong> — <code>/api/intel?op=congress</code>, parsed from Periodic Transaction Reports published by the Clerk of the House (the primary STOCK Act filings behind sites like CapitolTrades). <strong>Context badge only — deliberately not scored</strong>, see Chapter 16.</li>
       </ul>
       <h3>Still mock or static</h3>
       <ul>
@@ -1218,9 +1219,68 @@
       </div>
     </section>
 
+    <section id="alerts">
+      <h2><span class="chnum">Chapter 19</span>Alerts — the seven things that move a stock</h2>
+      <p>The <strong>Alerts</strong> tab watches a list of tickers and tells you when one of seven things happens. Each alert fires from a written rule and says why, so none of them is a mystery.</p>
+      <table class="cadence">
+        <thead><tr><th>Alert</th><th>Rule</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>Big price move</td><td>|day change| ≥ max(2 × ATR%, 4%), or 3× average volume with |change| ≥ 2%. ATR-relative, because a 4% day is news for Coca-Cola and noise for a small cap.</td><td>live prices</td></tr>
+          <tr><td>Breaking news</td><td>A headline not seen before, <em>about this ticker</em> (not merely mentioning it), with strong sentiment or tagged earnings.</td><td>Yahoo Finance headlines</td></tr>
+          <tr><td>Earnings report</td><td>The last report landed inside 3 days — BEAT or MISS with the surprise %. The pre-earnings gate (Chapter 04) is a separate thing.</td><td>NASDAQ earnings-surprise</td></tr>
+          <tr><td>Analyst rating</td><td>Consensus moved since the prior monthly snapshot: majority class flipped, counts moved ≥ 2, or mean target moved ≥ 5%.</td><td>NASDAQ analyst consensus</td></tr>
+          <tr><td>Insider trade</td><td>A new SEC Form 4 open-market trade by an officer or director: BUY ≥ $100k, SELL ≥ $1M. Gifts, option exercises and tax withholding are excluded.</td><td>SEC EDGAR Form 4</td></tr>
+          <tr><td>Deal or lawsuit</td><td>A new headline tagged acquisition / merger / stake, or lawsuit / probe / antitrust / regulator.</td><td>Yahoo Finance headlines</td></tr>
+          <tr><td>Sentiment shift</td><td>Headline tone flipped sign with a gap ≥ 0.4 — against the prior 24–96h when there are enough headlines, otherwise against yesterday's average stored on your device.</td><td>computed</td></tr>
+        </tbody>
+      </table>
+
+      <h3>What it does on first run</h3>
+      <p>Everything that already exists is history, not news. The first check records it all as seen and fires only today's facts (big moves, fresh earnings). From then on, an alert means <em>since you started watching</em>. Nothing fires twice.</p>
+
+      <h3>Notifications — what works and what does not</h3>
+      <p>Press <strong>Enable notifications</strong> and alerts pop up as browser notifications while the Alerts tab is open anywhere in your browser, including in the background. <strong>With the browser fully closed, nothing fires.</strong> That needs a push server holding subscriptions, which this app does not have yet; the page says so rather than implying otherwise. On iPhone, add the site to the Home Screen first — Safari only allows notifications for installed web apps.</p>
+
+      <h3>What the free sources cannot do</h3>
+      <ul>
+        <li><strong>Analyst upgrade events.</strong> NASDAQ's free feed carries an <code>upgradesDowngrades</code> field that is empty on every ticker tested. Only the monthly consensus is available, so "Apple gets upgraded at 7am" is not a thing this app can see. By the time a consensus moves it is public and priced.</li>
+        <li><strong>Headline relevance.</strong> Yahoo returns articles that mention a ticker among several. Only articles that are <em>about</em> the ticker (first related ticker, or named in the title) raise an alert — otherwise an Eli Lilly piece fires for every distributor it mentions.</li>
+      </ul>
+
+      <div class="callout warn">
+        <span class="callout-label">Insider trades were tested — and the result is backwards from the folklore</span>
+        <p>3,525 Form 4 filings across 94 large-cap names in 2026, 4,228 open-market transactions, excess return vs SPY measured from the <em>filing</em> date:</p>
+        <ul>
+          <li><strong>Officer/director BUYS ≥ $100k</strong> (n=22): +1.3% / +3.4% / +8.5% at 5/20/60 days, t ≈ 1.1–1.4. Leans positive, <em>not</em> statistically significant, and the sample is small. A reason to look.</li>
+          <li><strong>Officer/director SELLS</strong> (n=3,686): +0.9% / +3.5% / +3.1%, t = 7.2 / 12.3 / 6.8. <strong>Significantly positive.</strong> Insiders sell into strength on scheduled plans, and the stock kept going.</li>
+        </ul>
+        <p>So an insider SELL alert is <strong>not a sell signal</strong> — which is why it is rated low and only fires above $1M. Caveat on the sample: one year, large caps, mostly momentum leaders, a selection that flatters anything sold into strength. The BUY finding would need several more years to become a claim.</p>
+      </div>
+    </section>
+
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 19</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 20</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.8<br/>2026-10-22</div>
+        <div class="what">
+          <h4>Alerts tab — all seven alert types, with browser notifications</h4>
+          <ul>
+            <li>New <strong>Alerts</strong> tab watching a list of tickers for big moves, breaking news, earnings results, analyst consensus changes, insider trades, deals/lawsuits and sentiment flips — one written rule each (Chapter 19).</li>
+            <li>Three new sources: <strong>NASDAQ earnings results</strong> (actual vs consensus), <strong>NASDAQ analyst consensus + targets</strong> with monthly history, and <strong>SEC EDGAR Form 4</strong> insider trades parsed from the primary filings (open-market P/S only).</li>
+            <li>Headlines now carry an <strong>event category</strong> and a <strong>relevance flag</strong>; the sentiment lexicon gained past-tense forms ("soared", "dropped" previously scored zero). Sentiment <strong>shift</strong> is computed from timestamps, not just the level.</li>
+            <li><strong>Browser notifications</strong> via a service worker: alerts pop while the tab is open anywhere in the browser. True push with the browser closed needs a server the app does not have; stated on the page.</li>
+            <li>First run captures a <strong>baseline</strong> and fires nothing old. Nothing fires twice.</li>
+            <li>Two accuracy fixes caught in testing: the analyst detector compared two different NASDAQ analyst pools and produced false Buy→Hold flips; and "3 Energy Stocks to Buy" matched the deal rule via "to buy". Both fixed before shipping.</li>
+            <li>The five event-and-filing sources (macro, congress, earnings, analyst, insider) now sit behind one <code>/api/intel</code> router — the project is at 10 of Vercel's 12 functions.</li>
+          </ul>
+          <div class="callout warn" style="margin-top: 16px;">
+            <span class="callout-label">Insider trades measured: sells were followed by outperformance</span>
+            <p>Across 4,228 open-market Form 4 transactions in 2026, officer/director <strong>sells</strong> were followed by +3.5% excess return vs SPY at 20 days (t = 12.3). <strong>Buys</strong> leaned positive but on 22 observations were not significant. An insider sell is therefore rated low and treated as context, never as a sell signal. Full table in Chapter 19.</p>
+          </div>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.7<br/>2026-09-04</div>

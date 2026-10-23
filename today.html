@@ -958,6 +958,7 @@
   <nav class="tabbar" role="tablist" aria-label="Views">
     <div class="tabbar-tabs">
       <a href="/today" class="tab on" data-view="today" role="tab" aria-selected="true">Today</a>
+      <a href="/alerts" class="tab" data-view="alerts" role="tab" aria-selected="false">Alerts</a>
       <a href="/simulate" class="tab" data-view="simulate" role="tab" aria-selected="false">Simulate</a>
       <a href="/dashboard" class="tab" data-view="dashboard" role="tab" aria-selected="false">Dashboard</a>
       <a href="/" class="tab" data-view="stocks" role="tab" aria-selected="false">Stocks</a>
@@ -1351,7 +1352,7 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
 
     // 1. gates + benchmark bars + metals in one quotes call
     const [mc, q] = await Promise.allSettled([
-      j('/api/macro-calendar?hours=96'),
+      j('/api/intel?op=macro&hours=96'),
       j('/api/quotes?tickers=SPY,%5EVIX,GC%3DF,SI%3DF&range=1y'),
     ]);
     macro = mc.status === 'fulfilled' ? mc.value.macroRisk : null;

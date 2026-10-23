@@ -1841,6 +1841,7 @@
   <nav class="tabbar" role="tablist" aria-label="Views">
     <div class="tabbar-tabs">
       <a href="/today" class="tab" data-view="today" role="tab" aria-selected="false">Today</a>
+      <a href="/alerts" class="tab" data-view="alerts" role="tab" aria-selected="false">Alerts</a>
       <a href="/simulate" class="tab" data-view="simulate" role="tab" aria-selected="false">Simulate</a>
       <a href="/dashboard" class="tab" data-view="dashboard" role="tab" aria-selected="false">Dashboard</a>
       <a href="/" class="tab on" data-view="stocks" role="tab" aria-selected="true">Stocks</a>
@@ -2591,7 +2592,7 @@ import { runBacktest, walkForward } from './backtest.js';
   }
 
   // BUY / HOLD / AVOID / SELL — derived from setup + score. Big prominent call.
-  // Macro event risk from /api/macro-calendar (ForexFactory's own feed).
+  // Macro event risk from /api/intel?op=macro (ForexFactory's own feed).
   // Populated by loadMacro(); null until the first fetch lands.
   let macroRisk = null;
   let congressByTicker = {};
@@ -3588,7 +3589,7 @@ import { runBacktest, walkForward } from './backtest.js';
    */
   async function loadMacro() {
     try {
-      const r = await fetch('/api/macro-calendar?hours=96', { cache: 'no-store' });
+      const r = await fetch('/api/intel?op=macro&hours=96', { cache: 'no-store' });
       if (!r.ok) return;
       const d = await r.json();
       macroRisk = d.macroRisk || null;
@@ -3606,7 +3607,7 @@ import { runBacktest, walkForward } from './backtest.js';
    */
   async function loadCongress() {
     try {
-      const r = await fetch('/api/congress?limit=45', { cache: 'no-store' });
+      const r = await fetch('/api/intel?op=congress&limit=45', { cache: 'no-store' });
       if (!r.ok) return;
       const d = await r.json();
       congressByTicker = Object.fromEntries((d.byTicker || []).map(b => [b.ticker, b]));

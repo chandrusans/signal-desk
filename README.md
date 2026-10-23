@@ -28,6 +28,17 @@ a paper portfolio is a pure function of config and market history, so saved
 simulations store settings only and are recomputed from bars on every visit.
 No cron, no database, no drift. **No real order is ever placed.**
 
+## Alerts
+
+`/alerts` watches a ticker list for the seven things traders are told to watch
+(big move, breaking news, earnings result, analyst rating, insider trade,
+deal/lawsuit, sentiment shift), one written rule each in `alerts.js`, with
+browser notifications via `sw.js`. Notifications work while a tab is open
+anywhere in the browser; true push with the browser closed needs a subscription
+store this app does not have. First run captures a baseline and fires nothing
+old. Insider trades were measured before shipping (see handbook ch. 19): sells
+were followed by outperformance, buys were not significant on n=22.
+
 ## What it does
 
 - **Live prices**: 1-year OHLC + volume via Yahoo Finance chart API (no auth key). Polls every 15s (Stocks) / 20s (Crypto) behind a 30s edge cache.
@@ -43,6 +54,7 @@ No cron, no database, no drift. **No real order is ever placed.**
 ```
 signal-desk/
 ├── today.html         START HERE — one page, three questions, all four markets
+├── alerts.html        Seven alert types + browser notifications (engine in alerts.js)
 ├── simulate.html      Paper auto-trading — the rulebook trades pretend money
 ├── index.html         Stocks UI (all inline CSS/JS)
 ├── dashboard.html     Personal portfolio tracker
@@ -61,8 +73,12 @@ signal-desk/
 │   ├── options.js     NASDAQ option chains + recommendation engine
 │   ├── option-quote.js  Live per-contract premiums by OCC symbol
 │   ├── fundamentals.js  Market cap, P/E, earnings dates
-│   ├── macro-calendar.js   ForexFactory calendar (FairEconomy feed) — event gate
-│   ├── congress.js         STOCK Act PTRs from the Clerk of the House
+│   ├── intel.js            Router: ?op=macro|congress|earnings|analyst|insider
+│   ├── _macro-calendar.js    ForexFactory calendar (FairEconomy feed) — event gate
+│   ├── _congress.js          STOCK Act PTRs from the Clerk of the House
+│   ├── _earnings.js          NASDAQ actual-vs-consensus results
+│   ├── _analyst.js           NASDAQ consensus + targets, monthly history
+│   ├── _insider.js           SEC EDGAR Form 4 open-market insider trades
 │   ├── crypto.js           Router: ?op=universe|scan|hours|backtest|pumpfun
 │   ├── _crypto-universe.js   Top coins by mcap ∩ Coinbase USD pairs
 │   ├── _crypto-scan.js       Batch crypto scorer, BTC as benchmark
@@ -118,7 +134,7 @@ NODE_EXTRA_CA_CERTS=/tmp/ca.pem node tools/devserver.mjs 3000
 ### Checks before committing
 
 ```bash
-node tools/lint.mjs today.html simulate.html index.html dashboard.html options.html crypto.html metals.html handbook.html
+node tools/lint.mjs today.html alerts.html simulate.html index.html dashboard.html options.html crypto.html metals.html handbook.html
 ```
 
 This catches called-but-never-defined functions in the inline `<script>` blocks —
@@ -199,8 +215,11 @@ survives it.
 - Crypto prices, daily/hourly candles → Coinbase Exchange public API (no key)
 - Crypto universe + market caps → CoinGecko free tier, intersected with Coinbase USD pairs
 - Crypto backtest + fee sweep → `/api/crypto?op=backtest`, computed live and cached 6h
-- Economic calendar → `/api/macro-calendar` (FairEconomy feed behind ForexFactory)
-- Congressional trades → `/api/congress` (House Clerk STOCK Act PTRs, PDF-parsed)
+- Economic calendar → `/api/intel?op=macro` (FairEconomy feed behind ForexFactory)
+- Congressional trades → `/api/intel?op=congress` (House Clerk STOCK Act PTRs, PDF-parsed)
+- Earnings results → `/api/intel?op=earnings` (NASDAQ actual vs consensus)
+- Analyst consensus + targets → `/api/intel?op=analyst` (NASDAQ; upgrade events are NOT in the free feed)
+- Insider trades → `/api/intel?op=insider` (SEC EDGAR Form 4, open-market P/S only)
 - pump.fun tokens → `/api/crypto?op=pumpfun` (DexScreener public API, pumpswap pairs)
 
 ### pump.fun: an exit-risk screen
