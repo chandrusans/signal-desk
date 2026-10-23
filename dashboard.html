@@ -903,7 +903,7 @@ AAPL 30 @ 218.75"></textarea>
       <form class="adv-form" id="add-form" autocomplete="off">
         <div class="field">
           <label for="af-ticker">Ticker</label>
-          <input type="text" id="af-ticker" placeholder="NVDA" required maxlength="10"/>
+          <input type="text" id="af-ticker" placeholder="NVDA · or BTC 0.5 crypto · GC=F 1 metal" required maxlength="10"/>
         </div>
         <div class="field">
           <label for="af-qty">Shares</label>
@@ -991,7 +991,8 @@ AAPL 30 @ 218.75"></textarea>
 </script>
 
 <script type="module">
-import { analyze, regime } from './analyze.js';
+import { analyze, regime, cryptoRegime } from './analyze.js';
+import { positionVerdict, defaultStop, classOf } from './exits.js';
 
 (function () {
   const root = document.documentElement;
@@ -1060,72 +1061,23 @@ import { analyze, regime } from './analyze.js';
   }
 
   // ---- Sell logic — how a seasoned trader thinks about each position ----
+  // The exit rulebook lives in exits.js and is shared with the Alerts tab, so
+  // the verdict shown here and the notification sent there can never differ.
   function verdictFor(pos, analysis, currentPrice, currentRegime) {
-    const buy = pos.buyPrice;
-    const stop = pos.stop || buy * 0.95;   // default 5% stop if not provided
-    const R = Math.max(0.01, buy - stop);  // risk unit in dollars
-    const gain = currentPrice - buy;
-    const gainPct = (gain / buy) * 100;
-    const gainR = gain / R;
-    const daysHeld = Math.floor((Date.now() - Date.parse(pos.buyDate)) / (24 * 3600 * 1000));
-
-    // Hard stop hit — always sell
-    if (currentPrice <= stop) {
-      return { action: 'SELL', reason: `Hard stop hit ($${stop.toFixed(2)}). Exit — no averaging down.` };
-    }
-    // Regime breakdown — protect capital
-    if (currentRegime && (currentRegime.level === 'stress' || currentRegime.level === 'crisis')) {
-      return { action: 'SELL', reason: `Regime turned ${currentRegime.level.toUpperCase()} (VIX ${currentRegime.vix?.toFixed(1)}). Cut the momentum book.` };
-    }
-    // Setup broken with meaningful loss
-    if (analysis?.setup === 'BROKEN' && gainR < 0.5) {
-      return { action: 'SELL', reason: `Setup BROKEN — price below key MAs, trend dead. Take the loss before it compounds.` };
-    }
-    // Time stop — 15 trading days flat
-    if (daysHeld >= 15 && Math.abs(gainR) < 1) {
-      return { action: 'SELL', reason: `Time stop: ${daysHeld} days in, gain only ${gainR.toFixed(1)}R. Opportunity cost — free the capital.` };
-    }
-    // Overextended profit — take some off
-    if (analysis?.indicators?.rsi14 > 78 && gainR >= 2) {
-      return { action: 'TRIM', reason: `RSI ${analysis.indicators.rsi14.toFixed(0)} · +${gainR.toFixed(1)}R gain. Scale half; move stop to +1R on remainder.` };
-    }
-    if (analysis?.setup === 'EXTENDED' && gainR >= 2) {
-      return { action: 'TRIM', reason: `Setup EXTENDED with +${gainR.toFixed(1)}R gain. Take partial — wait for pullback to re-add.` };
-    }
-    // Trend deterioration on winner
-    if (analysis?.indicators?.ma20Slope != null && analysis.indicators.ma20Slope < -0.005 && gainR >= 1) {
-      return { action: 'TRIM', reason: `MA20 slope negative (${(analysis.indicators.ma20Slope*100).toFixed(1)}% / 5d) despite +${gainR.toFixed(1)}R. Protect gains.` };
-    }
-    // Fresh position — no verdict yet
-    if (daysHeld < 3) {
-      return { action: 'HOLD', reason: `Fresh position (day ${daysHeld}). Trend intact — give the setup room to work.` };
-    }
-    // Winner with intact trend
-    if (gainR >= 2) {
-      return { action: 'HOLD', reason: `+${gainR.toFixed(1)}R gain, trend intact. Trail stop to entry + 1R = $${(buy + R).toFixed(2)}.` };
-    }
-    if (gainR >= 1) {
-      return { action: 'HOLD', reason: `+${gainR.toFixed(1)}R gain. Trail stop to breakeven ($${buy.toFixed(2)}); let it run.` };
-    }
-    // Approaching stop
-    if (currentPrice < buy && currentPrice - stop < R * 0.3) {
-      return { action: 'WATCH', reason: `Approaching stop ($${stop.toFixed(2)}), ${((currentPrice - stop) / stop * 100).toFixed(1)}% away. Decision imminent.` };
-    }
-    // Approaching target
-    const target = buy + 2.5 * R;
-    if (currentPrice > buy && target - currentPrice < R * 0.5) {
-      return { action: 'WATCH', reason: `Approaching +2.5R target ($${target.toFixed(2)}). Prep to scale half.` };
-    }
-    // Default HOLD
-    return { action: 'HOLD', reason: `Position developing (${gainR >= 0 ? '+' : ''}${gainR.toFixed(1)}R, day ${daysHeld}). Setup ${analysis?.setup || '—'}. Let it work.` };
+    const v = positionVerdict(pos, { price: currentPrice, analysis, regime: currentRegime, earnings: latestEarnings[pos.ticker] || null });
+    return { action: v.action, reason: v.reason, rule: v.rule, severity: v.severity };
   }
+
 
   // ---- Live quotes ----
   const pendingFlashes = {};
+  let latestCrypto = {};        // coin -> daily bars, from /api/crypto?op=bars
+  let latestEarnings = {};      // ticker -> { date, daysAway }, from /api/fundamentals
   function tickerList() {
     // For option positions, use the underlying ticker so /api/quotes returns
     // real prices (Yahoo doesn't accept OCC symbols).
-    const symbols = portfolio.map(p => p.isOption ? p.underlying : p.ticker);
+    // Crypto is priced from Coinbase candles, not Yahoo, so it is excluded here.
+    const symbols = portfolio.filter(p => classOf(p) !== 'crypto').map(p => p.isOption ? p.underlying : p.ticker);
     return [...new Set([...symbols.filter(Boolean), '^VIX'])];
   }
   async function pull() {
@@ -1138,12 +1090,22 @@ import { analyze, regime } from './analyze.js';
       // Option positions need their own per-contract quote — the underlying's
       // price alone can't tell you what the contract is worth right now.
       const occSymbols = portfolio.filter(p => p.isOption).map(p => p.ticker);
-      const [res, optRes] = await Promise.all([
+      const coins = [...new Set(portfolio.filter(p => classOf(p) === 'crypto').map(p => p.ticker.toUpperCase()))];
+      const stockTk = [...new Set(portfolio.filter(p => classOf(p) === 'stock').map(p => p.ticker))];
+      const [res, optRes, cryRes, earnRes] = await Promise.all([
         fetch(`/api/quotes?tickers=${encodeURIComponent(tickers)}&range=1y`, { cache: 'no-store' }),
         occSymbols.length
           ? fetch(`/api/option-quote?occ=${encodeURIComponent(occSymbols.join(','))}`, { cache: 'no-store' }).catch(() => null)
           : Promise.resolve(null),
+        coins.length
+          ? fetch(`/api/crypto?op=bars&coins=${encodeURIComponent([...new Set([...coins, 'BTC'])].join(','))}&days=400`, { cache: 'no-store' }).catch(() => null)
+          : Promise.resolve(null),
+        stockTk.length
+          ? fetch(`/api/fundamentals?tickers=${encodeURIComponent(stockTk.join(','))}`, { cache: 'no-store' }).catch(() => null)
+          : Promise.resolve(null),
       ]);
+      if (cryRes && cryRes.ok) { const cd = await cryRes.json(); if (cd && cd.bars) latestCrypto = cd.bars; }
+      if (earnRes && earnRes.ok) { const ed = await earnRes.json(); const f = ed.fundamentals || {}; latestEarnings = Object.fromEntries(Object.entries(f).map(([t, x]) => [t, x?.earnings || null])); }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const quotes = data.quotes || {};
@@ -1198,7 +1160,11 @@ import { analyze, regime } from './analyze.js';
       // For options, look up the underlying's quote to show live stock price and
       // compute breakeven distance. The option premium itself isn't live-tracked
       // (would require a per-contract chain lookup) — so premium = entry premium.
-      const q = latestQuotes[pos.isOption ? pos.underlying : pos.ticker];
+      const cls = classOf(pos);
+      const cbars = cls === 'crypto' ? latestCrypto[pos.ticker.toUpperCase()] : null;
+      const q = cls === 'crypto'
+        ? (cbars && cbars.length ? { price: cbars[cbars.length - 1].c, bars: cbars } : null)
+        : latestQuotes[pos.isOption ? pos.underlying : pos.ticker];
       const underlyingLive = pos.isOption ? (q?.price ?? null) : null;
       // For options the "price" that drives P&L is the CONTRACT premium, not
       // the underlying. Use the live per-contract mid when we have it; only
@@ -1209,11 +1175,15 @@ import { analyze, regime } from './analyze.js';
       const price = pos.isOption
         ? (optQ?.mid ?? pos.buyPrice)
         : (q?.price ?? pos.buyPrice);
-      const analysis = !pos.isOption && q?.bars && q.bars.length >= 60 ? analyze(q.bars) : null;
-      const rg = vixPrice != null ? Object.assign(regime(vixPrice), { vix: vixPrice }) : null;
+      const analysis = !pos.isOption && q?.bars && q.bars.length >= 60
+        ? analyze(q.bars, { assetClass: cls === 'crypto' ? 'crypto' : cls === 'metal' ? 'metal' : 'equity', benchBars: cls === 'crypto' ? latestCrypto.BTC : undefined })
+        : null;
+      const rg = cls === 'crypto'
+        ? (latestCrypto.BTC ? cryptoRegime(latestCrypto.BTC) : null)
+        : (vixPrice != null ? Object.assign(regime(vixPrice), { vix: vixPrice }) : null);
       const v = verdictFor(pos, (analysis && !analysis.insufficient ? analysis : null), price, rg);
       const buy = pos.buyPrice;
-      const stop = pos.stop || (pos.isOption ? buy * 0.5 : buy * 0.95); // -50% stop for options premium
+      const stop = defaultStop(pos, analysis && !analysis.insufficient ? analysis : null);   // plan stop if tracked from a card, else class default
       const R = Math.max(0.01, buy - stop);
       const gain = price - buy;
       // Options: 1 contract = 100 shares → multiply everything by multiplier (100).
@@ -1284,7 +1254,7 @@ import { analyze, regime } from './analyze.js';
             <div class="pos-ticker">
               ${isOpt
                 ? `${r.pos.underlying} <span style="color: var(--accent);">$${r.pos.strike.toFixed(0)}${r.pos.optionType === 'CALL' ? 'C' : 'P'}</span> <span style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.06em;">${r.pos.qty} × 100 sh</span> <span class="setup-chip" style="font-size: 9px; padding: 1px 6px; color: var(--accent); border-color: var(--accent);">OPT</span>`
-                : `${r.pos.ticker} <span style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.06em;">${r.pos.qty} sh</span>${r.analysis?.setup ? ` <span class="setup-chip setup-${r.analysis.setup}" style="font-size: 9px; padding: 1px 6px;">${r.analysis.setup}</span>` : ''}`
+                : `${r.pos.label || r.pos.ticker} <span style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.06em;">${r.pos.qty} ${classOf(r.pos) === 'crypto' ? 'units' : classOf(r.pos) === 'metal' ? 'oz-eq' : 'sh'}</span>${classOf(r.pos) !== 'stock' ? ` <span class="setup-chip" style="font-size: 9px; padding: 1px 6px; color: var(--accent); border-color: var(--accent);">${classOf(r.pos).toUpperCase()}</span>` : ''}${r.analysis?.setup ? ` <span class="setup-chip setup-${r.analysis.setup}" style="font-size: 9px; padding: 1px 6px;">${r.analysis.setup}</span>` : ''}`
               }
             </div>
             <div class="pos-meta">
@@ -1296,7 +1266,7 @@ import { analyze, regime } from './analyze.js';
             <div class="pos-meta">
               ${isOpt
                 ? `Contract cost $${fmt(costBasis)} · exp ${r.pos.expiration}`
-                : `Stop $${r.stop.toFixed(2)} · Target $${target.toFixed(2)} (+2.5R)`
+                : `Stop $${r.stop.toFixed(2)}${r.pos.planStop ? ' (plan)' : r.pos.stop ? '' : ' (default)'} · Target $${target.toFixed(2)} (+2.5R)`
               }
             </div>
             ${r.pos.notes ? `<div class="pos-notes">${escapeHtml(r.pos.notes)}</div>` : ''}
@@ -1460,9 +1430,11 @@ import { analyze, regime } from './analyze.js';
     const qty = parseFloat(parts[1]);
     if (!(qty > 0)) return { error: `bad quantity "${parts[1]}"` };
 
-    let price = null, date = null, stop = null;
+    let price = null, date = null, stop = null, assetClass = null;
     for (let i = 2; i < parts.length; i++) {
       const p = parts[i];
+      // optional class token: "BTC 0.5 crypto", "GC=F 2 metal"
+      if (/^(crypto|metal|stock)$/i.test(p)) { assetClass = p.toLowerCase(); continue; }
       // ISO date match
       if (/^\d{4}-\d{2}-\d{2}$/.test(p)) { date = p; continue; }
       const n = parseFloat(p);
@@ -1471,12 +1443,19 @@ import { analyze, regime } from './analyze.js';
         else if (stop == null) stop = n;
       }
     }
-    return { ticker, qty, price, date, stop };
+    if (!assetClass) assetClass = ticker === 'GC=F' || ticker === 'SI=F' ? 'metal' : /^(BTC|ETH|SOL|XRP|ADA|DOGE|AVAX|LINK|DOT|LTC|BCH|UNI|ATOM|XLM|HBAR|SUI|NEAR|AAVE|ICP|ALGO|SHIB|PEPE|TAO|ONDO)$/.test(ticker) ? 'crypto' : 'stock';
+    return { ticker, qty, price, date, stop, assetClass };
   }
 
   // Fetch live price for a ticker; returns { price, ok } or null
-  async function fetchLivePrice(ticker) {
+  async function fetchLivePrice(ticker, assetClass = 'stock') {
     try {
+      if (assetClass === 'crypto') {
+        const r = await fetch(`/api/crypto?op=scan&coins=${encodeURIComponent(ticker)}`, { cache: 'no-store' });
+        if (!r.ok) return null;
+        const row = ((await r.json()).rows || [])[0];
+        return row && row.p != null ? { price: row.p, changePct: row.c } : null;
+      }
       const r = await fetch(`/api/quotes?tickers=${encodeURIComponent(ticker)}&range=1mo`, { cache: 'no-store' });
       if (!r.ok) return null;
       const d = await r.json();
@@ -1488,7 +1467,7 @@ import { analyze, regime } from './analyze.js';
   async function commitPositions(parsedList) {
     // Fill missing prices from live quotes in parallel
     const needPrice = parsedList.filter(p => !p.error && p.price == null);
-    const prices = await Promise.all(needPrice.map(async p => ({ ticker: p.ticker, live: await fetchLivePrice(p.ticker) })));
+    const prices = await Promise.all(needPrice.map(async p => ({ ticker: p.ticker, live: await fetchLivePrice(p.ticker, p.assetClass) })));
     const priceMap = Object.fromEntries(prices.map(x => [x.ticker, x.live]));
     const today = new Date().toISOString().slice(0, 10);
     const results = [];
@@ -1506,6 +1485,7 @@ import { analyze, regime } from './analyze.js';
         qty: p.qty,
         buyPrice,
         buyDate: p.date || today,
+        assetClass: p.assetClass || 'stock',
       };
       if (p.stop != null && p.stop > 0 && p.stop < buyPrice) pos.stop = p.stop;
       portfolio.push(pos);

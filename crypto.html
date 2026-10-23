@@ -768,6 +768,8 @@
   }
   .coin-right .score { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--ink); line-height: 1.1; }
 
+  .track-btn { margin-top: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; padding: 5px 9px; border: 1px dashed var(--rule); border-radius: 3px; background: transparent; color: var(--ink-3); cursor: pointer; }
+  .track-btn:hover { border-color: var(--accent); color: var(--accent); }
   .verdict-pill {
     display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 600;
     letter-spacing: 0.1em; padding: 4px 9px; border: 1px solid; border-radius: 3px;
@@ -1101,6 +1103,7 @@ import { cryptoRegime } from '/analyze.js';
   let verdictFilter = 'ALL', setupFilter = 'ALL', showCount = 10;
 
   const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"|]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '|': '/' }[ch]));
   const fmtPrice = (p) => {
     if (p == null) return '—';
     if (p >= 1000) return '$' + p.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -1357,13 +1360,30 @@ import { cryptoRegime } from '/analyze.js';
           <span class="verdict-pill verdict-${v}">${v}</span>
           <div class="score-label" style="margin-top:8px;">Composite</div>
           <div class="score">${r.sc != null ? r.sc : '—'}</div>
+          <button class="track-btn" data-track="${r.t}|${r.p}|${r.stop ?? ''}|${r.tgt ?? ''}|${esc(m ? m.name : r.t)}" title="Add to Dashboard with this stop and target">+ Track</button>
         </div>
       </div>`;
     }).join('');
 
     el.querySelectorAll('.coin-card').forEach(card => {
       const open = () => { activeCoin = card.dataset.coin; renderCoins(); renderDetail(); loadHours(activeCoin); };
-      card.addEventListener('click', open);
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.track-btn')) {
+          e.stopPropagation();
+          const [t, p, stop, tgt, name] = card.querySelector('.track-btn').dataset.track.split('|');
+          const price = parseFloat(p);
+          const q = parseFloat(prompt(`Track ${t} in Dashboard\n\nHow many ${t}? (fractions are fine)${stop ? `\nStop $${(+stop).toPrecision(5)} and target $${(+tgt).toPrecision(5)} from the plan will be stored.` : ''}`, '0.1'));
+          if (!(q > 0)) return;
+          try {
+            const key = 'sd-portfolio-v1'; const cur = JSON.parse(localStorage.getItem(key) || '[]');
+            cur.push({ id: `${t}-${Date.now()}`, ticker: t, label: `${t} · ${name}`, qty: q, buyPrice: price, buyDate: new Date().toISOString().slice(0, 10), assetClass: 'crypto', ...(stop ? { stop: +stop, planStop: +stop, target: +tgt, planTarget: +tgt } : {}) });
+            localStorage.setItem(key, JSON.stringify(cur));
+            const b = card.querySelector('.track-btn'); b.textContent = '✓ tracked'; setTimeout(() => { b.textContent = '+ Track'; }, 2000);
+          } catch (err) { alert('Failed: ' + err.message); }
+          return;
+        }
+        open();
+      });
       card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
       });

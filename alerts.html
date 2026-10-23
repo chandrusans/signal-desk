@@ -1011,6 +1011,13 @@
         <h2>Alert feed</h2>
         <span class="st" id="feed-st">—</span>
       </div>
+      <div class="snap-wrap" id="pos-wrap" hidden>
+        <div class="snap-head"><h3>Your positions — when to sell</h3><span class="st" id="pos-st"></span></div>
+        <div class="snap-scroll"><table class="snap"><thead><tr>
+          <th>Position</th><th>Now</th><th>P&amp;L</th><th>Stop · target</th><th>Verdict</th><th>Why</th>
+        </tr></thead><tbody id="pos-rows"></tbody></table></div>
+        <p class="note" style="margin:6px 0 0;font-size:11px;color:var(--ink-3);">Same rulebook as the Dashboard. SELL and TRIM notify once per rule per day; "move your stop" once. Positions are read from this device's Dashboard.</p>
+      </div>
       <div class="snap-wrap" id="snap-wrap" hidden>
         <div class="snap-head"><h3>Your watchlist right now</h3><span class="st" id="snap-st"></span></div>
         <div class="snap-scroll"><table class="snap"><thead><tr>
@@ -1104,7 +1111,9 @@
 
 
 <script type="module">
-import { TYPES, evaluate, notify, requestPermission, registerWorker, getSettings, setSettings, getWatch, setWatch, getHistory, clearHistory } from '/alerts.js';
+import { TYPES, evaluate, evaluatePositions, notify, requestPermission, registerWorker, getSettings, setSettings, getWatch, setWatch, getHistory, clearHistory } from '/alerts.js';
+import { analyze, regime, cryptoRegime } from '/analyze.js';
+import { classOf } from '/exits.js';
 
 (() => {
   'use strict';
@@ -1232,9 +1241,59 @@ import { TYPES, evaluate, notify, requestPermission, registerWorker, getSettings
     wrap.hidden = false;
   }
 
+  // ---- positions: price every held thing, run the shared exit rulebook, alert ----
+  const portfolio = () => { try { return JSON.parse(localStorage.getItem('sd-portfolio-v1') || '[]'); } catch { return []; } };
+  const fmtp = (x) => (x == null ? '—' : x >= 1000 ? '$' + Math.round(x).toLocaleString('en-US') : x >= 1 ? '$' + x.toFixed(2) : '$' + Number(x).toPrecision(3));
+  async function checkPositions() {
+    const pf = portfolio();
+    const wrap = $('pos-wrap');
+    if (!pf.length) { wrap.hidden = true; return []; }
+    const stocks = [...new Set(pf.filter(x => ['stock', 'metal'].includes(classOf(x)) || x.isOption).map(x => x.isOption ? x.underlying : x.ticker).filter(Boolean))];
+    const coins = [...new Set(pf.filter(x => classOf(x) === 'crypto').map(x => x.ticker.toUpperCase()))];
+    const occ = pf.filter(x => x.isOption).map(x => x.ticker);
+    const stockOnly = pf.filter(x => classOf(x) === 'stock').map(x => x.ticker);
+    const [qR, cR, oR, eR] = await Promise.allSettled([
+      stocks.length ? j(`/api/quotes?tickers=${encodeURIComponent([...stocks, '^VIX'].join(','))}&range=1y`) : Promise.resolve({ quotes: {} }),
+      coins.length ? j(`/api/crypto?op=bars&coins=${encodeURIComponent([...new Set([...coins, 'BTC'])].join(','))}&days=400`) : Promise.resolve({ bars: {} }),
+      occ.length ? j(`/api/option-quote?occ=${encodeURIComponent(occ.join(','))}`) : Promise.resolve({ quotes: {} }),
+      stockOnly.length ? j(`/api/fundamentals?tickers=${encodeURIComponent([...new Set(stockOnly)].join(','))}`) : Promise.resolve({ fundamentals: {} }),
+    ]);
+    const quotes = qR.status === 'fulfilled' ? (qR.value.quotes || {}) : {};
+    const cbars = cR.status === 'fulfilled' ? (cR.value.bars || {}) : {};
+    const oq = oR.status === 'fulfilled' ? (oR.value.quotes || {}) : {};
+    const fund = eR.status === 'fulfilled' ? (eR.value.fundamentals || {}) : {};
+    const vix = quotes['^VIX']?.price;
+    const eqRegime = vix != null ? Object.assign(regime(vix), { vix }) : null;
+    const crRegime = cbars.BTC ? cryptoRegime(cbars.BTC) : null;
+    const ctx = {};
+    for (const pos of pf) {
+      const cls = classOf(pos);
+      if (cls === 'option') { const q = oq[pos.ticker]; ctx[pos.id] = { price: q?.mid ?? null, underlying: quotes[pos.underlying]?.price ?? null, regime: eqRegime }; continue; }
+      if (cls === 'crypto') { const b = cbars[pos.ticker.toUpperCase()]; if (!b?.length) continue; const an = b.length >= 60 ? analyze(b, { assetClass: 'crypto', benchBars: cbars.BTC }) : null; ctx[pos.id] = { price: b[b.length - 1].c, analysis: an && !an.insufficient ? an : null, regime: crRegime }; continue; }
+      const q = quotes[pos.ticker]; if (!q?.price) continue;
+      const an = q.bars?.length >= 60 ? analyze(q.bars, { assetClass: cls === 'metal' ? 'metal' : 'equity' }) : null;
+      ctx[pos.id] = { price: q.price, analysis: an && !an.insufficient ? an : null, regime: eqRegime, earnings: fund[pos.ticker]?.earnings || null };
+    }
+    const fired = evaluatePositions(pf, ctx, settings);
+    const order = { SELL: 0, TRIM: 1, WATCH: 2, HOLD: 3 };
+    const rows = fired.verdicts.sort((x, y) => order[x.v.action] - order[y.v.action]);
+    $('pos-rows').innerHTML = rows.map(({ pos, v }) => {
+      const name = pos.label || (pos.isOption ? `${pos.underlying} $${pos.strike} ${pos.optionType || ''}` : pos.ticker);
+      const col = v.action === 'SELL' ? 'var(--risk)' : v.action === 'TRIM' ? 'var(--caution)' : v.action === 'WATCH' ? 'var(--caution)' : 'var(--signal)';
+      return `<tr><td class="t">${esc(name)}<small>${classOf(pos)} · ${pos.qty}${pos.isOption ? ' ct' : ''} @ ${fmtp(pos.buyPrice)} · day ${v.daysHeld}</small></td>
+        <td>${fmtp(v.price)}</td><td class="${v.gain >= 0 ? 'pos' : 'neg'}">${v.gainPct >= 0 ? '+' : ''}${v.gainPct.toFixed(1)}%<small>${v.gainR >= 0 ? '+' : ''}${v.gainR.toFixed(1)}R</small></td>
+        <td>${fmtp(v.stop)}<small>→ ${fmtp(v.target)}</small></td>
+        <td style="font-weight:600;color:${col};">${v.action}</td><td><small style="white-space:normal;max-width:320px;color:var(--ink-2);font-size:11px;">${esc(v.reason)}</small></td></tr>`;
+    }).join('');
+    $('pos-st').textContent = `${pf.length} position${pf.length === 1 ? '' : 's'} · ${rows.filter(r => r.v.action === 'SELL').length} SELL · ${rows.filter(r => r.v.action === 'TRIM').length} TRIM · ${Object.keys(ctx).length < pf.length ? `${pf.length - Object.keys(ctx).length} not priced` : 'all priced'}`;
+    wrap.hidden = false;
+    return fired;
+  }
+
   // ---- the poll ----
   async function check() {
-    if (inFlight || !watch.length) return;
+    if (inFlight) return;
+    if (!watch.length) { try { const f = await checkPositions(); await notify(f); renderFeed(); } catch {} return; }
     inFlight = true;
     $('feed-dot').style.background = 'var(--caution)'; $('feed-label').textContent = 'checking…';
     try {
@@ -1258,14 +1317,16 @@ import { TYPES, evaluate, notify, requestPermission, registerWorker, getSettings
       snap = { scan, news };
       renderSnapshot(tk);
       const fresh = evaluate(tk, { scan, news, earnings: slow.earnings, analyst: slow.analyst, insider: slow.insider }, settings);
-      const shown = await notify(fresh);
+      let posFired = []; try { posFired = await checkPositions(); } catch { /* positions panel stays as it was */ }
+      const all = [...posFired, ...fresh];
+      const shown = await notify(all);
       renderFeed();
       const failed = [scanR, newsR, earnR, anaR, insR].filter((x) => x.status === 'rejected').length;
       $('run-ts').textContent = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
       $('feed-dot').style.background = failed ? 'var(--caution)' : 'var(--signal)';
       $('feed-label').textContent = fresh.baseline
         ? `live · baseline captured for ${tk.length} tickers — alerts fire from now on`
-        : `live · ${tk.length} tickers · ${fresh.length} new${shown ? ` · ${shown} notified` : ''}${failed ? ` · ${failed} source${failed > 1 ? 's' : ''} down` : ''}`;
+        : `live · ${tk.length} tickers · ${all.length} new${shown ? ` · ${shown} notified` : ''}${failed ? ` · ${failed} source${failed > 1 ? 's' : ''} down` : ''}`;
       $('feed-st').textContent = `${getHistory().length} alerts on record · prices & news every 1 min · filings every 30 min`;
     } catch (e) {
       $('feed-dot').style.background = 'var(--risk)'; $('feed-label').textContent = `feed error · ${e.message}`;

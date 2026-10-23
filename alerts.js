@@ -34,6 +34,8 @@
 // store on a server, which this app does not have; that limit is stated on
 // the page rather than papered over.
 
+import { positionVerdict, alertKey, classOf } from '/exits.js';
+
 const LS = {
   seen: 'sd-alerts-seen-v1',
   history: 'sd-alerts-history-v1',
@@ -55,6 +57,7 @@ export const TYPES = {
   insider:   { label: 'Insider trade',    icon: '👤' },
   deal:      { label: 'Deal or lawsuit',  icon: '⚖' },
   sentiment: { label: 'Sentiment shift',  icon: '👥' },
+  position:  { label: 'Your position',    icon: '💼' },
 };
 
 export const DEFAULT_SETTINGS = { enabled: Object.fromEntries(Object.keys(TYPES).map((k) => [k, true])), notify: false, minInsiderValue: 100000, minInsiderSell: 1000000 };
@@ -202,6 +205,37 @@ export function evaluate(tickers, data, settings = getSettings()) {
   }
   out.baseline = baseline;
   return out;
+}
+
+/**
+ * Position alerts — "when to sell what you hold". Runs the SAME exit rulebook
+ * the Dashboard displays (exits.js), so the notification and the card agree.
+ * `ctxByPos` maps position id -> { price, analysis, regime, earnings }.
+ * SELL/TRIM fire once per rule per day; WATCH and "move your stop" once.
+ */
+export function evaluatePositions(portfolio, ctxByPos, settings = getSettings()) {
+  if (!settings.enabled.position) return Object.assign([], { verdicts: [] });
+  const seen = load(LS.seen, {});
+  const now = Date.now();
+  const out = []; const verdicts = [];
+  for (const pos of portfolio) {
+    const ctx = ctxByPos[pos.id]; if (!ctx || ctx.price == null) continue;
+    const v = positionVerdict(pos, ctx);
+    verdicts.push({ pos, v });
+    const k = alertKey(pos, v); if (!k) continue;
+    const key = `position:${k}`;
+    if (seen[key]) continue;
+    seen[key] = now;
+    const name = pos.label || (pos.isOption ? `${pos.underlying} $${pos.strike} ${pos.optionType || ''}`.trim() : pos.ticker);
+    const head = v.action === 'SELL' ? 'SELL' : v.action === 'TRIM' ? 'Take profit / tighten' : v.action === 'WATCH' ? 'Watch' : 'Move your stop';
+    out.push({ id: key, type: 'position', ticker: pos.ticker, ts: now, severity: v.severity,
+      title: `${head}: ${name}`,
+      body: `${v.reason} (${v.gainR >= 0 ? '+' : ''}${v.gainR.toFixed(1)}R, ${v.gainPct >= 0 ? '+' : ''}${v.gainPct.toFixed(1)}%, day ${v.daysHeld})`,
+      link: '/dashboard', action: v.action, rule: v.rule });
+  }
+  save(LS.seen, seen);
+  if (out.length) { const hist = load(LS.history, []); hist.unshift(...out); save(LS.history, hist.slice(0, MAX_HISTORY)); }
+  return Object.assign(out, { verdicts });
 }
 
 /** Show browser notifications for new alerts, via the service worker when present. */

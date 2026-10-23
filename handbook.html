@@ -481,12 +481,12 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.10</div>
+      <div class="kicker">Signal Desk · Handbook · v3.11</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
       <div id="hb-topnav"><a href="/today">← today</a> · <a href="/alerts">alerts</a> · <a href="/simulate">simulate</a> · <a href="/">stocks</a> · <a href="/crypto">crypto</a> · <a href="/metals">metals →</a></div>
-      <div>LAST UPDATED · 2026-10-22</div>
+      <div>LAST UPDATED · 2026-10-23</div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
   </header>
@@ -562,6 +562,7 @@
         <li><a href="#today">The Today tab — the simple version</a></li>
         <li><a href="#simulate">Simulate — paper auto-trading</a></li>
         <li><a href="#alerts">Alerts — the seven things that move a stock</a></li>
+        <li><a href="#exits">When to sell what you hold</a></li>
       </ul>
     </div>
 
@@ -1258,9 +1259,54 @@
       </div>
     </section>
 
+    <section id="exits">
+      <h2><span class="chnum">Chapter 20</span>When to sell what you hold</h2>
+      <p>Track anything from a card — a stock on Today or Stocks, a contract on Options, a coin on Crypto, gold or silver on Metals — and two things happen. The Dashboard shows a live verdict on it, and the Alerts tab notifies you when that verdict says act. <strong>Both read the same rulebook</strong> (one shared module), so the card, the Dashboard and the notification can never disagree.</p>
+
+      <h3>Track stores the plan, not just the price</h3>
+      <p>When you press <strong>+ Track</strong>, the position is saved with the card's stop and target. That matters: before this, a card could say "sell if it falls to $124" and the Dashboard would silently fall back to −5%. Now the stop you read is the stop that is enforced. Positions added by hand without a stop get a class default — 5% below entry for stocks, 2% for metals, 7% for crypto, half the premium for options — and the card says "(default)" so you know.</p>
+
+      <h3>The verdicts</h3>
+      <table class="cadence">
+        <thead><tr><th>Verdict</th><th>Stocks · metals · crypto</th><th>Options</th></tr></thead>
+        <tbody>
+          <tr><td><strong>SELL</strong></td><td>Stop hit · regime turns STRESS/CRISIS · setup BROKEN while losing · time-stop (15 days flat)</td><td>Premium at or below the stop (half your money) · under 7 days to expiry · expired</td></tr>
+          <tr><td><strong>TRIM</strong></td><td>Target (+2.5R) reached — sell half, trail the rest · overbought or EXTENDED on a +2R winner · 20-day average rolling over on a winner · earnings inside 5 days on a winner</td><td>+50% on the premium — sell half · +100% — sell the rest</td></tr>
+          <tr><td><strong>WATCH</strong></td><td>Within 0.3R of the stop · near the target · earnings inside 5 days · bought into a BROKEN setup (fresh, not yet losing)</td><td>Under 10 days to expiry · near the stop</td></tr>
+          <tr><td><strong>HOLD</strong></td><td>At +1R: move the stop to breakeven. At +2R: move it to +1R. Otherwise let it work.</td><td>Hold; sell half at +50%</td></tr>
+        </tbody>
+      </table>
+      <p>Each verdict carries the rule that produced it, in a sentence. SELL and TRIM notify once per rule per day; WATCH and "move your stop" once. Regime for stocks and metals is the VIX gate; for crypto it is BTC's realised volatility. The earnings check uses the next report date for stocks only.</p>
+
+      <div class="callout warn">
+        <span class="callout-label">What this is not</span>
+        <p>It is not a broker connection. Nothing is sold for you; the app tells you the rulebook says sell, and why. Notifications fire while the Alerts tab is open anywhere in your browser. The Dashboard reads positions on <em>this device</em> — there is no account yet, so a phone and a laptop each keep their own list.</p>
+      </div>
+    </section>
+
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 20</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 21</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.11<br/>2026-10-23</div>
+        <div class="what">
+          <h4>Sell alerts for what you hold — stocks, options, crypto, metals</h4>
+          <ul>
+            <li>The exit rulebook now lives in one shared module used by both the Dashboard and the Alerts tab, so the verdict you see and the notification you get can never differ. Alerts gained a <strong>Your position</strong> type: SELL and TRIM notify once per rule per day, "move your stop" once (Chapter 20).</li>
+            <li>The Dashboard understands <strong>crypto and metals</strong> (priced from Coinbase candles and Yahoo futures), not just stocks and options. Add by hand with a class word — <code>BTC 0.5 crypto</code>, <code>GC=F 1 metal</code> — or Track from a card.</li>
+            <li><strong>Track stores the plan.</strong> Every Track button — Today, Stocks, Options, Crypto, Metals — now writes the card's stop and target into the position. Previously the Dashboard silently used −5% regardless of what the card said.</li>
+            <li>Options exits added: half-premium stop, sell inside 7 days to expiry, take half at +50% and the rest at +100% — the same numbers the Options tab prints.</li>
+          </ul>
+          <h4 style="margin-top:16px;">Today and Stocks: the earnings gate now applies to every name</h4>
+          <ul>
+            <li>Scan-scored names (the ~480 not in the live poll) never saw the earnings gate, so a BUY could be a name reporting tomorrow. Both tabs now fetch the next report date for anything near a BUY and demote names inside 5 days — Today lists them under "leave these alone" with the days to the print. First live run caught ECL at 4 days.</li>
+            <li>Metals on Today now use the 2% stop floor the Metals tab and Dashboard use (a 5% floor put gold's stop three ATRs away).</li>
+            <li>Simulate now states what it does <em>not</em> simulate — the macro gate, the crypto regime, the earnings gate — and why a live account therefore takes fewer trades than it shows.</li>
+            <li>Verified end to end with one position of each class seeded: Dashboard and Alerts produced identical verdicts (SELL on a stopped-out stock, TRIM at a reached target, "move your stop" on a +2.3R coin, HOLD on a fresh option).</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.10<br/>2026-10-22</div>

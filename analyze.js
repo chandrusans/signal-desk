@@ -100,7 +100,7 @@ export function analyze(bars, extras = {}) {
   // extras.assetClass — 'equity' (default) | 'crypto'. Selects stop bounds and
   //                     turns off the earnings gate, which has no crypto analogue.
   const benchBars = extras.benchBars;
-  const assetClass = extras.assetClass === 'crypto' ? 'crypto' : 'equity';
+  const assetClass = ['crypto', 'metal'].includes(extras.assetClass) ? extras.assetClass : 'equity';
   const earnings = assetClass === 'crypto' ? null : extras.earnings;
   const closes = bars.map((b) => b.c);
   const price = closes[closes.length - 1];
@@ -375,6 +375,9 @@ export function analyze(bars, extras = {}) {
 const STOP_BOUNDS = {
   equity: { floorPct: 0.05, capPct: 0.10 },
   crypto: { floorPct: 0.03, capPct: 0.15 },
+  // Gold and silver move 1-2% a day; a 5% floor would put the stop three ATRs
+  // away and wreck the R:R. Matches the Metals tab's long-standing 2% floor.
+  metal:  { floorPct: 0.02, capPct: 0.10 },
 };
 
 function tradePlan({ price, atr14, atrPct, setup, ma10, ma20, assetClass = 'equity' }) {

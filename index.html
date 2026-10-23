@@ -2596,6 +2596,7 @@ import { runBacktest, walkForward } from './backtest.js';
   // Populated by loadMacro(); null until the first fetch lands.
   let macroRisk = null;
   let congressByTicker = {};
+  let earningsSoon = {};        // ticker -> { date, daysAway } when a report is inside 5 days
 
   function verdictForStock(p) {
     const s = p.score || 0;
@@ -2604,6 +2605,10 @@ import { runBacktest, walkForward } from './backtest.js';
     // priced off normal daily range and simply does not trade at that level
     // through a gap — same reason the earnings gate exists, one level up.
     if (macroRisk && macroRisk.level === 'blocked') return 'AVOID';
+    // Scan-scored names never saw the earnings gate server-side (fundamentals
+    // are per-ticker calls, too heavy for 500). Apply it here for the names
+    // that matter: anything close to a BUY.
+    if (earningsSoon[p.ticker]) return 'AVOID';
     const regimeBad = currentRegime?.level === 'stress'
                    || currentRegime?.level === 'crisis'
                    || currentRegime?.level === 'divergent';         // breadth collapse
@@ -2690,7 +2695,13 @@ import { runBacktest, walkForward } from './backtest.js';
           const btn = e.target.closest('.track-btn');
           const [ticker, priceStr] = btn.dataset.track.split('|');
           const price = parseFloat(priceStr);
-          const qtyStr = prompt(`Track ${ticker} in Dashboard\n\nHow many shares?`, '10');
+          const pk = picks.find(x => x.ticker === ticker);
+          // The stop and target on the card are what the Dashboard and Alerts
+          // must enforce — otherwise the card says "sell at $124" and the
+          // Dashboard silently uses -5%.
+          const planStop = pk?.analysis?.plan?.stop ?? pk?.scan?.stop ?? null;
+          const planTarget = pk?.analysis?.plan?.target ?? pk?.scan?.tgt ?? null;
+          const qtyStr = prompt(`Track ${ticker} in Dashboard\n\nHow many shares?${planStop ? `\nStop $${planStop.toFixed(2)} and target $${planTarget.toFixed(2)} from the plan will be stored.` : ''}`, '10');
           const qty = parseFloat(qtyStr);
           if (!qty || qty <= 0) return;
           try {
@@ -2701,6 +2712,8 @@ import { runBacktest, walkForward } from './backtest.js';
               ticker, qty,
               buyPrice: price,
               buyDate: new Date().toISOString().slice(0, 10),
+              assetClass: 'stock',
+              ...(planStop ? { stop: planStop, planStop, target: planTarget, planTarget } : {}),
             });
             localStorage.setItem(key, JSON.stringify(cur));
             btn.classList.add('added');
@@ -3430,6 +3443,7 @@ import { runBacktest, walkForward } from './backtest.js';
       rebuildPicksFromScan();
       renderPicks();
       renderSectorFilter();
+      loadEarningsGate();
 
       // Breadth from the full index is far more meaningful than from 30 names
       const withMa = scanRows.filter(r => r.a50 != null);
@@ -3605,6 +3619,24 @@ import { runBacktest, walkForward } from './backtest.js';
    * BUYs (t=-1.39) — no edge, because the median disclosure lag is 18 days.
    * It shows who traded what; it does not move a verdict.
    */
+  /** Earnings dates for the top of the list, so the EARNINGS gate applies to scan-scored names too. */
+  async function loadEarningsGate() {
+    const top = picks.slice(0, 60).map(p => p.ticker).filter(t => !t.startsWith('^'));
+    if (!top.length) return;
+    try {
+      const r = await fetch(`/api/fundamentals?tickers=${encodeURIComponent(top.join(','))}`, { cache: 'no-store' });
+      if (!r.ok) return;
+      const f = (await r.json()).fundamentals || {};
+      const next = {};
+      for (const [t, x] of Object.entries(f)) {
+        const e = x?.earnings; if (e && e.daysAway != null && e.daysAway >= 0 && e.daysAway <= 5) next[t] = e;
+      }
+      earningsSoon = next;
+      for (const p of picks) if (earningsSoon[p.ticker] && p.setup !== 'EARNINGS') { p.setup = 'EARNINGS'; p.setupReason = `Earnings in ${earningsSoon[p.ticker].daysAway}d (${earningsSoon[p.ticker].date}). No new entry — a gap through your stop is unmanageable.`; }
+      renderPicks();
+    } catch { /* gate simply stays open for these names */ }
+  }
+
   async function loadCongress() {
     try {
       const r = await fetch('/api/intel?op=congress&limit=45', { cache: 'no-store' });

@@ -1169,6 +1169,7 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
   let macro = null, stockRegime = null, cryptoReg = null;
   let stocks = [], coins = [], metals = [], options = [];
   let pfStats = null, btStats = null;
+  let earningsSoon = {};            // ticker -> { date, daysAway } inside 5 days
   let scanNote = '';
 
   function sizeMult() {
@@ -1217,7 +1218,7 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
   }
 
   // ═══ STEP 2 · what qualifies ═══
-  function card({ kind, name, sub, score, entry, stop, tgt, why, sell, caveat, link, sizing }) {
+  function card({ kind, name, sub, score, entry, stop, tgt, why, sell, caveat, link, sizing, track }) {
     return `
       <div class="pick">
         <div style="min-width:0;">
@@ -1236,9 +1237,27 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
         <div class="score">
           <div class="lbl">score</div><div class="big">${score}</div>
           <a href="${link}">full detail →</a>
+          ${track ? `<button class="refresh-btn track-btn" data-track='${JSON.stringify(track).replace(/'/g, '&#39;')}' style="display:block;margin-top:10px;width:100%;">+ Track</button>` : ''}
         </div>
       </div>`;
   }
+
+  // Track: writes the position WITH the card's stop and target, so the
+  // Dashboard and the Alerts tab enforce exactly what you read here.
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('.track-btn'); if (!b) return;
+    let p; try { p = JSON.parse(b.dataset.track); } catch { return; }
+    const unit = p.assetClass === 'option' ? 'contracts' : p.assetClass === 'crypto' ? `${p.ticker} (fractions fine)` : p.assetClass === 'metal' ? 'units (1 = 1 oz equivalent)' : 'shares';
+    const q = parseFloat(prompt(`Track ${p.label || p.ticker} in Dashboard\n\nHow many ${unit}?\nStop $${p.stop} and target $${p.target} from this card will be stored.`, String(p.suggestQty || 1)));
+    if (!(q > 0)) return;
+    try {
+      const key = 'sd-portfolio-v1'; const cur = JSON.parse(localStorage.getItem(key) || '[]');
+      const { suggestQty, ...pos } = p;
+      cur.push({ id: `${pos.ticker}-${Date.now()}`, qty: q, buyDate: new Date().toISOString().slice(0, 10), planStop: pos.stop, planTarget: pos.target, ...pos });
+      localStorage.setItem(key, JSON.stringify(cur));
+      b.textContent = '✓ tracked'; setTimeout(() => { b.textContent = '+ Track'; }, 2000);
+    } catch (err) { alert('Failed: ' + err.message); }
+  });
 
   function renderPicks() {
     const el = $('picks');
@@ -1266,6 +1285,7 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
         sizing: `<div class="cell"><div class="l">Buy this many</div><div class="v">${shares} sh</div></div>
                  <div class="cell"><div class="l">Max you can lose</div><div class="v stop">${money(shares * perShare, 0)}</div></div>`,
         link: r.kind === 'Metal' ? '/metals' : '/',
+        track: { ticker: r.kind === 'Metal' ? r.sym : r.t, label: r.kind === 'Metal' ? `${r.t} · ${r.name}` : undefined, buyPrice: r.p, stop: +r.stop.toFixed(4), target: +r.tgt.toFixed(4), assetClass: r.kind === 'Metal' ? 'metal' : 'stock', suggestQty: shares },
       }));
     }
 
@@ -1288,6 +1308,7 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
              <div class="cell"><div class="l">Why</div><div class="v" style="font-size:11px;font-weight:400;">one contract (${money(o.maxLoss, 0)}) is more than your ${money(risk, 0)} risk budget</div></div>`,
         caveat: 'Options can go to zero. The max-loss figure is real money, not a worst case.',
         link: '/options',
+        track: { ticker: o.occSymbol, underlying: o.underlying, optionType: o.direction, strike: o.strike, expiration: o.expiration, buyPrice: o.mid, stop: +o.stopPremium.toFixed(2), target: t1 ? +t1.premium.toFixed(2) : +(o.mid * 1.5).toFixed(2), isOption: true, multiplier: 100, assetClass: 'option', suggestQty: contracts || 1 },
       }));
     }
 
@@ -1310,6 +1331,7 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
           ? `Measured over ${btStats.years} years, this exact strategy lost money on crypto after Coinbase's retail fee (${btStats.expectancy}R per trade). The chart qualifies; the track record does not. If you trade it, trade it on a lower-fee venue and small.`
           : 'This strategy measured negative on crypto after retail exchange fees — see the Crypto tab before acting.',
         link: '/crypto',
+        track: { ticker: c.t, label: `${c.t} · ${c.name}`, buyPrice: c.p, stop: c.stop, target: c.tgt, assetClass: 'crypto', suggestQty: +(units).toPrecision(3) },
       }));
     }
 
@@ -1338,6 +1360,8 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
     const items = [];
     const ext = stocks.filter(r => r.su === 'EXTENDED').length;
     if (ext) items.push(`<strong>${ext} strong stocks that have run too far.</strong> They score well but are more than 6% above their 20-day average. Chasing here has poor odds — the rulebook says wait for them to pull back, then they may show up above.`);
+    const eg = Object.entries(earningsSoon);
+    if (eg.length) items.push(`<strong>${eg.length} name${eg.length > 1 ? 's' : ''} that would have qualified but report earnings inside 5 days</strong> — ${eg.slice(0, 8).map(([tk, e]) => `${tk} (${e.daysAway}d)`).join(', ')}. A gap through your stop fills at the open, not at the stop. Revisit after the print.`);
     if (pfStats) items.push(`<strong>pump.fun tokens.</strong> Only ${pfStats.exitablePct}% of live pairs have enough depth to sell into, and trading volume collapses ~99% within a week. If you must, the Crypto tab sizes each one to 1% of its pool. Most of them you cannot get out of.`);
     if (btStats && btStats.expectancy != null) items.push(`<strong>Trading crypto actively at retail fees.</strong> Over ${btStats.years} years and ${btStats.trades} trades this strategy returned ${btStats.expectancy}R per trade after Coinbase's fee — it loses. Bitcoin held over the same window did better than trading it.`);
     items.push(`<strong>Following congressional trades.</strong> Tested on 2,379 disclosed transactions: buys underperformed the market by 0.49% at 20 days, because the median filing arrives 18 days late. Shown as badges on the Stocks tab for context — never as a reason to buy.`);
@@ -1384,14 +1408,27 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
     for (const [sym, label] of [['GC=F', 'Gold'], ['SI=F', 'Silver']]) {
       const bars = quotes[sym]?.bars;
       if (!bars || bars.length < 60) continue;
-      const a = analyze(bars);
+      const a = analyze(bars, { assetClass: 'metal' });      // 2% floor / 10% cap, same as the Metals tab and Dashboard
       if (a.insufficient || !a.plan) continue;
-      metals.push({ t: label, name: sym === 'GC=F' ? 'XAU/USD' : 'XAG/USD', kind: 'Metal', p: quotes[sym].price ?? a.price,
+      metals.push({ t: label, sym, name: sym === 'GC=F' ? 'XAU/USD' : 'XAG/USD', kind: 'Metal', p: quotes[sym].price ?? a.price,
         sc: a.score, su: a.setup, reason: a.setupReason, stop: a.plan.stop, tgt: a.plan.target, rs: null });
     }
     stocks.push(...metals);
     stocks.sort((a, b) => (b.sc || 0) - (a.sc || 0));
     renderLight(); renderPicks();
+
+    // The earnings gate. Scan-scored names never saw it server-side, so check
+    // the ones that could qualify and demote any reporting inside 5 days.
+    try {
+      const cand = stocks.filter(r => r.kind === 'Stock' && verdict(r.su, r.sc, false) === 'BUY').slice(0, 40).map(r => r.t);
+      if (cand.length) {
+        const f = (await j(`/api/fundamentals?tickers=${encodeURIComponent(cand.join(','))}`)).fundamentals || {};
+        earningsSoon = {};
+        for (const [tk, x] of Object.entries(f)) { const e = x?.earnings; if (e && e.daysAway != null && e.daysAway >= 0 && e.daysAway <= 5) earningsSoon[tk] = e; }
+        for (const r of stocks) if (earningsSoon[r.t]) { r.su = 'EARNINGS'; r.reason = `Earnings in ${earningsSoon[r.t].daysAway}d (${earningsSoon[r.t].date}). No new entry — a gap through your stop is unmanageable.`; }
+        renderPicks(); renderAvoid();
+      }
+    } catch { /* gate stays open for these names */ }
 
     // 4. crypto
     try {

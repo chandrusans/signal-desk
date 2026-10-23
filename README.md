@@ -39,6 +39,14 @@ store this app does not have. First run captures a baseline and fires nothing
 old. Insider trades were measured before shipping (see handbook ch. 19): sells
 were followed by outperformance, buys were not significant on n=22.
 
+## Sell alerts for what you hold
+
+Track from any card (Today, Stocks, Options, Crypto, Metals) and the position is
+saved with that card's stop and target. The Dashboard shows a live verdict
+(SELL / TRIM / WATCH / HOLD) and the Alerts tab notifies on it. Both call
+`positionVerdict()` in `exits.js` — one rulebook, so they cannot disagree.
+Handbook ch. 20 lists every rule.
+
 ## What it does
 
 - **Live prices**: 1-year OHLC + volume via Yahoo Finance chart API (no auth key). Polls every 15s (Stocks) / 20s (Crypto) behind a 30s edge cache.
@@ -63,6 +71,7 @@ signal-desk/
 ├── metals.html        Gold / silver
 ├── handbook.html      Beginner reference + changelog (see CLAUDE.md — keep current)
 ├── analyze.js         Pure computation — indicators, score, setup, trade plan
+├── exits.js           The ONE exit rulebook — shared by Dashboard and Alerts
 ├── backtest.js        Point-in-time backtest + walk-forward validation
 ├── api/
 │   ├── quotes.js      Yahoo Finance proxy (bars, 60-ticker cap)

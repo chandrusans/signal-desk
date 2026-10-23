@@ -1057,7 +1057,7 @@ import { analyze, regime } from './analyze.js';
       chgEl.textContent = '—';
       return;
     }
-    const a = analyze(q.bars);
+    const a = analyze(q.bars, { assetClass: 'metal' });   // 2% floor, matches the formula below and the Dashboard
     if (a.insufficient) {
       body.innerHTML = `<p style="color: var(--ink-3); font-style: italic; font-family: var(--serif);">${a.reason}</p>`;
       return;
@@ -1093,7 +1093,7 @@ import { analyze, regime } from './analyze.js';
     const swingLo = Math.min(...recent.map(b => b.l));
 
     // Trade plan (simple)
-    const stopDist = Math.max(atr * 1.5, q.price * 0.02); // 1.5×ATR or 2% (metals move less %-wise than stocks)
+    const stopDist = Math.min(q.price * 0.10, Math.max(atr * 1.5, q.price * 0.02)); // 1.5×ATR, 2% floor, 10% cap — identical to analyze()'s metal bounds
     const stopLong = q.price - stopDist;
     const targetLong = q.price + 2.5 * stopDist;
 
@@ -1101,6 +1101,7 @@ import { analyze, regime } from './analyze.js';
     const setupCls = `setup-${a.setup}`;
 
     body.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin:-4px 0 6px;"><button class="track-btn" data-track="${ticker}|${q.price}|${stopLong}|${targetLong}|${ticker === 'GC=F' ? 'Gold · XAU/USD' : 'Silver · XAG/USD'}" style="font-family:var(--mono);font-size:10px;letter-spacing:0.08em;padding:5px 9px;border:1px dashed var(--rule);border-radius:3px;background:transparent;color:var(--ink-3);cursor:pointer;" title="Add to Dashboard with this stop and target">+ Track in Dashboard</button></div>
       <h3>Directional bias</h3>
       <div class="thesis">
         <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
@@ -1255,6 +1256,20 @@ import { analyze, regime } from './analyze.js';
     if (h < 24) return `${h}h`;
     return `${Math.floor(h / 24)}d`;
   }
+
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('.track-btn'); if (!b) return;
+    const [sym, p, stop, tgt, label] = b.dataset.track.split('|');
+    const price = parseFloat(p);
+    const q = parseFloat(prompt(`Track ${label} in Dashboard\n\nHow many units (1 unit = 1 troy oz equivalent, fractions fine)?\nStop $${(+stop).toFixed(2)} and target $${(+tgt).toFixed(2)} from the plan will be stored.`, '1'));
+    if (!(q > 0)) return;
+    try {
+      const key = 'sd-portfolio-v1'; const cur = JSON.parse(localStorage.getItem(key) || '[]');
+      cur.push({ id: `${sym}-${Date.now()}`, ticker: sym, label, qty: q, buyPrice: price, buyDate: new Date().toISOString().slice(0, 10), assetClass: 'metal', stop: +stop, planStop: +stop, target: +tgt, planTarget: +tgt });
+      localStorage.setItem(key, JSON.stringify(cur));
+      b.textContent = '✓ tracked'; setTimeout(() => { b.textContent = '+ Track in Dashboard'; }, 2000);
+    } catch (err) { alert('Failed: ' + err.message); }
+  });
 
   renderCalendar();
   pull();
