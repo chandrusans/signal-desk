@@ -28,13 +28,16 @@ check('App data is current', (Date.now() - last.t) < 3 * 86400e3, `last bar ${LA
 console.log('\n── 1. Close prices vs NASDAQ historical (independent of Yahoo) ──');
 const mdy = (iso) => { const [y, m, d] = iso.split('-'); return `${+m}/${+d}/${y}`; };
 const nasdaqHist = async (t) => { const d = await j(`https://api.nasdaq.com/api/quote/${t.replace('-', '.')}/historical?assetclass=stocks&fromdate=${PREV}&limit=5`, { Accept: 'application/json' }); return (d.data?.tradesTable?.rows || []).map((r) => [r.date, 0, 0, 0, r.close.replace(/[$,]/g, '')]); };
-let priceOK = 0, priceN = 0, worst = 0;
+let priceOK = 0, priceN = 0, worst = 0, cmpDay = LAST;
 for (const t of SAMPLE) {
   try {
     const rows = await nasdaqHist(t);
-    const st = rows.find((r) => r[0] === mdy(LAST)); const stPrev = rows.find((r) => r[0] === mdy(PREV));
-    const bars = q.quotes[t]?.bars; const app = bars?.find((b) => day(b.t) === LAST);
-    if (!st || !app) { console.log(`  ${t.padEnd(5)} no row for ${LAST} (stooq ${!!st}, app ${!!app})`); continue; }
+    // NASDAQ posts a session's row after the close; while the app already shows today's
+    // live bar, compare the most recent session BOTH sources have (usually yesterday).
+    let st = rows.find((r) => r[0] === mdy(LAST)); let stPrev = rows.find((r) => r[0] === mdy(PREV));
+    const bars = q.quotes[t]?.bars; let app = bars?.find((b) => day(b.t) === LAST);
+    if (!st && bars) { cmpDay = PREV; st = stPrev; app = bars.find((b) => day(b.t) === PREV); const i = rows.findIndex((r) => r[0] === mdy(PREV)); stPrev = i >= 0 ? rows[i + 1] : null; }
+    if (!st || !app) { console.log(`  ${t.padEnd(5)} no row for ${cmpDay} (nasdaq ${!!st}, app ${!!app})`); continue; }
     const stClose = +st[4], appClose = app.c, diff = Math.abs(appClose - stClose) / stClose * 100;
     const stChg = stPrev ? (stClose / +stPrev[4] - 1) * 100 : null;
     const appChg = q.quotes[t].changePct;
@@ -43,7 +46,7 @@ for (const t of SAMPLE) {
   } catch (e) { console.log(`  ${t} nasdaq unavailable: ${e.message}`); }
   await sleep(250);
 }
-check('Closes match independent source', priceN > 0 && priceOK === priceN, `${priceOK}/${priceN} within 0.05%, worst Δ ${worst.toFixed(3)}%`);
+check('Closes match independent source', priceN > 0 && priceOK === priceN, `${priceOK}/${priceN} within 0.05%, worst Δ ${worst.toFixed(3)}%${cmpDay !== LAST ? ` (session ${cmpDay}: NASDAQ has not posted ${LAST} yet)` : ''}`);
 
 // ── 2. ATR / stop / target arithmetic, recomputed from raw bars ───────────
 console.log('\n── 2. Trade-plan arithmetic (independent recomputation) ──');
@@ -84,7 +87,8 @@ check('Big-move rule catches the day\'s largest movers', caught >= 4, `${caught}
 try {
   const m = movers[0]; const rs = await nasdaqHist(m.t); const a = rs.find((r) => r[0] === mdy(LAST)), p = rs.find((r) => r[0] === mdy(PREV));
   const ind = a && p ? (+a[4] / +p[4] - 1) * 100 : null;
-  check('Top mover confirmed by independent source', ind != null && Math.abs(ind - m.c) < 0.3, `${m.t} app ${pct(m.c)} nasdaq ${pct(ind)}`);
+  if (!a) console.log(`  NOTE  Top mover ${m.t} ${pct(m.c)}: NASDAQ has not posted the ${LAST} session yet — re-run after the close to confirm independently`);
+  else check('Top mover confirmed by independent source', ind != null && Math.abs(ind - m.c) < 0.3, `${m.t} app ${pct(m.c)} nasdaq ${pct(ind)}`);
 } catch (e) { console.log('  (independent confirm skipped: ' + e.message + ')'); }
 
 // ── 5. EARNINGS facts vs NASDAQ's calendar (different endpoint) ──────────
