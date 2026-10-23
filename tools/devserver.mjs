@@ -21,6 +21,7 @@ const PAGES = {
   '/crypto': 'crypto.html',
   '/metals': 'metals.html',
   '/handbook': 'handbook.html',
+  '/research': 'research.html',
 };
 
 const TYPES = {

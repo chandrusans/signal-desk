@@ -978,6 +978,7 @@
       <a href="/options" class="tab" data-view="options" role="tab" aria-selected="false">Options</a>
       <a href="/crypto" class="tab" data-view="crypto" role="tab" aria-selected="false">Crypto</a>
       <a href="/metals" class="tab" data-view="metals" role="tab" aria-selected="false">Metals</a>
+      <a href="/research" class="tab" data-view="research" role="tab" aria-selected="false">Research</a>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -1274,7 +1275,7 @@ import { loadJournal, riskBudget } from '/risk.js';
   }
 
   // ═══ STEP 2 · what qualifies ═══
-  function card({ kind, name, sub, score, entry, stop, tgt, why, sell, caveat, link, sizing, track }) {
+  function card({ kind, name, sub, score, entry, stop, tgt, why, sell, caveat, link, sizing, track, research }) {
     return `
       <div class="pick">
         <div style="min-width:0;">
@@ -1293,6 +1294,7 @@ import { loadJournal, riskBudget } from '/risk.js';
         <div class="score">
           <div class="lbl">score</div><div class="big">${score}</div>
           <a href="${link}">full detail →</a>
+          ${research ? `<a href="/research?t=${research}" style="display:block;margin-top:4px;">research →</a>` : ''}
           ${track ? `<button class="refresh-btn track-btn" data-track='${JSON.stringify(track).replace(/'/g, '&#39;')}' style="display:block;margin-top:10px;width:100%;">+ Track</button>` : ''}
         </div>
       </div>`;
@@ -1344,6 +1346,7 @@ import { loadJournal, riskBudget } from '/risk.js';
         sizing: `<div class="cell"><div class="l">Buy this many</div><div class="v">${shares} sh</div></div>
                  <div class="cell"><div class="l">Max you can lose</div><div class="v stop">${money(shares * perShare, 0)}</div></div>`,
         link: r.kind === 'Metal' ? '/metals' : '/',
+        research: r.kind === 'Metal' ? null : r.t,
         track: { ticker: r.kind === 'Metal' ? r.sym : r.t, label: r.kind === 'Metal' ? `${r.t} · ${r.name}` : undefined, buyPrice: r.p, stop: +r.stop.toFixed(4), target: +r.tgt.toFixed(4), assetClass: r.kind === 'Metal' ? 'metal' : 'stock', suggestQty: shares },
       }));
     }
@@ -1367,6 +1370,7 @@ import { loadJournal, riskBudget } from '/risk.js';
              <div class="cell"><div class="l">Why</div><div class="v" style="font-size:11px;font-weight:400;">one contract (${money(o.maxLoss, 0)}) is more than your ${money(risk, 0)} risk budget</div></div>`,
         caveat: 'Options can go to zero. The max-loss figure is real money, not a worst case.',
         link: '/options',
+        research: o.underlying,
         track: { ticker: o.occSymbol, underlying: o.underlying, optionType: o.direction, strike: o.strike, expiration: o.expiration, buyPrice: o.mid, stop: +o.stopPremium.toFixed(2), target: t1 ? +t1.premium.toFixed(2) : +(o.mid * 1.5).toFixed(2), isOption: true, multiplier: 100, assetClass: 'option', suggestQty: contracts || 1 },
       }));
     }

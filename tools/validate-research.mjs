@@ -1,0 +1,54 @@
+// Re-runnable check of the Research tab's forensic module against real SEC filers.
+//   npm run validate:research      (needs network; the wrapper sets the macOS CA bundle)
+import { forensic, impliedGrowth } from '../api/_forensic.js';
+
+let pass = 0, fail = 0;
+const check = (name, ok, detail = '') => { (ok ? pass++ : fail++); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
+const near = (a, b, tol) => a != null && b != null && Math.abs(a - b) <= tol;
+
+// ── Pure math: the implied-growth solver inverts the DCF ──
+{
+  const fcf = 1e9, mcap = 25e9;
+  const g = impliedGrowth(fcf, mcap) / 100;
+  let v = 0, f = fcf; for (let t = 1; t <= 10; t++) { f *= 1 + g; v += f / Math.pow(1.1, t); } v += (f * 1.03 / 0.07) / Math.pow(1.1, 10);
+  check('Implied growth solver reproduces the market cap', near(v, mcap, mcap * 0.001), `g=${(g * 100).toFixed(2)}% → value ${(v / 1e9).toFixed(3)}B vs ${mcap / 1e9}B`);
+  check('Zero/negative FCF → no implied growth', impliedGrowth(-5, 100) === null && impliedGrowth(0, 100) === null);
+}
+
+// ── Apple: numbers match the FY2025 10-K ──
+const aapl = await forensic('AAPL', { sector: 'Information Technology' });
+const a25 = aapl.years?.find((y) => y.fy === '2025');
+check('AAPL FY2025 net income = $112.010B as filed', near(a25?.netIncome, 112010e6, 1e6), `${a25?.netIncome}`);
+check('AAPL FY2025 operating cash flow = $111.482B as filed', near(a25?.cfo, 111482e6, 1e6), `${a25?.cfo}`);
+check('AAPL FY2025 diluted EPS = 7.46 as filed', near(a25?.eps, 7.46, 0.005), `${a25?.eps}`);
+check('AAPL gross margin computed from revenue and gross profit (46.9%)', near(a25?.gm, 46.9, 0.2), `${a25?.gm}%`);
+check('AAPL cash verdict REAL (CFO/NI ≈ 1.19× over 6 yrs)', aapl.cash.verdict === 'REAL' && aapl.cash.avgRatio > 1.0, `${aapl.cash.verdict} ${aapl.cash.avgRatio}×`);
+check('AAPL working capital: negative cash conversion cycle (pays suppliers after collecting)', aapl.workingCapital.years.slice(-1)[0]?.ccc < 0, `CCC ${aapl.workingCapital.years.slice(-1)[0]?.ccc}d`);
+check('AAPL share count fell over the window (buybacks)', aapl.allocation.shareChangePct < -5, `${aapl.allocation.shareChangePct}%`);
+check('AAPL historical P/E all in 10–80× range', aapl.valuation.years.every((y) => y.pe == null || (y.pe > 10 && y.pe < 80)), aapl.valuation.years.map((y) => `${y.fy}:${y.pe}`).join(' '));
+check('AAPL fair value has three anchors (P/E, P/FCF, EV/EBITDA)', aapl.synthesis.fairValue?.anchors?.length === 3);
+check('AAPL credibility from NASDAQ surprises (≥4 quarters)', aapl.credibility.quarters.length >= 4 && aapl.credibility.score != null);
+
+// ── Nvidia: tag switch and 2021 / 2024 splits ──
+const nvda = await forensic('NVDA', { sector: 'Information Technology' });
+const nLast = nvda.years[nvda.years.length - 1];
+check('NVDA revenue present in the latest FY despite the XBRL tag switch', nLast.revenue > 100e9, `${nLast.fy}: ${nLast.revenue}`);
+check('NVDA share count split-adjusted: change within ±30% over the window (raw data shows +877%)', Math.abs(nvda.allocation.shareChangePct) < 30, `${nvda.allocation.shareChangePct}% · adjusted ${nvda.splitsAdjusted.join(', ')}`);
+check('NVDA diluted shares consistent across years (max/min < 1.5)', Math.max(...nvda.years.map((y) => y.shares)) / Math.min(...nvda.years.map((y) => y.shares)) < 1.5);
+check('NVDA working capital days computed (DSO present)', nvda.workingCapital.years.slice(-1)[0]?.dso > 0);
+check('NVDA CEO pay read from the DEF 14A proxy tag', nvda.pay.latest?.ceoPay > 1e6, `$${(nvda.pay.latest?.ceoPay / 1e6).toFixed(1)}M = ${nvda.pay.latest?.pctOfNetIncome}% of NI`);
+
+// ── JPMorgan: a bank degrades honestly ──
+const jpm = await forensic('JPM', { sector: 'Financials' });
+check('JPM flagged as financial; cash / working capital / moat / allocation = N/A', jpm.isFinancial && jpm.cash.verdict === 'N/A' && jpm.workingCapital.verdict === 'N/A' && jpm.moat.verdict === 'N/A' && jpm.allocation.verdict === 'N/A');
+check('JPM still gets P/E history and a credibility score', jpm.valuation.median5y.pe > 5 && jpm.credibility.score != null, `median P/E ${jpm.valuation.median5y.pe}`);
+check('JPM question is about credit quality, not margins', /credit|reserve|charge-off/i.test(jpm.synthesis.question));
+
+// ── Shape ──
+for (const [t, f] of [['AAPL', aapl], ['NVDA', nvda], ['JPM', jpm]]) {
+  check(`${t} response shape: verdicts, synthesis, sources, notAvailable`, ['cash', 'workingCapital', 'moat', 'allocation', 'valuation', 'credibility', 'pay', 'multibagger', 'synthesis'].every((k) => f[k]) && f.sources.length === 3 && f.notAvailable.length >= 4 && typeof f.synthesis.question === 'string');
+}
+check('Unknown ticker → explicit error, not a throw', (await forensic('ZZZZZZ')).error != null);
+
+console.log(`\n${pass}/${pass + fail} passed`);
+process.exit(fail ? 1 : 0);

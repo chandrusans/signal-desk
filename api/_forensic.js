@@ -71,14 +71,18 @@ async function cikFor(ticker) {
   return cikCache[ticker] || cikCache[ticker.replace('.', '-')] || cikCache[ticker.replace('-', '.')] || null;
 }
 
-/** Fiscal-year values keyed by period end, from annual filings, latest filing wins (restatements). */
-function series(facts, tags, instant) {
+/** Fiscal-year values keyed by period end. All fallback tags are MERGED (companies
+ *  switch tags between years — Nvidia moved from RevenueFromContract… to Revenues in
+ *  2022), and for each year the latest-filed value wins, so restatements and
+ *  split-adjusted comparatives replace the originals. */
+function series(facts, tags, instant, forms = ANNUAL_FORMS) {
+  const byEnd = new Map();
+  const used = new Set();
   for (const tag of tags) {
     const units = facts[tag]?.units; if (!units) continue;
     const unit = Object.keys(units).find((k) => /^USD|shares/.test(k)) || Object.keys(units)[0];
-    const byEnd = new Map();
     for (const r of units[unit]) {
-      if (!ANNUAL_FORMS.has(r.form) || r.val == null) continue;
+      if ((forms && !forms.has(r.form)) || r.val == null) continue;
       if (instant) { if (r.fp !== 'FY') continue; }
       else {
         if (!r.start) continue;
@@ -86,11 +90,28 @@ function series(facts, tags, instant) {
         if (span < 350 || span > 380) continue;
       }
       const prev = byEnd.get(r.end);
-      if (!prev || r.filed > prev.filed) byEnd.set(r.end, r);
+      if (!prev || r.filed > prev.filed) { byEnd.set(r.end, r); used.add(tag); }
     }
-    if (byEnd.size >= 2) return { tag, map: byEnd };
   }
-  return null;
+  return byEnd.size >= 2 ? { tag: [...used].join('+'), map: byEnd } : null;
+}
+
+/** Older 10-Ks report share counts and EPS before later stock splits. Walking back
+ *  from the latest year, a jump of ≥1.8× between adjacent years is a split; the
+ *  older years are scaled by the nearest plausible split ratio so share counts,
+ *  EPS and (split-adjusted) prices line up. */
+function adjustSplits(Y) {
+  const RATIOS = [1.5, 2, 3, 4, 5, 6, 7, 8, 10, 15, 20, 50];
+  let f = 1;
+  for (let i = Y.length - 2; i >= 0; i--) {
+    const raw = Y[i].shares, next = Y[i + 1].shares;
+    if (raw > 0 && next > 0) {
+      const jump = next / (raw * f);
+      if (jump >= 1.8) { const r = RATIOS.reduce((b, x) => (Math.abs(x - jump) < Math.abs(b - jump) ? x : b), RATIOS[0]); f *= r; Y[i].splitAdjusted = r; }
+    }
+    if (f !== 1) { if (Y[i].shares != null) Y[i].shares *= f; if (Y[i].eps != null) Y[i].eps /= f; }
+  }
+  return Y;
 }
 
 function nearest(map, end, tolDays = 12) {
@@ -157,7 +178,7 @@ async function fetchNasdaq(ticker) {
 }
 
 /** Solve for the FCF growth rate that makes a 10-year DCF equal today's market cap. */
-function impliedGrowth(fcf, mcap, r = 0.10, gT = 0.03, N = 10) {
+export function impliedGrowth(fcf, mcap, r = 0.10, gT = 0.03, N = 10) {
   if (!(fcf > 0) || !(mcap > 0)) return null;
   const value = (g) => { let v = 0, f = fcf; for (let t = 1; t <= N; t++) { f *= 1 + g; v += f / Math.pow(1 + r, t); } return v + (f * (1 + gT) / (r - gT)) / Math.pow(1 + r, N); };
   let lo = -0.5, hi = 1.5;
@@ -175,16 +196,21 @@ export async function forensic(ticker, { sector = null } = {}) {
   const ecd = factsDoc.facts?.['ecd'] || {};
   const S = {};
   for (const [k, tags] of Object.entries(TAGS)) S[k] = series(gaap, tags, INSTANT.has(k));
-  S.ceoPay = series(ecd, ['PeoTotalCompAmt'], false);
+  S.ceoPay = series(ecd, ['PeoTotalCompAmt'], false, null);      // filed on DEF 14A proxies, not 10-Ks
 
   const anchor = S.netIncome || S.cfo || S.revenue;
   if (!anchor) return { ticker, cik, error: 'no annual income or cash-flow facts in SEC XBRL for this filer' };
   const ends = [...anchor.map.keys()].sort().slice(-6);
-  const years = ends.map((end) => {
-    const g = (k) => nearest(S[k]?.map, end, INSTANT.has(k) ? 12 : 12);
+  const raw = ends.map((end) => {
+    const g = (k) => nearest(S[k]?.map, end, 12);
     const y = { fy: end.slice(0, 4), end };
     for (const k of Object.keys(TAGS)) y[k] = g(k);
     y.ceoPay = nearest(S.ceoPay?.map, end, 400);     // pay-vs-performance table covers the year; dates vary
+    return y;
+  });
+  adjustSplits(raw);
+  const years = raw.map((y) => {
+    const end = y.end;
     if (y.grossProfit == null && y.revenue != null && y.cogs != null) y.grossProfit = y.revenue - y.cogs;
     if (y.cogs == null && y.revenue != null && y.grossProfit != null) y.cogs = y.revenue - y.grossProfit;
     y.fcf = y.cfo != null ? y.cfo - (y.capex || 0) : null;
@@ -230,7 +256,7 @@ export async function forensic(ticker, { sector = null } = {}) {
   const ratios = cash.years.map((c) => c.ratio).filter((x) => x != null);
   const gaps = cash.years.map((c) => (c.gap != null && Y.find((y) => y.fy === c.fy)?.revenue > 0 ? c.gap / Y.find((y) => y.fy === c.fy).revenue : null)).filter((x) => x != null);
   cash.avgRatio = r2(ratios.length ? sum(ratios) / ratios.length : null);
-  cash.gapTrend = gaps.length >= 4 ? (sum(gaps.slice(-2)) / 2 - sum(gaps.slice(0, 2)) / 2) * 100 : null;   // pct of revenue, + = widening
+  cash.gapTrend = gaps.length >= 4 ? r2((sum(gaps.slice(-2)) / 2 - sum(gaps.slice(0, 2)) / 2) * 100) : null;   // pct of revenue, + = widening
   cash.divergentYears = cash.years.filter((c) => c.patUpCfoDown).map((c) => c.fy);
   cash.negativeYears = cash.years.filter((c) => c.cfoNegPatPos).map((c) => c.fy);
   if (isFinancial) { cash.verdict = 'N/A'; cash.note = 'Banks and insurers: operating cash flow swings with deposits, trading books and reserves, so CFO vs net income says nothing about earnings quality. Use the credibility and valuation sections.'; }
@@ -284,7 +310,11 @@ export async function forensic(ticker, { sector = null } = {}) {
   alloc.shareChangePct = first.shares && last.shares ? r1(((last.shares - first.shares) / first.shares) * 100) : null;
   alloc.debtChange = first.debt != null && last.debt != null ? last.debt - first.debt : null;
   alloc.buybackOffsetBySbc = T.buybacks > 0 && T.sbc > 0 ? r1((T.sbc / T.buybacks) * 100) : null;
-  if (isFinancial && T.fcf === 0) { alloc.verdict = 'N/A'; alloc.note = 'Free cash flow is not meaningful for a bank; dividends and buybacks below are still the filed numbers.'; }
+  if (isFinancial) {
+    alloc.verdict = 'N/A'; alloc.payoutPctFcf = null; alloc.acqPctFcf = null;
+    alloc.note = `Free cash flow is not meaningful for a bank, so no value-creation verdict. The filed numbers: $${(T.dividends / 1e9).toFixed(1)}B in dividends and $${(T.buybacks / 1e9).toFixed(1)}B in buybacks over ${n} years${alloc.shareChangePct != null ? `; share count ${alloc.shareChangePct >= 0 ? '+' : ''}${alloc.shareChangePct}%` : ''}.`;
+    if (alloc.shareChangePct != null) alloc.points.push(alloc.note);
+  }
   else {
     let good = 0, bad = 0;
     if (alloc.shareChangePct != null) { if (alloc.shareChangePct <= -2) { good++; alloc.points.push(`Share count fell ${Math.abs(alloc.shareChangePct)}% — buybacks actually shrank the float.`); } else if (alloc.shareChangePct >= 2 && T.buybacks > 0) { bad++; alloc.points.push(`Spent $${(T.buybacks / 1e9).toFixed(1)}B on buybacks yet the share count ROSE ${alloc.shareChangePct}% — buybacks only mopped up stock compensation.`); } }
@@ -363,7 +393,7 @@ export async function forensic(ticker, { sector = null } = {}) {
   // ── 10. Synthesis ────────────────────────────────────────────────────────
   const bull = [], flags = [];
   if (cash.verdict === 'REAL') bull.push(`Profits are cash: CFO/net income ${cash.avgRatio}× over ${n} years.`);
-  if (moat.verdict === 'WIDE') bull.push(`Wide-moat numbers: gross margin ${r1(last.gm)}%, ROCE ${r1(last.roce)}%.`);
+  if (moat.verdict === 'WIDE') bull.push(`Wide-moat numbers: ${last.gm != null ? `gross margin ${r1(last.gm)}%, ` : ''}ROCE ${r1(last.roce)}%.`);
   if (alloc.verdict === 'VALUE CREATORS') bull.push(alloc.points.find((p) => /Share count fell|compounding/.test(p)) || 'Capital allocation creates value.');
   if (valuation.verdict?.startsWith('CHEAP')) bull.push(valuation.note.split('.')[0] + '.');
   if (valuation.revenueCagr >= 15) bull.push(`Revenue compounding at ${valuation.revenueCagr}%/yr.`);
@@ -382,14 +412,16 @@ export async function forensic(ticker, { sector = null } = {}) {
   const question =
     cash.verdict === 'MANUFACTURED?' || cash.verdict === 'WATCH' ? `Operating cash flow has lagged reported profit (${cash.avgRatio}× on average). Where exactly is the difference sitting — receivables, inventory, capitalised costs — and when does it convert?` :
     wc.verdict === 'CONSUMING CASH' ? `The cash conversion cycle lengthened ${wc.change} days. Are customers paying slower by choice (financing growth) or by necessity (pricing power gone)?` :
-    valuation.verdict?.startsWith('EXPENSIVE') && valuation.impliedFcfGrowth != null ? `The price implies ${valuation.impliedFcfGrowth}% free-cash-flow growth for a decade against ${valuation.revenueCagr}% historical revenue growth. What specifically accelerates it?` :
+    valuation.verdict?.startsWith('EXPENSIVE') && valuation.impliedFcfGrowth != null ? `The price implies ${valuation.impliedFcfGrowth}% free-cash-flow growth for a decade; revenue grew ${valuation.revenueCagr}%/yr and EPS ${valuation.epsCagr ?? '?'}%/yr over the last ${n - 1} years, the EPS part helped by buybacks. Which of the two does the next decade look like, and why?` :
     alloc.verdict === 'VALUE DESTROYERS' ? `Buybacks have not reduced the share count and payouts exceed free cash flow. Is the capital-return programme funded by operations or by the balance sheet?` :
     moat.verdict === 'NONE EVIDENT' ? `Gross margin is ${r1(last.gm)}% and ROCE ${r1(last.roce)}%. What stops a competitor from pricing you out?` :
+    isFinancial ? `The filings tagged here do not show credit quality. What are the reserve build and net charge-off trends, and how much of the ${valuation.epsCagr != null ? valuation.epsCagr + '%/yr ' : ''}EPS growth came from the ${alloc.shareChangePct != null ? Math.abs(alloc.shareChangePct) + '% ' : ''}smaller share count rather than earnings?` :
     `Margins held and cash backs profit. What is the one input cost or customer whose change would break that?`;
 
   return {
     ticker, cik, name: factsDoc.entityName || monthly?.name || ticker, sector, isFinancial, asOf: Date.now(),
     fiscalYears: Y.map((y) => y.fy), latestFiscalEnd: last.end,
+    splitsAdjusted: Y.filter((y) => y.splitAdjusted).map((y) => `${y.fy}: ×${y.splitAdjusted}`),
     years: Y.map((y) => ({ fy: y.fy, end: y.end, revenue: y.revenue, netIncome: y.netIncome, cfo: y.cfo, capex: y.capex, fcf: y.fcf, grossProfit: y.grossProfit, opIncome: y.opIncome, ebitda: y.ebitda, eps: y.eps, shares: y.shares, debt: y.debt, cash: y.cashAll, equity: y.equity, assets: y.assets, ar: y.ar, inventory: y.inventory, ap: y.ap, gm: r1(y.gm), om: r1(y.om), roce: r1(y.roce), roic: r1(y.roic), price: r2(y.price) })),
     cash, workingCapital: wc, moat, allocation: alloc, valuation, credibility, pay, multibagger,
     synthesis: { bull: bull.slice(0, 3), flags: flags.slice(0, 3), question, fairValue: valuation.fairValue },

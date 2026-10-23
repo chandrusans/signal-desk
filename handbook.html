@@ -481,7 +481,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.14</div>
+      <div class="kicker">Signal Desk · Handbook · v3.15</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -565,6 +565,7 @@
         <li><a href="#exits">When to sell what you hold</a></li>
         <li><a href="#phone">Alerts on your phone — Telegram, WhatsApp, ntfy</a></li>
         <li><a href="#riskengine">Risk engine &amp; trade journal</a></li>
+        <li><a href="#research">Research — the seven questions from the filings</a></li>
       </ul>
     </div>
 
@@ -1340,9 +1341,56 @@
       </div>
     </section>
 
+    <section id="research">
+      <h2><span class="chnum">Chapter 23</span>Research — the seven questions, answered from the filings</h2>
+      <p>The rest of the desk answers <em>when</em>. The Research tab answers <em>what</em>: is this a business worth owning at all, and what is the price assuming? Type a ticker and it reads the company's own SEC filings (XBRL "companyfacts" — fifteen-plus years of income statement, cash flow and balance sheet as filed), NASDAQ's profile, analyst consensus and earnings record, the news feed, the sector peers and the sector ETFs, and lays the answers out as the seven standard research questions plus the forensic checks a short-seller would run.</p>
+      <h3>The seven questions and where each answer comes from</h3>
+      <table>
+        <thead><tr><th>Question</th><th>Answered from</th><th>What the free data cannot do</th></tr></thead>
+        <tbody>
+          <tr><td>1 · The business</td><td>NASDAQ description and industry; revenue, margins, R&amp;D intensity from the 10-K; moat score; analyst consensus and target; news tone; chart setup</td><td>Customer and segment concentration (10-K prose, not tagged)</td></tr>
+          <tr><td>2 · Trade setup</td><td>The scan's plan for the ticker — one entry, stop, 2.5R target</td><td>—</td></tr>
+          <tr><td>3 · News filter</td><td>The feed, tagged "matters" when the story is about this company and in an alert category</td><td>—</td></tr>
+          <tr><td>4 · Earnings call</td><td>EPS vs consensus for the last quarters and a credibility score</td><td>Transcripts — the page hands you a prompt carrying the beat/miss record to use with the transcript you fetch</td></tr>
+          <tr><td>5 · Portfolio risk</td><td>Lives on the Dashboard, where your positions are</td><td>—</td></tr>
+          <tr><td>6 · Valuation</td><td>P/E, EV/EBITDA, P/FCF today vs the stock's <em>own</em> 5-year medians; percentile among sector peers' P/E; the FCF growth a 10-year DCF needs to justify today's price; a fair-value range from own-history multiples</td><td>Peer EV/EBITDA and P/FCF (only P/E is free for the peer set)</td></tr>
+          <tr><td>7 · Macro &amp; sector</td><td>10-year yield change, VIX regime, dollar, the macro calendar, 1m/3m sector-ETF returns vs SPY, where this stock's sector sits</td><td>Anything beyond "textbook tendency" — the page says which sectors usually benefit from a rates move, not that they will</td></tr>
+        </tbody>
+      </table>
+      <h3>The forensic checks</h3>
+      <ul>
+        <li><strong>Cash flow vs profit.</strong> Operating cash flow divided by net income, every year; years profit rose while cash fell; years cash was negative while profit was positive; accruals as % of assets. Verdict REAL (≥0.9× on average, no bad years, gap not widening), WATCH, or MANUFACTURED? (&lt;0.7×, or negative-cash years, or repeated divergence with a widening gap). The research behind it is Sloan (1996): high-accrual firms underperform.</li>
+        <li><strong>Working capital.</strong> Debtor, inventory and creditor days and the cash conversion cycle, five years. MORE EFFICIENT if the cycle shortened 5+ days, CONSUMING CASH if it lengthened 10+ days or customers take 10+ more days to pay.</li>
+        <li><strong>Moat, 0–10.</strong> Gross margin level (3), margin trend (2), ROCE (3), and whether margins held through the 2022–23 inflation cycle (2). WIDE ≥8, NARROW ≥5. The <em>kind</em> of moat is a judgment the page leaves to you.</li>
+        <li><strong>Capital allocation.</strong> Five-year totals of free cash flow, dividends, buybacks, capex, R&amp;D, acquisitions and stock compensation; share-count change; debt change. VALUE CREATORS needs a shrinking share count or returns funded from operations, ROIC ≥15%, and no acquisition binge that diluted returns; VALUE DESTROYERS is the reverse.</li>
+        <li><strong>Executive pay</strong> as % of net income (SEC pay-versus-performance tag) — the US stand-in for "promoter salary"; promoter pledging has no US equivalent, and related-party loans are 10-K prose.</li>
+        <li><strong>Multibagger criteria</strong>, honestly adapted: revenue compounding ≥10%, ROIC ≥15% and holding, core reinvestment vs acquisitions. "Fewer than 5 analysts" fails for every S&P 500 name by construction, and insider ownership is not in free structured data — both are marked as such instead of scored.</li>
+      </ul>
+      <h3>Three things to know</h3>
+      <ul>
+        <li><strong>Banks and insurers</strong> get N/A on cash flow, working capital, moat and allocation — those measures are meaningless for a balance-sheet business — and a question about credit quality instead.</li>
+        <li><strong>Splits.</strong> Older filings report pre-split share counts and EPS; the page detects a ≥1.8× jump between adjacent years and scales the older years, and says so under the valuation table.</li>
+        <li><strong>Fair value is not a forecast.</strong> It is the stock's own median multiples applied to its latest numbers, ±10%. A great business above its range is still a great business; the range tells you what you are paying for that.</li>
+      </ul>
+      <p>Every section ends in a <strong>copy-prompt</strong> button: the thirteen research prompts (the seven above plus the forensic ones) pre-filled with the filed numbers, so the qualitative work — transcripts, 10-K prose, the kind of moat — can be done in Claude with the right figures in front of it instead of from memory.</p>
+    </section>
+
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 23</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 24</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.15<br/>2026-10-23</div>
+        <div class="what">
+          <h4>Research tab and portfolio risk check (Chapter 23)</h4>
+          <ul>
+            <li>New <strong>Research</strong> tab: one ticker in, the seven research questions out, from SEC XBRL filings, NASDAQ profile / consensus / earnings record, the news feed, sector peers and sector ETFs. Forensic checks: cash flow vs profit, working capital, moat score, capital allocation, executive pay, multibagger criteria; valuation vs the stock's own 5-year history with a stated-assumption fair-value range and the growth rate the price implies; a synthesis with bull points, red flags and the one question for the next call. Copy-prompt buttons pre-fill the qualitative prompts with the filed numbers.</li>
+            <li>Dashboard <strong>portfolio risk check</strong>: weight by name, sector and asset class; 60-session correlation matrix with the number of effectively independent bets; the single biggest vulnerability, named.</li>
+            <li>Research links on Today's cards; <code>/api/fundamentals?op=research</code>; <code>npm run validate:research</code>.</li>
+            <li>Said plainly where free data stops: earnings-call transcripts, customer concentration, segment detail, insider ownership %, peer ROCE tables.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.14<br/>2026-10-23</div>

@@ -77,6 +77,7 @@ signal-desk/
 ├── options.html       Options recommendations
 ├── crypto.html        Crypto — rankings + measured-edge reality check
 ├── metals.html        Gold / silver
+├── research.html      Research tab — the seven research questions from SEC filings (api/_forensic.js)
 ├── risk.js            Risk engine (book-level limits) + trade journal, shared by Today and Dashboard
 ├── handbook.html      Beginner reference + changelog (see CLAUDE.md — keep current)
 ├── analyze.js         Pure computation — indicators, score, setup, trade plan
@@ -188,6 +189,16 @@ npm run validate:risk
 Pure arithmetic, no network: the risk engine (`risk.js`) — per-trade risk,
 portfolio heat, daily loss limit, position cap, concentration warning — and the
 journal's R-multiples, win rate, expectancy and profit factor. 20 checks.
+
+```bash
+npm run validate:research
+```
+
+The forensic module (`api/_forensic.js`) against real filers: Apple's FY2025
+net income and operating cash flow match the 10-K to the dollar, Nvidia's
+share count is split-adjusted, JPMorgan degrades to "not meaningful" for a
+bank, historical multiples are sane, the implied-growth solver reproduces
+the market cap, and the research endpoint shape is stable.
 
 ### Checks before committing
 

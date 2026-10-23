@@ -25,5 +25,6 @@ fi
 
 case "$1" in
   co|crypto|options) shift; exec node tools/validate-crypto-options.mjs "$@" ;;
+  research) shift; exec node tools/validate-research.mjs "$@" ;;
   *) exec node tools/validate.mjs "$@" ;;
 esac

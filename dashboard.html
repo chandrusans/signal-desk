@@ -703,6 +703,24 @@
   .risk-cells .bar i.warn { background: var(--caution); } .risk-cells .bar i.bad { background: var(--risk); }
   .risk-list { padding: 10px 18px 12px; font-size: 13px; color: var(--ink-2); }
   .risk-list li { margin: 4px 0; } .risk-list li.breach { color: var(--risk); } .risk-list li.warn { color: var(--caution); }
+  .pr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  @media (max-width: 900px) { .pr-grid { grid-template-columns: 1fr; } }
+  .pr-col { padding: 12px 18px; border-right: 1px solid var(--rule); min-width: 0; }
+  .pr-col:last-child { border-right: none; }
+  @media (max-width: 900px) { .pr-col { border-right: none; border-bottom: 1px solid var(--rule); } }
+  .pr-col h5 { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 8px; font-weight: 500; }
+  .pr-bar { display: grid; grid-template-columns: minmax(90px, 150px) 1fr 54px; gap: 10px; align-items: center; font-size: 12.5px; margin: 4px 0; }
+  .pr-bar > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pr-bar .track { height: 6px; background: var(--ground-2); position: relative; }
+  .pr-bar .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+  .pr-bar .track i.bad { background: var(--risk); } .pr-bar .track i.warn { background: var(--caution); }
+  .pr-bar .n { font-family: var(--mono); text-align: right; }
+  .pr-vuln { padding: 12px 18px; border-top: 1px solid var(--rule); font-size: 13.5px; }
+  .pr-vuln strong { color: var(--risk); }
+  .pr-corr-wrap { overflow-x: auto; }
+  .pr-corr { font-family: var(--mono); font-size: 11.5px; border-collapse: collapse; }
+  .pr-corr td, .pr-corr th { padding: 3px 7px; text-align: center; border: 1px solid var(--rule); }
+  .pr-corr th { color: var(--ink-3); font-weight: 500; }
   .jr-cells { display: grid; grid-template-columns: repeat(6, 1fr); border: 1px solid var(--rule); background: var(--panel); margin-bottom: 8px; }
   @media (max-width: 900px) { .jr-cells { grid-template-columns: repeat(3, 1fr); } .jr-cells .sum-cell:nth-child(3n) { border-right: none; } }
   .jr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; background: var(--panel); border: 1px solid var(--rule); }
@@ -849,6 +867,7 @@
       <a href="/options" class="tab" data-view="options">Options</a>
       <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
       <a href="/metals" class="tab" data-view="metals">Metals</a>
+      <a href="/research" class="tab" data-view="research">Research</a>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -981,6 +1000,12 @@ AAPL 30 @ 218.75"></textarea>
     <span class="aside" id="risk-aside">1% per trade · 3% daily · 5% heat · 6 positions</span>
   </div>
   <div class="risk-panel" id="risk-panel"></div>
+
+  <div class="section-head" id="portfolio-risk">
+    <h2>Portfolio risk check · what the book is exposed to</h2>
+    <span class="aside" id="pr-aside">concentration · sector · correlation</span>
+  </div>
+  <div class="risk-panel" id="pr-panel"></div>
 
   <div class="section-head">
     <h2>Trade journal · your own record</h2>
@@ -1202,7 +1227,7 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
     if (!portfolio.length) {
       positionsEl.innerHTML = `<div class="empty-state"><strong>No positions yet.</strong><br/>Add one above and the desk will track it live and tell you when to sell.</div>`;
       summaryEl.innerHTML = '';
-      lastRows = []; renderRisk([]); renderJournal();
+      lastRows = []; renderRisk([]); renderPortfolioRisk([]); renderJournal();
       return;
     }
 
@@ -1464,7 +1489,66 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
         else if (newStop === '') { delete pos.stop; save(); render(); }
       });
     });
-    renderRisk(rows); renderJournal();
+    renderRisk(rows); renderPortfolioRisk(rows); renderJournal();
+  }
+
+  // ---- Portfolio risk check: concentration, sector, class, correlation, the one vulnerability ----
+  let universeMap = null;
+  async function loadUniverseMap() {
+    if (universeMap) return universeMap;
+    try { const d = await (await fetch('/api/universe')).json(); universeMap = {}; for (const c of d.constituents || []) universeMap[c.symbol] = c.sector; }
+    catch { universeMap = {}; }
+    renderPortfolioRisk(lastRows);
+    return universeMap;
+  }
+  function pearson(a, b) {
+    const n = Math.min(a.length, b.length); if (n < 20) return null;
+    const x = a.slice(-n), y = b.slice(-n);
+    const mx = x.reduce((s, v) => s + v, 0) / n, my = y.reduce((s, v) => s + v, 0) / n;
+    let sxy = 0, sxx = 0, syy = 0;
+    for (let i = 0; i < n; i++) { const dx = x[i] - mx, dy = y[i] - my; sxy += dx * dy; sxx += dx * dx; syy += dy * dy; }
+    return sxx > 0 && syy > 0 ? sxy / Math.sqrt(sxx * syy) : null;
+  }
+  function renderPortfolioRisk(rows) {
+    const el = document.getElementById('pr-panel'); if (!el) return;
+    if (!rows.length) { el.innerHTML = '<div class="risk-list">No positions — nothing to be exposed to. The check fills in as you add them.</div>'; document.getElementById('pr-aside').textContent = 'concentration · sector · correlation'; return; }
+    if (universeMap == null) { el.innerHTML = '<div class="risk-list">Reading sector map…</div>'; loadUniverseMap(); return; }
+    const total = rows.reduce((s, r) => s + r.price * r.pos.qty * r.mult, 0) || 1;
+    const name = (r) => (r.pos.isOption ? r.pos.underlying : r.pos.ticker);
+    const sectorOf = (r) => { const c = classOf(r.pos); if (c === 'crypto') return 'Crypto'; if (c === 'metal') return 'Metals'; return universeMap[name(r)] || 'Other / non-S&P'; };
+    const agg = (keyFn) => { const m = {}; for (const r of rows) { const k = keyFn(r); m[k] = (m[k] || 0) + (r.price * r.pos.qty * r.mult) / total * 100; } return Object.entries(m).sort((a, b) => b[1] - a[1]); };
+    const byName = agg(name), bySector = agg(sectorOf), byClass = agg((r) => classOf(r.pos));
+    // 60-session daily-return correlation between positions (options use their underlying)
+    const series = {};
+    for (const r of rows) { const bars = r.q?.bars; const k = name(r); if (bars && bars.length > 21 && !series[k]) series[k] = bars.slice(-61).map((b, i, a) => (i ? b.c / a[i - 1].c - 1 : null)).filter((v) => v != null); }
+    const keys = Object.keys(series);
+    const pairs = [];
+    for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++) { const c = pearson(series[keys[i]], series[keys[j]]); if (c != null) pairs.push({ a: keys[i], b: keys[j], c }); }
+    const avgCorr = pairs.length ? pairs.reduce((s, p) => s + p.c, 0) / pairs.length : null;
+    const hi = pairs.slice().sort((a, b) => b.c - a.c)[0];
+    const effN = avgCorr != null ? rows.length / (1 + (rows.length - 1) * Math.max(0, avgCorr)) : null;
+    const bar = (label, v, lim) => `<div class="pr-bar"><span title="${escapeHtml(label)}">${escapeHtml(label)}</span><div class="track"><i class="${v >= lim ? 'bad' : v >= lim * 0.7 ? 'warn' : ''}" style="width:${Math.min(100, v)}%"></i></div><span class="n">${v.toFixed(0)}%</span></div>`;
+    // The single biggest vulnerability, by rule, worst first
+    const vulns = [];
+    if (byName[0][1] > 40) vulns.push(`<strong>${byName[0][1].toFixed(0)}% of the book is one name (${escapeHtml(byName[0][0])}).</strong> A 10% gap in it moves the whole account ${(byName[0][1] / 10).toFixed(1)}%; an earnings miss can do that overnight.`);
+    if (bySector[0][1] > 60 && rows.length > 1) vulns.push(`<strong>${bySector[0][1].toFixed(0)}% is in one sector (${escapeHtml(bySector[0][0])}).</strong> Diversified by ticker, not by risk — one sector-rotation day hits every position at once.`);
+    if (avgCorr != null && avgCorr > 0.6) vulns.push(`<strong>Positions move together (average 60-day correlation ${avgCorr.toFixed(2)}).</strong> This is effectively ${effN.toFixed(1)} independent bet${effN > 1.5 ? 's' : ''}, not ${rows.length}.`);
+    if (byClass.length === 1 && rows.length >= 3) vulns.push(`<strong>Everything is one asset class (${escapeHtml(byClass[0][0])}).</strong> Nothing in the book hedges anything else.`);
+    const unknown = bySector.find(([k]) => k === 'Other / non-S&P');
+    if (unknown && unknown[1] > 30) vulns.push(`${unknown[1].toFixed(0)}% of the book is outside the S&P 500 sector map, so sector exposure is understated.`);
+    const headline = vulns[0] || `<strong style="color:var(--signal)">No single dominant exposure.</strong> Largest name ${byName[0][1].toFixed(0)}%, largest sector ${bySector[0][1].toFixed(0)}%${avgCorr != null ? `, average correlation ${avgCorr.toFixed(2)}` : ''}. The remaining risk is the one the heat meter above measures: every stop hitting on the same day.`;
+    document.getElementById('pr-aside').textContent = `${rows.length} position${rows.length === 1 ? '' : 's'} · $${fmt(total)}`;
+    el.innerHTML = `
+      <div class="pr-grid">
+        <div class="pr-col"><h5>By name · limit 25%</h5>${byName.slice(0, 8).map(([k, v]) => bar(k, v, 25)).join('')}
+          <h5 style="margin-top:12px;">By asset class</h5>${byClass.map(([k, v]) => bar(k, v, 101)).join('')}</div>
+        <div class="pr-col"><h5>By sector · flag at 50%</h5>${bySector.map(([k, v]) => bar(k, v, 50)).join('')}
+          <h5 style="margin-top:12px;">Correlation of daily moves · last 60 sessions</h5>
+          ${pairs.length ? `<p style="font-size:12.5px;margin:0 0 6px;">Average <strong>${avgCorr.toFixed(2)}</strong> · highest ${escapeHtml(hi.a)}–${escapeHtml(hi.b)} <strong>${hi.c.toFixed(2)}</strong>${avgCorr > 0.6 ? ' — largely the same bet' : avgCorr > 0.35 ? ' — moderately linked, normal for a momentum book' : ' — genuinely different exposures'}${effN != null ? ` · ≈${effN.toFixed(1)} independent bets` : ''}.</p>
+          ${keys.length <= 7 ? `<div class="pr-corr-wrap"><table class="pr-corr"><tr><th></th>${keys.map((k) => `<th>${escapeHtml(k)}</th>`).join('')}</tr>${keys.map((a) => `<tr><th>${escapeHtml(a)}</th>${keys.map((b) => { if (a === b) return '<td>—</td>'; const p = pairs.find((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a)); const c = p ? p.c : null; return `<td style="color:${c == null ? 'var(--ink-3)' : c > 0.6 ? 'var(--risk)' : c > 0.35 ? 'var(--caution)' : 'var(--ink)'}">${c == null ? '·' : c.toFixed(2)}</td>`; }).join('')}</tr>`).join('')}</table></div>` : ''}`
+          : `<p style="font-size:12.5px;color:var(--ink-3);margin:0;">${rows.length < 2 ? 'Needs two or more positions.' : 'Needs 20+ sessions of price history on at least two positions.'}</p>`}</div>
+      </div>
+      <div class="pr-vuln">Biggest vulnerability: ${headline}${vulns.length > 1 ? `<ul class="risk-list" style="padding:6px 0 0 18px;">${vulns.slice(1).map((v) => `<li>${v}</li>`).join('')}</ul>` : ''}</div>`;
   }
 
   // ---- Risk engine: the book-level limits (risk.js) ----

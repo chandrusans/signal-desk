@@ -1,4 +1,12 @@
 // Vercel serverless: /api/fundamentals?tickers=NVDA,PLTR,...
+//                    /api/fundamentals?op=research&ticker=NVDA[&sector=Information%20Technology]
+//
+// op=research is the Research tab's one call: the forensic module (_forensic.js —
+// SEC XBRL cash flow / working capital / margins / capital allocation / valuation
+// vs own history / earnings credibility) plus NASDAQ's company profile
+// (description, sector, industry, website). Analyst consensus, news sentiment
+// and the sector peers' multiples are fetched by the page from the existing
+// endpoints so nothing is duplicated.
 //
 // Replaces the previously-mocked market cap / P/E on the screener AND supplies
 // the next earnings date, which the analyzer needs to flag "earnings inside
@@ -11,8 +19,20 @@
 // Returns { NVDA: { marketCap, marketCapRaw, peRatio, avgVolume, yield,
 //                   fiftyTwoWeek: {high, low}, earningsDate, earningsInDays } }
 
+import { forensic } from './_forensic.js';
+
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
 const HEADERS = { 'User-Agent': UA, Accept: 'application/json' };
+
+async function fetchProfile(sym) {
+  try {
+    const res = await fetch(`https://api.nasdaq.com/api/company/${encodeURIComponent(sym)}/company-profile`, { headers: HEADERS });
+    if (!res.ok) return null;
+    const d = (await res.json())?.data; if (!d) return null;
+    const v = (k) => d[k]?.value ?? null;
+    return { name: v('CompanyName'), description: v('CompanyDescription'), sector: v('Sector'), industry: v('Industry'), region: v('Region'), website: v('CompanyUrl'), address: v('Address') };
+  } catch { return null; }
+}
 
 function parseMoney(s) {
   if (!s) return null;
@@ -82,6 +102,21 @@ async function fetchEarningsDate(sym) {
 }
 
 export default async function handler(req, res) {
+  const op = String((req.query && req.query.op) || '').toLowerCase();
+  if (op === 'research') {
+    const t = String((req.query && req.query.ticker) || '').trim().toUpperCase();
+    if (!/^[A-Z][A-Z0-9.\-]{0,6}$/.test(t)) { res.status(400).json({ error: 'Pass ?op=research&ticker=NVDA' }); return; }
+    const sector = (req.query && req.query.sector) ? String(req.query.sector).slice(0, 60) : null;
+    try {
+      const [f, profile, summary] = await Promise.all([forensic(t, { sector }), fetchProfile(t), fetchSummary(t)]);
+      res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=86400');   // filings change quarterly; price fields refresh via summary
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.status(200).json({ asOf: Date.now(), ticker: t, profile, summary, forensic: f });
+    } catch (e) {
+      res.status(200).json({ asOf: Date.now(), ticker: t, error: String(e.message || e) });
+    }
+    return;
+  }
   const raw = (req.query && req.query.tickers) || '';
   const tickers = String(raw)
     .split(',')

@@ -1,0 +1,1371 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Signal Desk — Research</title>
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('sd-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root {
+    --ground: #F4EFE4;
+    --ground-2: #EDE7D8;
+    --ink: #161512;
+    --ink-2: #3A362E;
+    --ink-3: #6B655A;
+    --rule: #D9D2BF;
+    --panel: #FBF8F0;
+    --accent: #B8863A;
+    --accent-soft: #E9D3A3;
+    --signal: #3B8C5A;
+    --caution: #B57F1F;
+    --risk: #B84438;
+    --grid: rgba(22, 21, 18, 0.06);
+    --gold: #C89B3C;
+    --silver: #9BA1A6;
+
+    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: ui-sans-serif, -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0E1116;
+      --ground-2: #141821;
+      --ink: #E7E2D6;
+      --ink-2: #B5AF9F;
+      --ink-3: #7C7767;
+      --rule: #262B36;
+      --panel: #161B24;
+      --accent: #D6A24B;
+      --accent-soft: #4A3820;
+      --signal: #5FBF83;
+      --caution: #D4A040;
+      --risk: #D96355;
+      --grid: rgba(231, 226, 214, 0.06);
+      --gold: #E0B45C;
+      --silver: #C4CBD1;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#F4EFE4;--ground-2:#EDE7D8;--ink:#161512;--ink-2:#3A362E;--ink-3:#6B655A;--rule:#D9D2BF;--panel:#FBF8F0;--accent:#B8863A;--accent-soft:#E9D3A3;--signal:#3B8C5A;--caution:#B57F1F;--risk:#B84438;--grid:rgba(22,21,18,0.06);--gold:#C89B3C;--silver:#9BA1A6;
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E1116;--ground-2:#141821;--ink:#E7E2D6;--ink-2:#B5AF9F;--ink-3:#7C7767;--rule:#262B36;--panel:#161B24;--accent:#D6A24B;--accent-soft:#4A3820;--signal:#5FBF83;--caution:#D4A040;--risk:#D96355;--grid:rgba(231,226,214,0.06);--gold:#E0B45C;--silver:#C4CBD1;
+  }
+
+  html { color-scheme: light dark; }
+  html, body { overflow-x: hidden; max-width: 100%; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+
+  .shell { max-width: 1280px; margin: 0 auto; padding: 32px 28px 80px; }
+
+  .masthead {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--ink);
+  }
+  .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+  .brand { font-family: var(--serif); font-size: 40px; line-height: 1; letter-spacing: -0.015em; font-weight: 500; text-wrap: balance; margin: 0; }
+  .brand em { font-style: italic; color: var(--accent); font-weight: 400; }
+  .meta { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-2); line-height: 1.7; }
+  .meta .date { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .meta a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+  .meta a:hover { border-bottom-style: solid; }
+  .theme-toggle {
+    background: transparent; border: 1px solid var(--rule); color: var(--ink-2);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 6px 10px; margin-top: 8px; cursor: pointer;
+  }
+  .theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
+
+  @media (max-width: 900px) {
+    .brand { font-size: 30px; }
+  }
+
+  /* Cross-asset strip */
+  .drivers {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  @media (max-width: 900px) { .drivers { grid-template-columns: repeat(2, 1fr); } }
+  .drv-cell {
+    padding: 14px 16px;
+    border-right: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .drv-cell:last-child { border-right: none; }
+  @media (max-width: 900px) { .drv-cell:nth-child(2n) { border-right: none; } }
+  .drv-cell .label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+  .drv-cell .value { font-size: 15px; color: var(--ink); }
+  .drv-cell .delta { font-size: 11px; margin-top: 2px; }
+  .up { color: var(--signal); }
+  .down { color: var(--risk); }
+  .flat { color: var(--ink-3); }
+
+  /* Section head */
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 36px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .section-head h2 {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .section-head .aside {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* Two big metal panels */
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .panels { grid-template-columns: 1fr; } }
+  .metal-panel {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 24px 26px;
+    position: relative;
+  }
+  .metal-panel.gold::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gold); }
+  .metal-panel.silver::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--silver); }
+
+  .mp-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+  }
+  .mp-ticker {
+    font-family: var(--mono);
+    font-size: 20px;
+    letter-spacing: 0.02em;
+    font-weight: 500;
+  }
+  .mp-name {
+    font-family: var(--serif);
+    font-size: 12px;
+    color: var(--ink-3);
+    font-style: italic;
+    margin-top: 2px;
+  }
+  .mp-price {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 28px;
+    color: var(--ink);
+    line-height: 1;
+    text-align: right;
+  }
+  .mp-change {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  .mp h3 {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 20px 0 10px;
+    font-weight: 500;
+  }
+  .mp h3:first-of-type { margin-top: 0; }
+
+  /* Range block — the day/week projection */
+  .range {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--rule);
+    background: var(--ground-2);
+  }
+  .range-cell {
+    padding: 12px 14px;
+    border-right: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .range-cell:last-child { border-right: none; }
+  .range-cell .l {
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .range-cell .hi { color: var(--signal); font-size: 15px; }
+  .range-cell .lo { color: var(--risk); font-size: 15px; }
+  .range-cell .band { font-size: 11px; color: var(--ink-2); margin-top: 4px; }
+  .range-visual {
+    height: 6px;
+    background: var(--ground-2);
+    margin: 10px 0;
+    position: relative;
+    border: 1px solid var(--rule);
+  }
+  .range-fill {
+    position: absolute; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--risk), var(--ink-3), var(--signal));
+    opacity: 0.5;
+  }
+  .range-marker {
+    position: absolute;
+    top: -3px; bottom: -3px;
+    width: 2px;
+    background: var(--ink);
+  }
+  .range-marker::before {
+    content: '';
+    position: absolute;
+    top: -4px; left: -3px;
+    width: 8px; height: 8px;
+    background: var(--ink);
+    border-radius: 50%;
+  }
+
+  /* Indicator grid */
+  .ind-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    gap: 10px;
+    row-gap: 6px;
+    align-items: baseline;
+  }
+  .ind-grid .k {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .ind-grid .v {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: var(--ink);
+    text-align: right;
+  }
+  .bar-track { height: 6px; background: var(--ground-2); position: relative; overflow: hidden; }
+  .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+
+  /* Setup chip */
+  .setup-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border: 1px solid;
+    line-height: 1.5;
+  }
+  .setup-BREAKOUT { color: var(--signal); border-color: var(--signal); }
+  .setup-PULLBACK { color: var(--accent); border-color: var(--accent); }
+  .setup-EARLY    { color: var(--ink-2); border-color: var(--ink-3); }
+  .setup-EXTENDED { color: var(--caution); border-color: var(--caution); }
+  .setup-BROKEN   { color: var(--risk); border-color: var(--risk); }
+  .setup-AVOID    { color: var(--risk); border-color: var(--risk); }
+
+  .thesis {
+    background: var(--ground-2);
+    border-left: 3px solid var(--accent);
+    padding: 12px 14px;
+    font-family: var(--serif);
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  .plan {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 1px solid var(--rule);
+  }
+  .plan-cell {
+    padding: 12px 14px;
+    border-right: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .plan-cell:last-child { border-right: none; }
+  .plan-cell .l {
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .plan-cell .n { font-size: 14px; color: var(--ink); }
+  .plan-cell.tgt .n { color: var(--signal); }
+  .plan-cell.stop .n { color: var(--risk); }
+
+  /* Notes */
+  .notes-list { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; }
+  .notes-list li {
+    font-family: var(--serif); font-size: 12.5px; line-height: 1.45;
+    color: var(--ink-2); padding-left: 12px; position: relative;
+  }
+  .notes-list li::before { content: "·"; color: var(--accent); position: absolute; left: 0; top: -1px; font-weight: bold; }
+
+  /* Calendar (reuse from dashboard rules layout) */
+  .rules { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; background: var(--panel); border: 1px solid var(--rule); }
+  @media (max-width: 900px) { .rules { grid-template-columns: 1fr; } }
+  .rule-cell { padding: 18px 20px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .rule-cell:nth-child(2n) { border-right: none; }
+  .rule-cell:nth-last-child(-n+2) { border-bottom: none; }
+  @media (max-width: 900px) { .rule-cell { border-right: none; } .rule-cell:not(:last-child) { border-bottom: 1px solid var(--rule); } }
+  .rule-cell h4 {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-3); margin: 0 0 8px; font-weight: 500;
+  }
+  .rule-cell h4 .num {
+    font-family: var(--serif); font-style: italic; color: var(--accent);
+    font-size: 14px; margin-right: 6px; letter-spacing: 0;
+  }
+  .rule-cell p { font-family: var(--serif); font-size: 13.5px; line-height: 1.5; color: var(--ink); margin: 0 0 6px; }
+  .rule-cell code { font-family: var(--mono); font-size: 11.5px; background: var(--ground-2); padding: 1px 5px; color: var(--ink); }
+
+  /* News */
+  .intel { background: var(--panel); border: 1px solid var(--rule); }
+  .feed { list-style: none; margin: 0; padding: 0; }
+  .feed li {
+    display: grid;
+    grid-template-columns: 60px 60px 60px 1fr 60px;
+    gap: 14px;
+    padding: 12px 18px;
+    border-bottom: 1px dotted var(--rule);
+    align-items: baseline;
+  }
+  .feed li:last-child { border-bottom: none; }
+  .feed .ts { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.04em; }
+  .feed .src-badge {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-2); padding: 2px 6px; border: 1px solid var(--rule); text-align: center;
+  }
+  .feed .tk { font-family: var(--mono); font-size: 12px; color: var(--ink); letter-spacing: 0.02em; }
+  .feed .hd { font-family: var(--serif); font-size: 13.5px; line-height: 1.4; color: var(--ink); }
+  .feed .hd a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--ink-3); }
+  .feed .hd a:hover { border-bottom-color: var(--accent); }
+  .feed .sent { font-family: var(--mono); font-size: 10.5px; text-align: right; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+  .sent.pos { color: var(--signal); }
+  .sent.neg { color: var(--risk); }
+  .sent.neu { color: var(--ink-3); }
+  @media (max-width: 900px) {
+    .feed li { grid-template-columns: 55px 55px 1fr 55px; }
+    .feed .tk { display: none; }
+  }
+
+  /* Disclosure */
+  .disclosure {
+    margin-top: 36px; padding: 20px 24px;
+    background: transparent;
+    border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule);
+  }
+  .disclosure h4 {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--risk); margin: 0 0 8px; font-weight: 500;
+  }
+  .disclosure p {
+    font-family: var(--serif); font-style: italic; font-size: 13.5px; line-height: 1.55;
+    color: var(--ink-2); margin: 0; max-width: 78ch;
+  }
+
+  /* Tab bar + Handbook button (mirrored from dashboard) */
+  .tabbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 0 12px; margin-bottom: 20px; border-bottom: 1px solid var(--rule); }
+  .tabbar-tabs { display: flex; gap: 0; }
+  .tab { padding: 10px 22px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); text-decoration: none; border: none; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; background: transparent; cursor: pointer; }
+  .tab:hover { color: var(--ink); }
+  .tab.on { color: var(--ink); border-bottom-color: var(--accent); }
+  .handbook-btn { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+  .handbook-btn:hover, .handbook-btn:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
+  .handbook-btn .hb-glyph { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+
+  /* Handbook slide-over drawer */
+  .hb-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 900; }
+  .hb-backdrop.open { display: block; animation: hb-bg-in 0.2s ease-out; }
+  @keyframes hb-bg-in { from { opacity: 0; } to { opacity: 1; } }
+  .hb-drawer { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: min(960px, 92vw); background: var(--ground); z-index: 1000; flex-direction: column; box-shadow: -8px 0 40px rgba(0, 0, 0, 0.35); }
+  .hb-drawer.open { display: flex; animation: hb-in 0.24s ease-out; }
+  @keyframes hb-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  .hb-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--rule); background: var(--panel); }
+  .hb-title { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+  .hb-title strong { color: var(--ink); }
+  .hb-close { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 12px; cursor: pointer; }
+  .hb-close:hover, .hb-close:focus-visible { border-color: var(--ink); color: var(--ink); outline: none; }
+  .hb-frame { flex: 1; border: none; width: 100%; background: var(--ground); }
+
+  /* --- UI trends layer (mirror of dashboard) --- */
+  :root {
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+    --neu-hi: rgba(255, 255, 255, 0.9);
+    --neu-lo: rgba(96, 84, 60, 0.14);
+    --neu-inset-hi: rgba(255, 255, 255, 0.7);
+    --neu-inset-lo: rgba(96, 84, 60, 0.16);
+    --glass-bg: rgba(251, 248, 240, 0.72);
+    --glass-border: rgba(22, 21, 18, 0.10);
+    --glass-blur: 20px;
+    --card-glow: transparent;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --neu-hi: rgba(255, 255, 255, 0.045);
+      --neu-lo: rgba(0, 0, 0, 0.55);
+      --neu-inset-hi: rgba(255, 255, 255, 0.03);
+      --neu-inset-lo: rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(14, 17, 22, 0.65);
+      --glass-border: rgba(214, 162, 75, 0.12);
+      --card-glow: rgba(214, 162, 75, 0.06);
+    }
+    body {
+      background:
+        radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.08), transparent 60%),
+        radial-gradient(900px 600px at 90% 100%, rgba(155, 161, 166, 0.05), transparent 55%),
+        var(--ground);
+    }
+  }
+  :root[data-theme="dark"] body {
+    background:
+      radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.08), transparent 60%),
+      radial-gradient(900px 600px at 90% 100%, rgba(155, 161, 166, 0.05), transparent 55%),
+      var(--ground);
+  }
+  :root[data-theme="light"] body { background: var(--ground); }
+
+  /* Neu buttons */
+  .tab { border-radius: 10px 10px 0 0; transition: color 0.18s var(--ease-out), background 0.18s var(--ease-out); }
+  .tab:hover:not(.on) { color: var(--ink); background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 6%, transparent)); }
+  .tab.on {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
+    box-shadow: inset 0 -2px 0 var(--accent);
+    border-bottom-color: transparent;
+  }
+  .handbook-btn {
+    border-radius: 8px; background: var(--panel);
+    box-shadow: 3px 3px 8px var(--neu-lo), -3px -3px 8px var(--neu-hi);
+    transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), color 0.18s var(--ease-out);
+  }
+  .handbook-btn:hover, .handbook-btn:focus-visible {
+    transform: translateY(-1px); color: var(--ink);
+    box-shadow: 4px 4px 12px var(--neu-lo), -4px -4px 12px var(--neu-hi);
+  }
+  .handbook-btn:active {
+    transform: translateY(0);
+    box-shadow: inset 2px 2px 6px var(--neu-inset-lo), inset -2px -2px 6px var(--neu-inset-hi);
+  }
+  .handbook-btn .hb-glyph { box-shadow: 0 0 8px var(--accent); }
+  .theme-toggle {
+    border-radius: 6px; background: var(--panel);
+    box-shadow: 2px 2px 6px var(--neu-lo), -2px -2px 6px var(--neu-hi);
+    transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), color 0.18s var(--ease-out);
+    border: none;
+  }
+  .theme-toggle:hover { transform: translateY(-1px); }
+  .theme-toggle:active {
+    transform: translateY(0);
+    box-shadow: inset 2px 2px 4px var(--neu-inset-lo), inset -2px -2px 4px var(--neu-inset-hi);
+  }
+
+  /* Glass drawer */
+  .hb-backdrop {
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px) saturate(140%);
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+  }
+  .hb-drawer {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    border-left: 1px solid var(--glass-border);
+    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.45), inset 1px 0 0 rgba(255, 255, 255, 0.06);
+  }
+  .hb-header { background: transparent; border-bottom: 1px solid var(--glass-border); }
+
+  /* Metal panels — hover lift + gold/silver glow */
+  .metal-panel {
+    transition: transform 0.24s var(--ease-out), box-shadow 0.24s var(--ease-out);
+  }
+  .metal-panel.gold:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px color-mix(in srgb, var(--gold) 14%, transparent);
+  }
+  .metal-panel.silver:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px color-mix(in srgb, var(--silver) 12%, transparent);
+  }
+
+  /* Live-dot pulse */
+  @keyframes live-pulse {
+    0%, 100% { opacity: 1; text-shadow: 0 0 6px currentColor; }
+    50% { opacity: 0.65; text-shadow: 0 0 0px currentColor; }
+  }
+  #live-dot { display: inline-block; animation: live-pulse 2s var(--ease-inout) infinite; }
+
+  /* Price flash */
+  @keyframes flash-up { 0% { background: color-mix(in srgb, var(--signal) 45%, transparent); color: var(--signal); } 100% { background: transparent; color: inherit; } }
+  @keyframes flash-down { 0% { background: color-mix(in srgb, var(--risk) 45%, transparent); color: var(--risk); } 100% { background: transparent; color: inherit; } }
+  .flash-up   { animation: flash-up 1.4s var(--ease-out); border-radius: 3px; }
+  .flash-down { animation: flash-down 1.4s var(--ease-out); border-radius: 3px; }
+
+  .refresh-btn {
+    background: transparent; border: 1px solid var(--rule); color: var(--ink-3);
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 3px 7px; margin-left: 6px; cursor: pointer; border-radius: 3px;
+    transition: color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+  }
+  .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Page-load stagger */
+  @keyframes rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .masthead { animation: rise-in 0.5s var(--ease-out) both; }
+  .drivers  { animation: rise-in 0.5s var(--ease-out) 0.08s both; }
+  .section-head { animation: rise-in 0.5s var(--ease-out) 0.16s both; }
+  .panels   { animation: rise-in 0.5s var(--ease-out) 0.24s both; }
+  .rules    { animation: rise-in 0.5s var(--ease-out) 0.32s both; }
+  .intel    { animation: rise-in 0.5s var(--ease-out) 0.40s both; }
+
+  /* Brand logomark on masthead */
+  .brand-mark {
+    display: inline-block;
+    vertical-align: -6px;
+    margin-right: 12px;
+    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 32%, transparent));
+    animation: spin-slow 60s linear infinite;
+  }
+  @keyframes spin-slow { to { transform: rotate(360deg); } }
+
+  /* Coin illustrations in headers */
+  .coin-ill {
+    display: inline-block;
+    vertical-align: -4px;
+    margin-right: 10px;
+  }
+  .coin-ill.gold circle.face { fill: color-mix(in srgb, var(--gold) 24%, var(--panel)); }
+  .coin-ill.silver circle.face { fill: color-mix(in srgb, var(--silver) 22%, var(--panel)); }
+  .coin-ill { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25)); }
+  .coin-ill .glint { opacity: 0.5; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, #live-dot { transition: none !important; animation: none !important; }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+   * MOBILE — phones (≤ 640px)
+   * ══════════════════════════════════════════════════════════════════════ */
+  @media (max-width: 640px) {
+    body { font-size: 15px; }
+
+    /* Grid/flex children default to min-width:auto and refuse to shrink below
+       their content, which pushes the page wider than the viewport. Allowing
+       them to shrink is what actually stops horizontal scroll. */
+    .desk, .desk > *, .picks, .card, .card > *, .card-body, .card-body > *,
+    .detail, .detail > *, .pos-card, .pos-card > *, .pos-primary, .pos-primary > *,
+    .opt-card, .opt-card > *, .opt-top, .opt-top > *, .metal-panel, .metal-panel > *,
+    .an-cell, .an-cell > *, .rules, .rule-cell, .intel, .feed li, .feed li > * {
+      min-width: 0;
+    }
+    /* Long unbroken strings (OCC symbols, URLs) must wrap rather than push */
+    .thesis, .verdict-reason, .buzz-snippet, .hd, .pos-notes, .an-value, .an-sub {
+      overflow-wrap: anywhere;
+    }
+    .shell { padding: 14px 14px 60px; }
+
+    .tabbar { flex-direction: column; align-items: stretch; gap: 10px; padding: 0 0 10px; margin-bottom: 14px; }
+    .tabbar-tabs {
+      overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+      margin: 0 -14px; padding: 0 14px;
+    }
+    .tabbar-tabs::-webkit-scrollbar { display: none; }
+    .tab { padding: 12px 16px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
+
+    .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
+    .brand { font-size: 25px; }
+    .brand-mark { width: 30px; height: 30px; margin-right: 8px; vertical-align: -4px; }
+    .meta { text-align: left; font-size: 10.5px; line-height: 1.9; }
+    .theme-toggle, .refresh-btn { min-height: 36px; padding: 8px 12px; }
+    /* Header buttons inline rather than stacked — reclaims vertical space */
+    .meta { display: flex; flex-direction: column; gap: 2px; }
+    .meta > div { display: block; }
+    .theme-toggle { align-self: flex-start; margin-top: 6px; }
+
+    /* Drivers strip 2-up */
+    .drivers { grid-template-columns: 1fr 1fr; }
+    .drv-cell { padding: 11px 12px; border-bottom: 1px solid var(--rule); }
+    .drv-cell:nth-child(2n) { border-right: none; }
+    .drv-cell .value { font-size: 14px; }
+
+    .section-head { flex-direction: column; align-items: flex-start; gap: 6px; margin: 24px 0 12px; }
+    .section-head h2 { font-size: 19px; }
+
+    /* Metal panels */
+    .panels { gap: 14px; }
+    .metal-panel { padding: 16px; }
+    .mp-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .mp-ticker { font-size: 18px; }
+    .mp-price { font-size: 24px; text-align: left; }
+    .mp-change { text-align: left; }
+    .coin-ill { width: 24px; height: 24px; margin-right: 8px; }
+    .range-cell { padding: 11px 12px; }
+    .range-cell .hi, .range-cell .lo { font-size: 14px; }
+    .ind-grid { grid-template-columns: 96px 1fr auto; gap: 8px; }
+    .plan { grid-template-columns: 1fr 1fr; }
+    .plan-cell { border-bottom: 1px solid var(--rule); }
+    .plan-cell:nth-child(2n) { border-right: none; }
+
+    .rules { grid-template-columns: 1fr; }
+    .rule-cell { border-right: none; padding: 14px 16px; }
+
+    .feed li { grid-template-columns: 46px 52px 1fr; gap: 8px; padding: 11px 14px; }
+    .feed .tk, .feed .sent { display: none; }
+    .feed .hd { font-size: 13px; }
+
+    .hb-drawer { width: 100vw; }
+    .hb-header { padding: 12px 14px; }
+    .hb-close { min-height: 40px; }
+    .disclosure { padding: 16px 14px; }
+  }
+
+  @media (max-width: 360px) {
+    .brand { font-size: 22px; }
+    .drivers { grid-template-columns: 1fr; }
+    .drv-cell { border-right: none; }
+    .plan { grid-template-columns: 1fr; }
+    .plan-cell { border-right: none; }
+  }
+
+  /* ---- Crypto-specific ---- */
+  /* The detail panel. The shared shell carries only its mobile overrides,
+     so the base styling has to be declared here. */
+  .detail {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 22px 24px;
+    position: sticky;
+    top: 20px;
+    min-width: 0;
+  }
+  .detail h3 {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-3); margin: 20px 0 10px; font-weight: 500;
+  }
+  .detail h3:first-of-type { margin-top: 0; }
+  .panels { grid-template-columns: 1fr minmax(0, 420px); align-items: start; }
+  @media (max-width: 900px) {
+    .panels { grid-template-columns: 1fr; }
+    .detail { position: static; }
+  }
+
+  .reality {
+    border: 1px solid var(--risk);
+    border-left: 3px solid var(--risk);
+    background: color-mix(in srgb, var(--risk) 7%, transparent);
+    padding: 20px 22px;
+    margin: 0 0 28px;
+    border-radius: 4px;
+  }
+  .reality h2 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--risk); margin: 0 0 12px; font-weight: 600;
+  }
+  .reality .headline {
+    font-family: var(--serif); font-size: 21px; line-height: 1.35;
+    color: var(--ink); margin: 0 0 14px;
+  }
+  .reality p { font-size: 13.5px; line-height: 1.65; color: var(--ink-2); margin: 0 0 10px; }
+  .reality strong { color: var(--ink); }
+  .reality .num { font-family: var(--mono); font-weight: 600; color: var(--risk); }
+  .reality .numok { font-family: var(--mono); font-weight: 600; color: var(--signal); }
+
+  /* The table is wider than a phone. It must scroll inside its own box —
+     letting it overflow clips the right-hand columns silently. */
+  .fee-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 14px 0 6px; }
+  .fee-table { width: 100%; min-width: 460px; border-collapse: collapse; font-family: var(--mono); font-size: 11.5px; }
+  .fee-table th {
+    text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule);
+    color: var(--ink-3); font-weight: 500; letter-spacing: 0.08em; font-size: 10px; text-transform: uppercase;
+  }
+  .fee-table td { padding: 7px 8px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-2); }
+  .fee-table td.pos { color: var(--signal); font-weight: 600; }
+  .fee-table td.neg { color: var(--risk); font-weight: 600; }
+  .fee-table tr.you td { background: color-mix(in srgb, var(--risk) 9%, transparent); }
+  .fee-table .venue { color: var(--ink); }
+
+  .target-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    margin: 14px 0 4px; border-radius: 3px; overflow: hidden;
+  }
+  .target-cell { background: var(--ground); padding: 12px 14px; min-width: 0; }
+  .target-cell .l {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 5px;
+  }
+  .target-cell .n { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--ink); }
+  .target-cell .n.bad { color: var(--risk); }
+  .target-cell .sub { font-size: 11px; color: var(--ink-3); margin-top: 3px; line-height: 1.4; }
+
+  .coin-card {
+    display: grid; grid-template-columns: 42px 1fr auto; gap: 14px; align-items: start;
+    border: 1px solid var(--rule); border-radius: 4px; padding: 15px 16px; margin-bottom: 10px;
+    background: var(--ground); cursor: pointer; transition: border-color .18s, transform .18s;
+    min-width: 0;
+  }
+  .coin-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .coin-card.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .coin-card .rank {
+    font-family: var(--serif); font-style: italic; font-size: 20px; color: var(--accent); line-height: 1;
+  }
+  .coin-card .sym {
+    font-family: var(--mono); font-size: 15px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--ink); margin-bottom: 2px; overflow-wrap: anywhere;
+  }
+  .coin-card .nm { font-size: 12px; color: var(--ink-3); margin-bottom: 7px; overflow-wrap: anywhere; }
+  .coin-card .why { font-size: 12.5px; color: var(--ink-2); line-height: 1.55; margin-top: 6px; }
+  .coin-right { text-align: right; min-width: 0; }
+  .coin-right .score-label {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .coin-right .score { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--ink); line-height: 1.1; }
+
+  .verdict-pill {
+    display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 0.1em; padding: 4px 9px; border: 1px solid; border-radius: 3px;
+  }
+  .verdict-BUY   { color: var(--signal); border-color: var(--signal); background: color-mix(in srgb, var(--signal) 14%, transparent); }
+  .verdict-HOLD  { color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 14%, transparent); }
+  .verdict-AVOID { color: var(--ink-3); border-color: var(--rule); }
+  .verdict-SELL  { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 14%, transparent); }
+
+  .filter-bar {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    padding: 12px 0 16px; border-bottom: 1px solid var(--rule-soft); margin-bottom: 18px;
+  }
+  .filter-group { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .flbl {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-3); white-space: nowrap;
+  }
+  .seg { display: flex; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+  .seg button {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; padding: 6px 11px;
+    background: transparent; border: none; border-right: 1px solid var(--rule);
+    color: var(--ink-3); cursor: pointer; white-space: nowrap;
+  }
+  .seg button:last-child { border-right: none; }
+  .seg button.on { background: var(--accent); color: var(--ground); font-weight: 600; }
+
+  .hours-grid { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; margin: 12px 0 8px; }
+  .hour-bar {
+    position: relative; height: 46px; background: var(--ground-2);
+    border-radius: 2px; display: flex; align-items: flex-end; overflow: hidden;
+  }
+  .hour-bar i { display: block; width: 100%; background: var(--ink-3); }
+  .hour-bar.pos i { background: var(--signal); }
+  .hour-bar.neg i { background: var(--risk); }
+  .hour-bar.sig { outline: 1px solid var(--accent); }
+  .hours-axis {
+    display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px;
+    font-family: var(--mono); font-size: 8px; color: var(--ink-3); text-align: center;
+  }
+
+  /* pump.fun section — deliberately styled as a hazard panel, not a pick list */
+  .pf-wrap { margin: 40px 0 0; }
+  .pf-warn {
+    border: 1px solid var(--risk); border-left: 3px solid var(--risk);
+    background: color-mix(in srgb, var(--risk) 8%, transparent);
+    padding: 18px 20px; border-radius: 4px; margin-bottom: 18px;
+  }
+  .pf-warn h3 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--risk); margin: 0 0 10px; font-weight: 600;
+  }
+  .pf-warn p { font-size: 13px; line-height: 1.65; color: var(--ink-2); margin: 0 0 9px; }
+  .pf-warn strong { color: var(--ink); }
+  .pf-warn .big { font-family: var(--mono); font-weight: 600; color: var(--risk); }
+  .pf-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    margin: 14px 0 4px; border-radius: 3px; overflow: hidden;
+  }
+  .pf-stat { background: var(--ground); padding: 11px 13px; min-width: 0; }
+  .pf-stat .l {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.11em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px;
+  }
+  .pf-stat .n { font-family: var(--mono); font-size: 17px; font-weight: 600; color: var(--ink); }
+  .pf-stat .n.bad { color: var(--risk); }
+  .pf-stat .s { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
+
+  .pf-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .pf-table { width: 100%; min-width: 720px; border-collapse: collapse; font-family: var(--mono); font-size: 11.5px; }
+  .pf-table th {
+    text-align: left; padding: 8px; border-bottom: 1px solid var(--rule); color: var(--ink-3);
+    font-weight: 500; letter-spacing: 0.08em; font-size: 9.5px; text-transform: uppercase; white-space: nowrap;
+  }
+  .pf-table td { padding: 8px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-2); white-space: nowrap; }
+  .pf-table td.sym { color: var(--ink); font-weight: 600; }
+  .pf-table td.flags { white-space: normal; font-family: var(--sans); font-size: 11px; color: var(--ink-3); min-width: 200px; }
+  .risk-pill {
+    display: inline-block; font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em;
+    padding: 3px 7px; border: 1px solid; border-radius: 3px;
+  }
+  .risk-MODERATE { color: var(--caution); border-color: var(--caution); }
+  .risk-ELEVATED { color: var(--caution); border-color: var(--caution); background: color-mix(in srgb, var(--caution) 12%, transparent); }
+  .risk-HIGH     { color: var(--risk); border-color: var(--risk); }
+  .risk-EXTREME  { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 18%, transparent); }
+
+  .empty-note {
+    border: 1px dashed var(--rule); border-radius: 4px; padding: 26px 20px;
+    text-align: center; color: var(--ink-3); font-size: 13px;
+  }
+
+  @media (max-width: 640px) {
+    .reality { padding: 15px 14px; }
+    .reality .headline { font-size: 17px; }
+    .coin-card { grid-template-columns: 28px 1fr; gap: 10px; padding: 13px 12px; }
+    .coin-right { grid-column: 1 / -1; text-align: left; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .coin-right .score { font-size: 21px; }
+    .filter-bar { gap: 10px; }
+    .filter-group { width: 100%; }
+    .seg { overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
+    .seg::-webkit-scrollbar { display: none; }
+    .seg button { min-height: 40px; scroll-snap-align: start; }
+    .fee-table { font-size: 10.5px; }
+    .fee-table th, .fee-table td { padding: 6px 5px; }
+    .hours-grid { grid-template-columns: repeat(12, 1fr); }
+    .hours-axis { grid-template-columns: repeat(12, 1fr); }
+  }
+
+  /* ---- Today page ---- */
+  .light {
+    display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: center;
+    border: 1px solid var(--rule); border-radius: 6px; padding: 22px 24px; margin: 0 0 22px;
+    background: var(--panel);
+  }
+  .light .dot { width: 44px; height: 44px; border-radius: 50%; box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 18%, transparent); }
+  .light.go   .dot { background: var(--signal); color: var(--signal); }
+  .light.half .dot { background: var(--caution); color: var(--caution); }
+  .light.stop .dot { background: var(--risk); color: var(--risk); }
+  .light h2 { font-family: var(--serif); font-size: 24px; margin: 0 0 6px; line-height: 1.2; }
+  .light p { margin: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.6; }
+  .light .why { font-family: var(--mono); font-size: 11px; color: var(--ink-3); margin-top: 8px; letter-spacing: 0.04em; }
+
+  .capital { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 22px; font-size: 13px; color: var(--ink-2); }
+  .capital input {
+    font-family: var(--mono); font-size: 14px; width: 120px; padding: 7px 10px;
+    background: var(--ground-2); border: 1px solid var(--rule); border-radius: 4px; color: var(--ink);
+  }
+  .capital .hint { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+
+  .step { margin: 30px 0 12px; display: flex; align-items: baseline; gap: 12px; }
+  .step .n { font-family: var(--serif); font-style: italic; font-size: 26px; color: var(--accent); line-height: 1; }
+  .step h3 { font-family: var(--serif); font-size: 20px; margin: 0; }
+  .step .sub { font-size: 12.5px; color: var(--ink-3); }
+
+  .pick {
+    border: 1px solid var(--rule); border-radius: 6px; padding: 18px 20px; margin-bottom: 12px;
+    background: var(--ground); display: grid; grid-template-columns: 1fr auto; gap: 14px; min-width: 0;
+  }
+  .pick .kind {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 4px;
+  }
+  .pick .name { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+  .pick .name small { font-size: 12px; font-weight: 400; color: var(--ink-3); }
+  .pick .plain { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin: 8px 0 0; }
+  .pick .plain strong { color: var(--ink); }
+  .pick .grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1px;
+    background: var(--rule); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; margin: 12px 0 0;
+  }
+  .pick .cell { background: var(--ground-2); padding: 9px 11px; min-width: 0; }
+  .pick .cell .l { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 3px; }
+  .pick .cell .v { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--ink); }
+  .pick .cell .v.stop { color: var(--risk); }
+  .pick .cell .v.tgt { color: var(--signal); }
+  .pick .sell { font-size: 12.5px; color: var(--ink-2); margin: 12px 0 0; line-height: 1.6; padding-left: 12px; border-left: 2px solid var(--accent); }
+  .pick .caveat { font-size: 12px; color: var(--caution); margin: 10px 0 0; line-height: 1.5; }
+  .pick .score { text-align: right; font-family: var(--mono); }
+  .pick .score .big { font-size: 26px; font-weight: 600; color: var(--ink); line-height: 1; }
+  .pick .score .lbl { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+  .pick .score a { display: inline-block; margin-top: 10px; font-size: 10.5px; color: var(--accent); text-decoration: none; letter-spacing: 0.06em; }
+
+  /* Risk engine box — book-level limits from risk.js */
+  .risk-box { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; border: 1px solid var(--rule); background: var(--panel); padding: 14px 18px; margin: -10px 0 22px; }
+  .risk-box .stamp { font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; padding: 6px 10px; border: 2px solid; font-weight: 700; white-space: nowrap; }
+  .risk-box .stamp.OPEN { color: var(--signal); border-color: var(--signal); }
+  .risk-box .stamp.REDUCED { color: var(--caution); border-color: var(--caution); }
+  .risk-box .stamp.BLOCKED { color: var(--risk); border-color: var(--risk); }
+  .risk-box .msg { font-size: 13.5px; color: var(--ink-2); min-width: 0; }
+  .risk-box .msg strong { color: var(--ink); }
+  .risk-box .meter { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.04em; }
+  .risk-box .meter b { color: var(--ink); font-weight: 600; }
+  .risk-box .meter .bad { color: var(--risk); } .risk-box .meter .warn { color: var(--caution); }
+  .risk-box a { color: var(--accent); }
+  @media (max-width: 640px) { .risk-box { grid-template-columns: 1fr; gap: 8px; } }
+  .none {
+    border: 1px dashed var(--rule); border-radius: 6px; padding: 26px 22px; text-align: center;
+    color: var(--ink-2); font-size: 14px; line-height: 1.65;
+  }
+  .none strong { color: var(--ink); font-family: var(--serif); font-size: 19px; display: block; margin-bottom: 6px; }
+
+  .avoid-list { list-style: none; padding: 0; margin: 0; }
+  .avoid-list li { padding: 10px 0; border-bottom: 1px solid var(--rule-soft); font-size: 13px; color: var(--ink-2); line-height: 1.55; }
+  .avoid-list li strong { color: var(--ink); }
+
+  .status-line { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.04em; margin: 6px 0 0; }
+
+  @media (max-width: 640px) {
+    .light { grid-template-columns: 40px 1fr; gap: 12px; padding: 16px; }
+    .light .dot { width: 32px; height: 32px; }
+    .light h2 { font-size: 19px; }
+    .pick { grid-template-columns: 1fr; }
+    .pick .score { text-align: left; display: flex; align-items: baseline; gap: 12px; }
+    .pick .grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── Research page ── */
+  .rsearch { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 18px; }
+  .rsearch input { font-family: var(--mono); font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 14px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); width: 150px; }
+  .rsearch button { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; padding: 12px 18px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+  .rsearch .hint { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+  .rsearch .recent a { font-family: var(--mono); font-size: 11px; color: var(--accent); margin-right: 10px; text-decoration: none; border-bottom: 1px dotted var(--accent); }
+  .sec { border: 1px solid var(--rule); background: var(--panel); padding: 18px 20px; margin: 0 0 14px; }
+  .sec h4 { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 10px; font-weight: 500; }
+  .sec p { margin: 0 0 10px; max-width: 86ch; }
+  .sec p.plain { font-size: 14.5px; line-height: 1.6; }
+  .sec ul { margin: 6px 0 10px; padding-left: 20px; } .sec li { margin: 4px 0; max-width: 86ch; }
+  .sec .step { margin: 0 0 10px; }
+  .verdict { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; padding: 4px 10px; border: 1.5px solid; margin: 0 8px 8px 0; font-weight: 700; }
+  .v-good { color: var(--signal); border-color: var(--signal); } .v-warn { color: var(--caution); border-color: var(--caution); } .v-bad { color: var(--risk); border-color: var(--risk); } .v-na { color: var(--ink-3); border-color: var(--rule); }
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 6px 0 10px; }
+  table.r { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.r th, table.r td { padding: 6px 10px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  table.r th { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+  table.r th:first-child, table.r td:first-child { text-align: left; }
+  table.r td.up { color: var(--signal); } table.r td.down { color: var(--risk); }
+  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin: 8px 0 12px; }
+  .kv .c { background: var(--panel); padding: 10px 12px; min-width: 0; }
+  .kv .l { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+  .kv .v { font-family: var(--mono); font-size: 16px; color: var(--ink); margin-top: 2px; overflow-wrap: anywhere; }
+  .kv .s { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+  .copy { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 12px; border: 1px solid var(--rule); background: transparent; color: var(--ink-2); cursor: pointer; }
+  .copy:hover { border-color: var(--accent); color: var(--ink); }
+  .q { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--ink); border-left: 3px solid var(--accent); padding: 6px 14px; margin: 10px 0; }
+  .news-item { display: grid; grid-template-columns: 70px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--rule); font-size: 13px; }
+  .news-item .tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding-top: 2px; }
+  .news-item .tag.matters { color: var(--accent); } .news-item .tag.noise { color: var(--ink-3); }
+  .news-item a { color: var(--ink); text-decoration: none; } .news-item a:hover { color: var(--accent); }
+  .news-item small { color: var(--ink-3); font-family: var(--mono); font-size: 10.5px; }
+  .na { font-size: 12.5px; color: var(--ink-3); font-style: italic; }
+  .loading { font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.08em; }
+  @media (max-width: 640px) { .sec { padding: 14px; } .rsearch input { width: 120px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="tabbar" role="tablist" aria-label="Views">
+    <div class="tabbar-tabs">
+      <a href="/today" class="tab" data-view="today" role="tab" aria-selected="false">Today</a>
+      <a href="/alerts" class="tab" data-view="alerts" role="tab" aria-selected="false">Alerts</a>
+      <a href="/simulate" class="tab" data-view="simulate" role="tab" aria-selected="false">Simulate</a>
+      <a href="/dashboard" class="tab" data-view="dashboard" role="tab" aria-selected="false">Dashboard</a>
+      <a href="/" class="tab" data-view="stocks" role="tab" aria-selected="false">Stocks</a>
+      <a href="/options" class="tab" data-view="options" role="tab" aria-selected="false">Options</a>
+      <a href="/crypto" class="tab" data-view="crypto" role="tab" aria-selected="false">Crypto</a>
+      <a href="/metals" class="tab" data-view="metals" role="tab" aria-selected="false">Metals</a>
+      <a href="/research" class="tab on" data-view="research" role="tab" aria-selected="true">Research</a>
+    </div>
+    <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
+      <span class="hb-glyph" aria-hidden="true"></span>
+      Handbook
+    </button>
+  </nav>
+
+  <header class="masthead">
+    <div>
+      <div class="kicker">The Signal Desk · Research · the seven questions, answered from the filings</div>
+      <h1 class="brand">
+        <svg class="brand-mark" width="42" height="42" viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs><radialGradient id="lg-r" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="var(--accent)" stop-opacity="0.9"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></radialGradient></defs>
+          <circle cx="21" cy="21" r="20" fill="url(#lg-r)"/><circle cx="21" cy="21" r="14" fill="none" stroke="var(--accent)" stroke-width="1.1" opacity="0.75"/><circle cx="21" cy="21" r="8" fill="none" stroke="var(--accent)" stroke-width="1.1" opacity="0.5"/><circle cx="21" cy="21" r="3" fill="var(--accent)"/>
+        </svg>
+        Know the <em>business,</em> not just the chart.
+      </h1>
+    </div>
+    <div class="meta">
+      <div>RUN · <span id="run-ts">—</span></div>
+      <div class="feed">FEED · <span class="dot" id="feed-dot"></span> <span id="feed-label">SEC XBRL · NASDAQ · Yahoo</span></div>
+      <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
+    </div>
+  </header>
+
+  <form class="rsearch" id="rsearch" autocomplete="off">
+    <input id="ticker" placeholder="NVDA" maxlength="7" aria-label="Ticker" />
+    <button type="submit">Research</button>
+    <span class="hint">any US-listed SEC filer · ~2 s · filings refresh quarterly</span>
+    <span class="recent" id="recent"></span>
+  </form>
+
+  <div id="out">
+    <div class="none"><strong>Type a ticker.</strong>The page answers the seven research questions from primary sources — the company's own SEC filings, NASDAQ's analyst consensus and earnings record, the news feed, the sector ETFs — and tells you plainly where the free data stops. Nothing here is advice.</div>
+  </div>
+
+  <div class="disclosure" style="margin-top: 34px;">
+    <strong>Rules applied to filed numbers, not opinion.</strong> Every verdict word on this page comes from a threshold written in the Handbook (chapter 23) and every figure can be traced to an SEC filing or a quoted price. Where the free data stops — earnings-call transcripts, customer concentration, segment detail — the page says so and hands you a prompt pre-filled with the numbers instead of guessing.
+  </div>
+</div>
+<div class="hb-backdrop" id="hb-backdrop" hidden></div>
+<aside class="hb-drawer" id="hb-drawer" hidden aria-modal="true" role="dialog" aria-labelledby="hb-title">
+  <header class="hb-header">
+    <span class="hb-title" id="hb-title"><strong>Handbook</strong> — click any chapter to jump</span>
+    <button class="hb-close" id="hb-close" aria-label="Close handbook">Close ✕</button>
+  </header>
+  <iframe class="hb-frame" id="hb-frame" title="Signal Desk Handbook" src="about:blank" loading="lazy"></iframe>
+</aside>
+
+<script>
+(function () {
+  const btn = document.getElementById('open-handbook');
+  const drawer = document.getElementById('hb-drawer');
+  const backdrop = document.getElementById('hb-backdrop');
+  const closeBtn = document.getElementById('hb-close');
+  const frame = document.getElementById('hb-frame');
+  if (!btn || !drawer || !frame) return;
+  let loaded = false;
+  function open() {
+    if (!loaded) { frame.src = '/handbook'; loaded = true; }
+    drawer.classList.add('open');
+    backdrop.classList.add('open');
+    drawer.removeAttribute('hidden');
+    backdrop.removeAttribute('hidden');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => closeBtn.focus(), 100);
+  }
+  function close() {
+    drawer.classList.remove('open');
+    backdrop.classList.remove('open');
+    drawer.setAttribute('hidden', '');
+    backdrop.setAttribute('hidden', '');
+    document.body.style.overflow = '';
+    btn.focus();
+  }
+  btn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  backdrop.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawer.classList.contains('open')) close(); });
+})();
+</script>
+
+<script>
+// Theme toggle. The early inline script in <head> already applied the stored
+// choice before first paint; this only handles switching and iframe sync.
+(function () {
+  const root = document.documentElement;
+  const mql = window.matchMedia('(prefers-color-scheme: dark)');
+  function applyTheme(next) {
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('sd-theme', next); } catch (e) {}
+    const frame = document.getElementById('hb-frame');
+    if (frame && frame.contentWindow) {
+      try { frame.contentWindow.postMessage({ type: 'sd-theme', theme: next }, '*'); } catch (e) {}
+    }
+  }
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme') || (mql.matches ? 'dark' : 'light');
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'sd-theme' && (e.data.theme === 'dark' || e.data.theme === 'light')) {
+      applyTheme(e.data.theme);
+    }
+  });
+})();
+</script>
+
+
+
+<script type="module">
+import { regime } from '/analyze.js';
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const money = (x, d = 2) => (x == null || !isFinite(x) ? '—' : '$' + Number(x).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }));
+  const big = (x) => (x == null || !isFinite(x) ? '—' : Math.abs(x) >= 1e12 ? '$' + (x / 1e12).toFixed(2) + 'T' : Math.abs(x) >= 1e9 ? '$' + (x / 1e9).toFixed(1) + 'B' : Math.abs(x) >= 1e6 ? '$' + (x / 1e6).toFixed(0) + 'M' : money(x, 0));
+  const pct = (x, d = 1, sign = true) => (x == null || !isFinite(x) ? '—' : `${sign && x > 0 ? '+' : ''}${Number(x).toFixed(d)}%`);
+  const num = (x, d = 1) => (x == null || !isFinite(x) ? '—' : Number(x).toFixed(d));
+  const mult = (x) => (x == null || !isFinite(x) ? '—' : Number(x).toFixed(1) + '×');
+  const j = async (u) => { const r = await fetch(u); if (!r.ok) throw new Error(`${u.split('?')[0]} ${r.status}`); return r.json(); };
+  const vcls = (v) => (/REAL|EFFICIENT|WIDE|CREATORS|CHEAP|STABLE/.test(v || '') ? 'v-good' : /WATCH|NARROW|MIXED|FAIR/.test(v || '') ? 'v-warn' : /MANUFACTURED|CONSUMING|NONE|DESTROYERS|EXPENSIVE/.test(v || '') ? 'v-bad' : 'v-na');
+
+  const SECTOR_ETFS = { XLK: 'Technology', XLV: 'Health care', XLF: 'Financials', XLY: 'Consumer discretionary', XLC: 'Communication', XLI: 'Industrials', XLP: 'Consumer staples', XLE: 'Energy', XLU: 'Utilities', XLRE: 'Real estate', XLB: 'Materials' };
+  let universe = null;
+  async function getUniverse() { if (!universe) { try { universe = (await j('/api/universe')); } catch { universe = { constituents: [], sectorEtfs: {} }; } } return universe; }
+
+  const recent = () => { try { return JSON.parse(localStorage.getItem('sd-research-recent') || '[]'); } catch { return []; } };
+  function renderRecent() { const r = recent(); $('recent').innerHTML = r.length ? 'recent: ' + r.map((t) => `<a href="?t=${t}">${t}</a>`).join('') : ''; }
+  renderRecent();
+
+  $('rsearch').addEventListener('submit', (e) => { e.preventDefault(); const t = $('ticker').value.trim().toUpperCase(); if (t) { history.replaceState(null, '', `?t=${t}`); research(t); } });
+  $('recent').addEventListener('click', (e) => { const a = e.target.closest('a'); if (!a) return; e.preventDefault(); const t = new URL(a.href).searchParams.get('t'); $('ticker').value = t; history.replaceState(null, '', `?t=${t}`); research(t); });
+
+  const retTo = (bars, days) => { if (!bars || bars.length < days + 1) return null; const a = bars[bars.length - 1 - days].c, b = bars[bars.length - 1].c; return a > 0 ? ((b / a) - 1) * 100 : null; };
+
+  async function research(t) {
+    $('out').innerHTML = `<div class="none"><strong>Reading ${esc(t)}…</strong><span class="loading">SEC XBRL companyfacts · NASDAQ profile, consensus, earnings · news · sector peers · sector ETFs</span></div>`;
+    $('feed-label').textContent = `reading ${t}…`;
+    const uni = await getUniverse();
+    const me = (uni.constituents || []).find((c) => c.symbol === t);
+    const sector = me?.sector || null;
+    const etf = me?.sectorEtf || null;
+    const peers = (uni.constituents || []).filter((c) => c.sector === sector && c.symbol !== t).map((c) => c.symbol).slice(0, 40);
+    const [res, an, nw, sc, pf, qt, mc] = await Promise.all([
+      j(`/api/fundamentals?op=research&ticker=${t}${sector ? '&sector=' + encodeURIComponent(sector) : ''}`).catch((e) => ({ error: e.message })),
+      j(`/api/intel?op=analyst&tickers=${t}`).then((d) => d.results?.[t] || null).catch(() => null),
+      j(`/api/news?tickers=${t}`).then((d) => { const v = d.news?.[t]; return Array.isArray(v) ? v : (v?.items || []); }).catch(() => []),
+      j(`/api/scan?tickers=${t}${etf ? `&sectors=${t}:${etf}` : ''}`).then((d) => (d.rows || []).find((r) => r.t === t || r.ticker === t) || d.rows?.[0] || null).catch(() => null),
+      peers.length ? j(`/api/fundamentals?tickers=${peers.join(',')}`).then((d) => d.fundamentals || {}).catch(() => ({})) : Promise.resolve({}),
+      j(`/api/quotes?tickers=${['SPY', ...Object.keys(SECTOR_ETFS), '^VIX', '^TNX', 'DX-Y.NYB'].join(',')}&range=6mo`).then((d) => d.quotes || {}).catch(() => ({})),
+      j('/api/intel?op=macro&hours=96').catch(() => null),
+    ]);
+    $('run-ts').textContent = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+    $('feed-label').textContent = res?.error ? `SEC read failed · ${res.error}` : 'live';
+    const r = recent().filter((x) => x !== t); r.unshift(t); try { localStorage.setItem('sd-research-recent', JSON.stringify(r.slice(0, 8))); } catch {} renderRecent();
+    render(t, { res, an, nw, sc, pf, qt, mc, sector, etf, peers, me });
+  }
+
+  function render(t, D) {
+    const { res, an, nw, sc, pf, qt, mc, sector, etf } = D;
+    const f = res?.forensic && !res.forensic.error ? res.forensic : null;
+    const P = res?.profile || null, S = res?.summary || null;
+    const name = P?.name || f?.name || t;
+    const price = f?.valuation?.price ?? sc?.p ?? null;
+    const Y = f?.years || [], last = Y[Y.length - 1] || {}, first = Y[0] || {};
+    const n = Y.length;
+    const sections = [];
+    const err = res?.error || res?.forensic?.error;
+    if (err) sections.push(`<div class="sec"><h4>Filings</h4><p class="na">${esc(err)}. The sections below use whatever the other sources returned.</p></div>`);
+
+    // ── 1 · The business ──
+    const netM = last.revenue > 0 && last.netIncome != null ? (last.netIncome / last.revenue) * 100 : null;
+    const lastA = f?.allocation?.years?.slice(-1)[0];
+    const rndPct = last.revenue > 0 && lastA?.rnd ? (lastA.rnd / last.revenue) * 100 : null;
+    const risks = [];
+    if (f) {
+      for (const x of f.synthesis.flags) risks.push(x);
+      if (last.debt > 0 && last.ebitda > 0 && last.debt / last.ebitda > 2.5 && !risks.some((x) => /Leverage/.test(x))) risks.push(`Leverage: debt is ${(last.debt / last.ebitda).toFixed(1)}× EBITDA.`);
+      if (f.valuation.revenueCagr != null && f.valuation.revenueCagr < 3) risks.push(`Growth: revenue compounded only ${f.valuation.revenueCagr}%/yr over ${n - 1} years.`);
+      risks.push('Customer and segment concentration is not in structured data — read the "Customers" and segment notes of the latest 10-K (prompt pre-filled below).');
+    }
+    const sentiment = nw.length ? nw.reduce((s, x) => s + (x.sentiment || 0), 0) / nw.length : null;
+    const pos = nw.filter((x) => (x.sentiment || 0) > 0.15).length, neg = nw.filter((x) => (x.sentiment || 0) < -0.15).length;
+    sections.push(`<div class="sec"><div class="step"><span class="n">1</span><h3>The business</h3><span class="sub">model, revenue, margins, risks, advantages, sentiment</span></div>
+      <p class="plain"><strong>${esc(name)}</strong>${P?.sector ? ` · ${esc(P.sector)} / ${esc(P.industry || '')}` : sector ? ` · ${esc(sector)}` : ''}${P?.website ? ` · <a href="${esc(P.website)}" target="_blank" rel="noopener" style="color:var(--accent)">investor site ↗</a>` : ''}</p>
+      ${P?.description ? `<p class="plain">${esc(P.description)}</p>` : '<p class="na">No company description from NASDAQ.</p>'}
+      <div class="kv">
+        <div class="c"><div class="l">Revenue FY${esc(last.fy || '')}</div><div class="v">${big(last.revenue)}</div><div class="s">${f?.valuation?.revenueCagr != null ? `${pct(f.valuation.revenueCagr)}/yr over ${n - 1} yrs` : ''}</div></div>
+        <div class="c"><div class="l">Gross margin</div><div class="v">${pct(last.gm, 1, false)}</div><div class="s">${first.gm != null && last.gm != null ? `${pct(last.gm - first.gm)} pts since FY${first.fy}` : f?.isFinancial ? 'n/a for financials' : ''}</div></div>
+        <div class="c"><div class="l">Operating margin</div><div class="v">${pct(last.om, 1, false)}</div><div class="s">net ${pct(netM, 1, false)}</div></div>
+        <div class="c"><div class="l">R&amp;D intensity</div><div class="v">${pct(rndPct, 1, false)}</div><div class="s">of revenue</div></div>
+        <div class="c"><div class="l">Market cap</div><div class="v">${S?.marketCapRaw ? big(S.marketCapRaw) : big(f?.valuation?.marketCap)}</div><div class="s">price ${money(price)}${S?.beta != null ? ` · beta ${S.beta}` : ''}</div></div>
+      </div>
+      <h4>Key risks (from the numbers)</h4>${risks.length ? `<ul>${risks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="na">No filings-based risks could be computed.</p>'}
+      <h4>Competitive advantage</h4>
+      ${f?.moat ? `<span class="verdict ${vcls(f.moat.verdict)}">moat ${esc(f.moat.verdict)}${f.moat.score != null ? ` · ${f.moat.score}/10` : ''}</span><p>${esc(f.moat.note)}</p>${f.moat.factors.length ? `<ul>${f.moat.factors.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}` : '<p class="na">—</p>'}
+      <h4>Market sentiment</h4>
+      <div class="kv">
+        <div class="c"><div class="l">Analysts</div><div class="v">${an ? esc(an.consensus || an.meanRating || '—') : '—'}</div><div class="s">${an ? `${an.buy ?? 0} buy · ${an.hold ?? 0} hold · ${an.sell ?? 0} sell · ${an.analysts ?? '?'} analysts` : 'no consensus data'}</div></div>
+        <div class="c"><div class="l">Consensus target</div><div class="v">${an?.target ? money(an.target, 0) : '—'}</div><div class="s">${an?.target && price ? `${pct(((an.target / price) - 1) * 100)} from price · range ${money(an.targetLow, 0)}–${money(an.targetHigh, 0)}` : ''}</div></div>
+        <div class="c"><div class="l">News tone</div><div class="v">${sentiment == null ? '—' : sentiment > 0.1 ? 'positive' : sentiment < -0.1 ? 'negative' : 'neutral'}</div><div class="s">${nw.length ? `${pos} positive · ${neg} negative of ${nw.length} headlines` : 'no recent headlines'}</div></div>
+        <div class="c"><div class="l">Chart setup</div><div class="v">${sc ? esc(sc.su || sc.setup || '—') : '—'}</div><div class="s">${sc ? `score ${sc.sc ?? sc.score ?? '—'}${sc.rs != null ? ` · vs market ${pct(sc.rs)} / 20d` : ''}` : 'not in the scan'}</div></div>
+      </div></div>`);
+
+    // ── 2 · Trade setup ──
+    sections.push(`<div class="sec"><div class="step"><span class="n">2</span><h3>Trade setup</h3><span class="sub">entry, stop, target, risk/reward — the rulebook's plan</span></div>
+      ${sc && sc.stop ? `<div class="kv">
+        <div class="c"><div class="l">Setup</div><div class="v">${esc(sc.su || '—')}</div><div class="s">score ${sc.sc ?? '—'}</div></div>
+        <div class="c"><div class="l">Entry</div><div class="v">${money(sc.p)}</div></div>
+        <div class="c"><div class="l">Stop</div><div class="v">${money(sc.stop)}</div><div class="s">${pct(((sc.stop - sc.p) / sc.p) * 100)}</div></div>
+        <div class="c"><div class="l">Target</div><div class="v">${money(sc.tgt)}</div><div class="s">${pct(((sc.tgt - sc.p) / sc.p) * 100)} · 2.5R</div></div>
+      </div><p class="plain">One plan, not two or three: the rulebook has a single entry rule per setup and the Handbook explains it. The <a href="/" style="color:var(--accent)">Stocks tab</a> shows the chart, the <a href="/today" style="color:var(--accent)">Today tab</a> sizes it to your capital and the risk engine, and <a href="/options" style="color:var(--accent)">Options</a> has the contract version. Only a BUY verdict there is a trade; everything on this page is the homework behind it.</p>`
+      : `<p class="na">${esc(t)} is not in the S&P 500 scan, so there is no mechanical plan. The research below still applies.</p>`}</div>`);
+
+    // ── 3 · News filter ──
+    const matters = (x) => !!x.primary && x.category && x.category !== 'other';
+    sections.push(`<div class="sec"><div class="step"><span class="n">3</span><h3>News filter</h3><span class="sub">what moves the price vs noise — rule: company-specific and categorised</span></div>
+      ${nw.length ? nw.slice(0, 10).map((x) => `<div class="news-item"><span class="tag ${matters(x) ? 'matters' : 'noise'}">${matters(x) ? 'matters' : 'noise'}</span><div><a href="${esc(x.link || x.url || '#')}" target="_blank" rel="noopener">${esc(x.title)}</a><br/><small>${esc(x.category || '')}${x.sentiment != null ? ` · tone ${x.sentiment > 0 ? '+' : ''}${x.sentiment}` : ''}${x.publisher || x.source ? ' · ' + esc(x.publisher || x.source) : ''}${x.ts ? ' · ' + new Date(x.ts).toISOString().slice(0, 10) : ''}</small></div></div>`).join('') : '<p class="na">No headlines in the feed right now.</p>'}
+      <p class="na" style="margin-top:8px;">"Matters" = the article is about this company (not a passing mention) and falls in an alert category — earnings, guidance, deal, lawsuit, regulatory, analyst, product. The same rule feeds the Alerts tab.</p></div>`);
+
+    // ── 4 · Earnings call ──
+    const cq = f?.credibility?.quarters || [];
+    sections.push(`<div class="sec"><div class="step"><span class="n">4</span><h3>Earnings call</h3><span class="sub">the quantitative half from the record; the transcript half by prompt</span></div>
+      ${f?.credibility?.score != null ? `<span class="verdict ${f.credibility.score >= 8 ? 'v-good' : f.credibility.score >= 5 ? 'v-warn' : 'v-bad'}">credibility ${f.credibility.score}/10</span>` : ''}
+      <p>${esc(f?.credibility?.note || 'No consensus history.')}</p>
+      ${cq.length ? `<div class="tbl-wrap"><table class="r"><thead><tr><th>Quarter</th><th>Reported</th><th>EPS</th><th>Consensus</th><th>Surprise</th></tr></thead><tbody>${cq.map((q) => `<tr><td>${esc(q.q || '')}</td><td>${esc(q.date || '')}</td><td>${q.eps != null ? money(q.eps) : '—'}</td><td>${q.est != null ? money(q.est) : '—'}</td><td class="${q.surprise > 0 ? 'up' : q.surprise < 0 ? 'down' : ''}">${pct(q.surprise)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+      <p class="na">No free source carries call transcripts. ${P?.website ? `Get the latest one from the <a href="${esc(P.website)}" target="_blank" rel="noopener" style="color:var(--accent)">investor site</a>, then` : 'Get the latest one from the investor site, then'} use the pre-filled prompt — it carries the beat/miss record above so the model can check what management said against what landed.</p>
+      <button class="copy" data-copy="call">Copy earnings-call prompt</button></div>`);
+
+    // ── 5 · Portfolio risk ──
+    let held = []; try { held = (JSON.parse(localStorage.getItem('sd-portfolio-v1') || '[]')).filter((p) => p.ticker === t || p.underlying === t); } catch {}
+    sections.push(`<div class="sec"><div class="step"><span class="n">5</span><h3>Portfolio risk</h3><span class="sub">concentration, sector exposure, correlation — lives on the Dashboard</span></div>
+      <p class="plain">${held.length ? `You hold <strong>${held.length} position${held.length > 1 ? 's' : ''}</strong> in ${esc(t)}. ` : `You do not hold ${esc(t)}. `}The <a href="/dashboard#portfolio-risk" style="color:var(--accent)">Dashboard's portfolio risk check</a> measures your book as a whole: the largest name, sector and asset-class weights, how correlated the positions are over the last 60 sessions, and total risk at stops — and names the single biggest vulnerability. It reads your real positions, so it cannot be answered from this page.</p></div>`);
+
+    // ── 6 · Valuation reality check ──
+    const V = f?.valuation || null;
+    const peerPE = Object.values(pf).map((x) => x.peRatio).filter((x) => x > 0 && x < 200).sort((a, b) => a - b);
+    const peerFwd = Object.values(pf).map((x) => x.forwardPE).filter((x) => x > 0 && x < 200).sort((a, b) => a - b);
+    const med = (a) => (a.length ? (a.length % 2 ? a[a.length >> 1] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2) : null);
+    const pctl = (a, x) => (a.length && x != null ? Math.round((a.filter((v) => v < x).length / a.length) * 100) : null);
+    const curPE = V?.current?.pe ?? S?.peRatio ?? null;
+    sections.push(`<div class="sec"><div class="step"><span class="n">6</span><h3>Valuation reality check</h3><span class="sub">own history, peers, growth, what the price assumes</span></div>
+      ${V ? `<span class="verdict ${vcls(V.verdict)}">${esc(V.verdict)}</span>${peerPE.length && curPE ? `<span class="verdict ${pctl(peerPE, curPE) >= 75 ? 'v-bad' : pctl(peerPE, curPE) <= 25 ? 'v-good' : 'v-warn'}">${pctl(peerPE, curPE)}th pctile of sector P/E</span>` : ''}
+      <p class="plain">${esc(V.note)}</p>
+      <div class="kv">
+        <div class="c"><div class="l">P/E</div><div class="v">${mult(curPE)}</div><div class="s">own 5-yr median ${mult(V.median5y.pe)}${peerPE.length ? ` · sector median ${mult(med(peerPE))} (n=${peerPE.length})` : ''}</div></div>
+        <div class="c"><div class="l">Forward P/E</div><div class="v">${mult(V.forwardPE ?? S?.forwardPE)}</div><div class="s">${peerFwd.length ? `sector median ${mult(med(peerFwd))}` : ''}</div></div>
+        <div class="c"><div class="l">EV / EBITDA</div><div class="v">${mult(V.current.evEbitda)}</div><div class="s">own median ${mult(V.median5y.evEbitda)}</div></div>
+        <div class="c"><div class="l">P / FCF</div><div class="v">${mult(V.current.pfcf)}</div><div class="s">own median ${mult(V.median5y.pfcf)} · FCF yield ${pct(V.current.fcfYieldPct, 2, false)}</div></div>
+        <div class="c"><div class="l">Growth priced in</div><div class="v">${pct(V.impliedFcfGrowth, 1, false)}/yr</div><div class="s">FCF for 10 yrs · actual rev ${pct(V.revenueCagr, 1, false)} · EPS ${pct(V.epsCagr, 1, false)}</div></div>
+      </div>
+      <div class="tbl-wrap"><table class="r"><thead><tr><th>FY</th><th>Price</th><th>EPS</th><th>P/E</th><th>EV/EBITDA</th><th>P/FCF</th></tr></thead><tbody>${V.years.map((y) => `<tr><td>${y.fy}</td><td>${money(y.price)}</td><td>${y.eps != null ? money(y.eps) : '—'}</td><td>${mult(y.pe)}</td><td>${mult(y.evEbitda)}</td><td>${mult(y.pfcf)}</td></tr>`).join('')}<tr><td><strong>now</strong></td><td>${money(price)}</td><td>${V.ttmEps != null ? money(V.ttmEps) : '—'}</td><td><strong>${mult(curPE)}</strong></td><td><strong>${mult(V.current.evEbitda)}</strong></td><td><strong>${mult(V.current.pfcf)}</strong></td></tr></tbody></table></div>
+      ${V.fairValue ? `<h4>Fair value range (own-history multiples)</h4><p class="plain"><strong>${money(V.fairValue.low)} – ${money(V.fairValue.high)}</strong> vs price ${money(price)} — ${price < V.fairValue.low ? 'below the range' : price > V.fairValue.high ? 'above the range' : 'inside the range'}.</p><ul>${V.fairValue.anchors.map((a) => `<li>${esc(a.basis)} = ${money(a.value)}</li>`).join('')}</ul><p class="na">${esc(V.fairValue.assumption)} ${esc(V.dcfAssumptions)}</p>` : ''}
+      ${f.splitsAdjusted?.length ? `<p class="na">Older years split-adjusted: ${esc(f.splitsAdjusted.join(', '))}.</p>` : ''}` : '<p class="na">No valuation history without filings.</p>'}</div>`);
+
+    // ── 7 · Macro & sector ──
+    const spy = qt.SPY?.bars, tnx = qt['^TNX']?.bars, vix = qt['^VIX']?.price ?? (qt['^VIX']?.bars?.slice(-1)[0]?.c), dxy = qt['DX-Y.NYB']?.bars;
+    const rows = Object.keys(SECTOR_ETFS).map((e) => { const b = qt[e]?.bars; const m1 = retTo(b, 21), m3 = retTo(b, 63), s1 = retTo(spy, 21), s3 = retTo(spy, 63); return { e, name: SECTOR_ETFS[e], m1, m3, r1: m1 != null && s1 != null ? m1 - s1 : null, r3: m3 != null && s3 != null ? m3 - s3 : null }; }).filter((x) => x.m1 != null).sort((a, b) => (b.r3 ?? -99) - (a.r3 ?? -99));
+    const tnxNow = tnx?.slice(-1)[0]?.c, tnx1m = tnx && tnx.length > 21 ? tnx[tnx.length - 22].c : null;
+    const dRate = tnxNow != null && tnx1m != null ? tnxNow - tnx1m : null;
+    const rg = vix != null ? regime(vix) : null;
+    const dxy1m = retTo(dxy, 21);
+    const rateText = dRate == null ? '' : dRate > 0.15 ? `The 10-year yield is <strong>up ${dRate.toFixed(2)} pts</strong> in a month (${num(tnxNow, 2)}%). Textbook tendency: banks, insurers and energy hold up; utilities, REITs and long-duration growth get repriced down.` : dRate < -0.15 ? `The 10-year yield is <strong>down ${Math.abs(dRate).toFixed(2)} pts</strong> in a month (${num(tnxNow, 2)}%). Textbook tendency: long-duration growth, utilities and REITs benefit; bank margins compress.` : `The 10-year yield is roughly flat on the month (${num(tnxNow, 2)}%), so rates are not the sector driver right now.`;
+    const mine = rows.find((x) => x.e === etf);
+    sections.push(`<div class="sec"><div class="step"><span class="n">7</span><h3>Macro &amp; sector context</h3><span class="sub">rates, volatility, the calendar, and where this sector sits</span></div>
+      <div class="kv">
+        <div class="c"><div class="l">10-yr yield</div><div class="v">${num(tnxNow, 2)}%</div><div class="s">${dRate != null ? `${dRate >= 0 ? '+' : ''}${dRate.toFixed(2)} pts / 1m` : ''}</div></div>
+        <div class="c"><div class="l">VIX regime</div><div class="v">${rg ? esc(rg.level.toUpperCase()) : '—'}</div><div class="s">VIX ${num(vix, 1)}${rg && rg.sizeMult < 1 ? ` · size ×${rg.sizeMult}` : ''}</div></div>
+        <div class="c"><div class="l">Dollar (DXY)</div><div class="v">${pct(dxy1m)}</div><div class="s">1 month</div></div>
+        <div class="c"><div class="l">Macro calendar</div><div class="v">${mc?.macroRisk ? esc(mc.macroRisk.level.toUpperCase()) : '—'}</div><div class="s">${mc?.macroRisk?.note ? esc(mc.macroRisk.note) : ''}</div></div>
+      </div>
+      <p class="plain">${rateText}${rg && (rg.level === 'stress' || rg.level === 'crisis') ? ' Volatility is in a risk-off regime: the rulebook cuts new momentum entries regardless of sector.' : ''}</p>
+      ${rows.length ? `<div class="tbl-wrap"><table class="r"><thead><tr><th>Sector ETF</th><th>1m</th><th>3m</th><th>vs SPY 1m</th><th>vs SPY 3m</th></tr></thead><tbody>${rows.map((x) => `<tr${x.e === etf ? ' style="background:color-mix(in srgb, var(--accent) 10%, transparent)"' : ''}><td>${x.e} · ${esc(x.name)}${x.e === etf ? ' ← this stock' : ''}</td><td class="${x.m1 >= 0 ? 'up' : 'down'}">${pct(x.m1)}</td><td class="${x.m3 >= 0 ? 'up' : 'down'}">${pct(x.m3)}</td><td class="${x.r1 >= 0 ? 'up' : 'down'}">${pct(x.r1)}</td><td class="${x.r3 >= 0 ? 'up' : 'down'}">${pct(x.r3)}</td></tr>`).join('')}</tbody></table></div>
+      <p class="plain">Leading over 3 months: <strong>${rows.slice(0, 3).map((x) => x.e).join(', ')}</strong>. Lagging: <strong>${rows.slice(-3).map((x) => x.e).join(', ')}</strong>.${mine ? ` ${esc(t)}'s sector (${mine.e}) is ${mine.r3 >= 0 ? 'ahead of' : 'behind'} the market by ${pct(Math.abs(mine.r3), 1, false)} over 3 months${sc?.rs != null ? `, and ${esc(t)} itself is ${sc.rs >= 0 ? 'ahead of' : 'behind'} the market by ${pct(Math.abs(sc.rs), 1, false)} over 20 days` : ''} — ${mine.r3 >= 0 ? 'a sector tailwind, which the composite score already credits' : 'the right stock in a lagging sector still fights the tape'}.` : ''}</p>` : '<p class="na">Sector ETF quotes unavailable.</p>'}
+      <p class="na">"Textbook tendency" means the historical pattern, not a forecast; the composite score already includes sector-relative strength so this is context, not a signal.</p></div>`);
+
+    // ── Forensic deep-dive ──
+    if (f) {
+      const C = f.cash, W = f.workingCapital, A = f.allocation, M = f.multibagger;
+      sections.push(`<div class="sec"><h4>Forensic · cash flow vs reported profit</h4>
+        <span class="verdict ${vcls(C.verdict)}">profits ${esc(C.verdict)}</span><p>${esc(C.note)}</p>
+        <div class="tbl-wrap"><table class="r"><thead><tr><th>FY</th><th>Net income</th><th>Operating CF</th><th>Free CF</th><th>CFO / NI</th><th>Accruals % assets</th><th>Flag</th></tr></thead><tbody>${C.years.map((y) => `<tr><td>${y.fy}</td><td>${big(y.netIncome)}</td><td class="${y.cfo < 0 ? 'down' : ''}">${big(y.cfo)}</td><td>${big(y.fcf)}</td><td class="${y.ratio != null && y.ratio < 0.8 ? 'down' : ''}">${mult(y.ratio)}</td><td>${pct(y.accrualPct, 1, true)}</td><td>${y.cfoNegPatPos ? 'CFO < 0, profit > 0' : y.patUpCfoDown ? 'profit up, cash down' : ''}</td></tr>`).join('')}</tbody></table></div>
+        <h4 style="margin-top:14px;">Forensic · working capital</h4>
+        <span class="verdict ${vcls(W.verdict)}">${esc(W.verdict)}</span><p>${esc(W.note)}</p>
+        ${W.verdict !== 'N/A' ? `<div class="tbl-wrap"><table class="r"><thead><tr><th>FY</th><th>Debtor days</th><th>Inventory days</th><th>Creditor days</th><th>Cash conversion cycle</th></tr></thead><tbody>${W.years.map((y) => `<tr><td>${y.fy}</td><td>${num(y.dso, 0)}</td><td>${num(y.dio, 0)}</td><td>${num(y.dpo, 0)}</td><td>${num(y.ccc, 0)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+        <h4 style="margin-top:14px;">Forensic · capital allocation (${n} fiscal years)</h4>
+        <span class="verdict ${vcls(A.verdict)}">${esc(A.verdict)}</span>
+        <div class="kv">
+          <div class="c"><div class="l">Free cash flow</div><div class="v">${big(A.totals.fcf)}</div></div>
+          <div class="c"><div class="l">Dividends</div><div class="v">${big(A.totals.dividends)}</div></div>
+          <div class="c"><div class="l">Buybacks</div><div class="v">${big(A.totals.buybacks)}</div><div class="s">${A.payoutPctFcf != null ? `payout ${A.payoutPctFcf}% of FCF` : ''}${A.buybackOffsetBySbc != null ? ` · SBC = ${A.buybackOffsetBySbc}% of buybacks` : ''}</div></div>
+          <div class="c"><div class="l">Capex + R&amp;D</div><div class="v">${big(A.totals.capex + A.totals.rnd)}</div><div class="s">core reinvestment</div></div>
+          <div class="c"><div class="l">Acquisitions</div><div class="v">${big(A.totals.acquisitions)}</div><div class="s">${A.acqPctFcf != null ? `${A.acqPctFcf}% of FCF` : ''}</div></div>
+          <div class="c"><div class="l">Share count</div><div class="v">${pct(A.shareChangePct)}</div><div class="s">FY${first.fy} → FY${last.fy}${A.debtChange != null ? ` · debt ${A.debtChange >= 0 ? '+' : '−'}${big(Math.abs(A.debtChange))}` : ''}</div></div>
+        </div>
+        <ul>${A.points.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+        <h4 style="margin-top:14px;">Executive pay (US stand-in for promoter salary)</h4><p>${esc(f.pay.note)}</p>
+        <h4 style="margin-top:14px;">Multibagger criteria · ${M.score}/${M.of} measurable</h4>
+        <ul>${M.criteria.map((c) => `<li>${c.pass === null ? '◌' : c.pass ? '✓' : '✕'} <strong>${esc(c.name)}</strong> — ${esc(c.detail)}</li>`).join('')}</ul></div>`);
+
+      const Sy = f.synthesis;
+      sections.push(`<div class="sec"><h4>Synthesis</h4>
+        <h4 style="color:var(--signal)">Reasons to be bullish</h4>${Sy.bull.length ? `<ul>${Sy.bull.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="na">The numbers do not make a bull case on their own.</p>'}
+        <h4 style="color:var(--risk)">Red flags to monitor</h4>${Sy.flags.length ? `<ul>${Sy.flags.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="na">No red flags from the filed numbers.</p>'}
+        ${Sy.fairValue ? `<h4>Fair value range</h4><p class="plain"><strong>${money(Sy.fairValue.low)} – ${money(Sy.fairValue.high)}</strong> (assumptions stated in section 6).</p>` : ''}
+        <h4>The one question for the next earnings call</h4><div class="q">${esc(Sy.question)}</div>
+        <p class="na">Sources: ${esc(f.sources.join(' · '))}. Not available free, and not faked: ${esc(f.notAvailable.join(', '))}.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button class="copy" data-copy="all">Copy all prompts, pre-filled with these numbers</button><button class="copy" data-copy="data">Copy the data table only</button></div></div>`);
+    }
+    $('out').innerHTML = sections.join('');
+    $('out').querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
+      const kind = b.dataset.copy;
+      const text = kind === 'call' ? promptCall(t, D) : kind === 'data' ? dataBlock(t, D) : promptAll(t, D);
+      const label = b.textContent;
+      try { await navigator.clipboard.writeText(text); b.textContent = '✓ copied'; } catch { prompt('Copy this:', text); }
+      setTimeout(() => { b.textContent = label; }, 1800);
+    }));
+  }
+
+  const bn = (x) => (x == null ? '?' : Math.abs(x) >= 1e9 ? (x / 1e9).toFixed(2) + 'B' : (x / 1e6).toFixed(0) + 'M');
+  function dataBlock(t, D) {
+    const f = D.res?.forensic && !D.res.forensic.error ? D.res.forensic : null; const P = D.res?.profile, an = D.an;
+    const L = [];
+    L.push(`DATA for ${t}${f ? ` — ${f.name}` : ''}${P?.sector ? ` (${P.sector} / ${P.industry})` : ''}, as of ${new Date().toISOString().slice(0, 10)}. Source: SEC XBRL 10-K filings, NASDAQ, Yahoo.`);
+    if (f) {
+      L.push(`Price $${f.valuation.price ?? '?'}, market cap ${f.valuation.marketCap ? '$' + (f.valuation.marketCap / 1e9).toFixed(1) + 'B' : '?'}.`);
+      L.push('FY | revenue | net income | operating CF | free CF | gross margin | op margin | ROCE | ROIC | diluted EPS | shares | debt | cash');
+      for (const y of f.years) L.push(`${y.fy} | ${bn(y.revenue)} | ${bn(y.netIncome)} | ${bn(y.cfo)} | ${bn(y.fcf)} | ${y.gm ?? '?'}% | ${y.om ?? '?'}% | ${y.roce ?? '?'}% | ${y.roic ?? '?'}% | ${y.eps ?? '?'} | ${y.shares ? (y.shares / 1e6).toFixed(0) + 'M' : '?'} | ${bn(y.debt)} | ${bn(y.cash)}`);
+      L.push(`Working capital (days): ${f.workingCapital.years.map((y) => `${y.fy} DSO ${y.dso ?? '?'} / DIO ${y.dio ?? '?'} / DPO ${y.dpo ?? '?'} / CCC ${y.ccc ?? '?'}`).join('; ')}.`);
+      const T = f.allocation.totals; L.push(`Capital allocation, ${f.years.length} yrs: FCF ${bn(T.fcf)}, dividends ${bn(T.dividends)}, buybacks ${bn(T.buybacks)}, capex ${bn(T.capex)}, R&D ${bn(T.rnd)}, acquisitions ${bn(T.acquisitions)}, SBC ${bn(T.sbc)}; share count ${f.allocation.shareChangePct ?? '?'}%.`);
+      const V = f.valuation; L.push(`Valuation: P/E ${V.current.pe ?? '?'} (5y median ${V.median5y.pe ?? '?'}), forward P/E ${V.forwardPE ?? '?'}, EV/EBITDA ${V.current.evEbitda ?? '?'} (median ${V.median5y.evEbitda ?? '?'}), P/FCF ${V.current.pfcf ?? '?'} (median ${V.median5y.pfcf ?? '?'}); revenue CAGR ${V.revenueCagr ?? '?'}%, EPS CAGR ${V.epsCagr ?? '?'}%; a 10-yr DCF (10% discount, 3% terminal) implies ${V.impliedFcfGrowth ?? '?'}%/yr FCF growth at today's price.`);
+      if (f.credibility.quarters.length) L.push(`EPS vs consensus, last ${f.credibility.quarters.length} quarters: ${f.credibility.quarters.map((q) => `${q.q}: ${q.eps} vs ${q.est} (${q.surprise > 0 ? '+' : ''}${q.surprise}%)`).join('; ')}.`);
+      if (f.pay.latest) L.push(`CEO total pay FY${f.pay.latest.fy}: $${(f.pay.latest.ceoPay / 1e6).toFixed(1)}M = ${f.pay.latest.pctOfNetIncome}% of net income.`);
+    }
+    if (an) L.push(`Analysts: ${an.consensus || an.meanRating}, ${an.buy} buy / ${an.hold} hold / ${an.sell} sell of ${an.analysts}; consensus target $${an.target} (range $${an.targetLow}–$${an.targetHigh}).`);
+    if (D.nw?.length) L.push(`Recent headlines: ${D.nw.slice(0, 6).map((x) => `"${x.title}"`).join('; ')}.`);
+    return L.join('\n');
+  }
+  function promptCall(t, D) {
+    return `${dataBlock(t, D)}\n\nHere is the transcript of ${t}'s latest earnings call:\n[PASTE TRANSCRIPT HERE]\n\nHighlight what management is confident about, what they are vague on, and any red flags in their language. Then, using the EPS-vs-consensus record above: did they meet, beat or miss their own stated targets; did the language change versus the prior quarter; and were misses explained with clear reasons or deflected? Score management credibility out of 10 and give 3 specific examples. State every assumption and flag where you are uncertain.`;
+  }
+  function promptAll(t, D) {
+    return `${dataBlock(t, D)}\n\nUsing ONLY the data above plus anything I paste, answer the following. Be direct, state every assumption, and say "not determinable from the data" where that is true.\n\n1. STOCK ANALYST — Act as a stock analyst. Break down ${t}: business model, revenue drivers, profit margins, key risks, competitive advantages, and current market sentiment. Understand the business, not just the chart.\n\n2. CFO vs PAT AUDIT — Using the FY table: years where net income grew but operating cash flow fell; the gap between reported profit and cash generated; whether the gap is narrowing or widening; years with negative CFO despite positive profit. Are the profits real or manufactured?\n\n3. WORKING CAPITAL TRAP — Using the DSO/DIO/DPO/CCC series: is the business getting more efficient or slowly consuming cash?\n\n4. REVENUE CONCENTRATION — I will paste the "Customers" and segment sections of the latest 10-K here: [PASTE]. Revenue from the top 3 customers as a % of total; how it changed over 5 years; geographic and segment concentration; what happens to earnings if the largest customer exits. Pricing power or dangerous dependency?\n\n5. MOAT STRENGTH — Rate the moat 1–10 using the gross-margin trend, ROCE and its trajectory, whether margins held through the 2022–23 inflation cycle, and how many direct competitors can replicate the product. Name the type of moat, if any, and what could erode it.\n\n6. INSIDER & EXECUTIVE QUALITY (US version of the promoter scan) — Using the CEO pay figure and the capital-allocation totals, plus any Form 4 insider trades I paste here: [PASTE], does executive behaviour signal long-term conviction or short-term extraction?\n\n7. CAPITAL ALLOCATION AUDIT — Dividends and buybacks vs free cash flow; capex and R&D in the core vs acquisitions; did acquisitions create or destroy value (ROIC trend); any loans to related entities (from the 10-K related-party note: [PASTE]). Rate management as value creators or destroyers with reasoning.\n\n8. VALUATION REALITY CHECK — Current P/E vs own 5-year median; EV/EBITDA vs own median; P/FCF — is free cash flow justifying the price; what earnings growth rate is baked into today's valuation (use the implied-growth figure and challenge it). Cheap, fair, or expensive — with evidence.\n\n9. MANAGEMENT CREDIBILITY — Using the EPS-vs-consensus record and the last 4 call transcripts I paste here: [PASTE]. Per quarter: guidance given; met/beat/missed; language change quarter on quarter; misses explained or deflected. Score out of 10 with 3 examples.\n\n10. MULTIBAGGER CRITERIA — Score ${t} on: expanding addressable market; ROCE improving and sustained above 15%; owner alignment (insider ownership — I will paste the proxy's beneficial-ownership table: [PASTE]); analyst coverage (note: S&P 500 names are heavily covered by construction); profits reinvested in the core, not unrelated ventures. Total out of 5 with data.\n\n11. PORTFOLIO RISK CHECK — Here is my portfolio: [PASTE positions and % allocation from the Dashboard]. Concentration risk, sector exposure, correlation between positions, and the biggest vulnerability I might be missing.\n\n12. MACRO AND SECTOR CONTEXT — How does the current macro environment (rates, inflation, cycle) affect ${t}'s sector? Which types of stock in this sector do well in it, and which are at risk?\n\n13. MASTER SYNTHESIS — You are a forensic equity analyst. Produce: top 3 reasons to be bullish with supporting data; top 3 red flags to monitor with evidence; a fair value range with every key assumption stated; the single most important question for the next earnings call.`;
+  }
+
+  const t0 = new URLSearchParams(location.search).get('t');
+  if (t0) { $('ticker').value = t0.toUpperCase(); research(t0.toUpperCase()); }
+})();
+</script>
+</body>
+</html>
