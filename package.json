@@ -1,7 +1,7 @@
 {
   "name": "signal-desk",
   "version": "2.4.0",
-  "description": "Multi-user momentum-swing signals platform — Stocks, Options, Metals, Personal Dashboard",
+  "description": "Multi-user momentum-swing signals platform \u2014 Stocks, Options, Metals, Personal Dashboard",
   "private": true,
   "type": "module",
   "engines": {
@@ -15,6 +15,7 @@
   },
   "scripts": {
     "validate": "sh tools/validate.sh",
-    "lint": "node tools/lint.mjs today.html alerts.html simulate.html index.html dashboard.html options.html crypto.html metals.html handbook.html"
+    "lint": "node tools/lint.mjs today.html alerts.html simulate.html index.html dashboard.html options.html crypto.html metals.html handbook.html",
+    "validate:co": "sh tools/validate.sh co"
   }
 }

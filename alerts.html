@@ -1021,7 +1021,7 @@
 
       <h3>Watchlist <span style="font-weight:400;color:var(--ink-3);">· <span id="watch-n">0</span></span></h3>
       <div class="watch" id="watch"></div>
-      <div class="addrow"><input id="watch-add" placeholder="add ticker" maxlength="6" /><button id="watch-add-btn">Add</button></div>
+      <div class="addrow"><input id="watch-add" placeholder="add ticker or coin (BTC)" maxlength="6" /><button id="watch-add-btn">Add</button></div>
       <button class="btn" id="watch-reset">Reset to today's picks + portfolio</button>
       <button class="btn" id="hist-clear">Clear alert history</button>
     </aside>
@@ -1154,7 +1154,9 @@ import { classOf } from '/exits.js';
   // Default watchlist: today's top-scoring S&P names plus anything in the portfolio
   async function defaultWatch() {
     const out = new Set();
-    try { const p = JSON.parse(localStorage.getItem('sd-portfolio-v1') || '[]'); for (const x of p) if (x.ticker && !x.isOption) out.add(String(x.ticker).toUpperCase()); } catch {}
+    // Everything you hold is watched: stocks and coins by symbol, options by their underlying
+    try { const p = JSON.parse(localStorage.getItem('sd-portfolio-v1') || '[]'); for (const x of p) { const sym = x.isOption ? x.underlying : x.ticker; if (sym && !/[=]/.test(sym)) out.add(String(sym).toUpperCase()); } } catch {}
+    for (const c of ['BTC', 'ETH', 'SOL']) out.add(c);          // the majors, so crypto alerts exist from day one
     try {
       const uni = (await j('/api/universe')).constituents || [];
       const first = uni.slice(0, 200).map((c) => c.symbol);                 // enough to find the leaders quickly
@@ -1248,11 +1250,11 @@ import { classOf } from '/exits.js';
       return `<tr>
         <td class="t">${esc(t)}</td>
         <td>${s?.p != null ? (s.p >= 1000 ? money(s.p) : '$' + s.p.toFixed(2)) : '—'} <span class="${cls(s?.c)}">${pctf(s?.c, 2)}</span>${s?.atr != null ? `<small>ATR ${s.atr}% · vol ${s.vr ?? '—'}×</small>` : ''}</td>
-        <td>${s?.su ? `${esc(s.su)} · ${s.sc}` : '—'}</td>
-        <td>${e?.result ? `<span class="${e.result === 'BEAT' ? 'pos' : e.result === 'MISS' ? 'neg' : ''}">${e.result}</span> ${pctf(e.surprisePct)}<small>${e.dateReported}${e.recent ? ' · fresh' : ''}</small>` : '<span class="dim">—</span>'}</td>
-        <td>${a ? `${esc(a.consensus || '—')} ${a.buy}B/${a.hold}H/${a.sell}S<small>target ${money(a.target)}${a.changed ? ' · moved' : ''}</small>` : '<span class="dim">—</span>'}</td>
-        <td>${ev ? `${esc(ev.action)} ${esc(ev.rating)}<small>${esc(ev.firm)} · ${ev.date}${ev.targetTo ? ' · ' + money(ev.targetTo) : ''}</small>` : '<span class="dim">—</span>'}</td>
-        <td>${tr ? `<span class="${tr.type === 'BUY' ? 'pos' : 'dim'}">${tr.type}</span> ${money(tr.value)}<small>${esc(tr.role)} · ${tr.filingDate}</small>` : '<span class="dim">none 30d</span>'}</td>
+        <td>${s?.su ? `${esc(s.su)} · ${s.sc}${s.cls === 'crypto' ? ' <small>crypto · vs BTC</small>' : ''}` : '—'}</td>
+        <td>${s?.cls === 'crypto' ? '<span class="dim">n/a</span>' : e?.result ? `<span class="${e.result === 'BEAT' ? 'pos' : e.result === 'MISS' ? 'neg' : ''}">${e.result}</span> ${pctf(e.surprisePct)}<small>${e.dateReported}${e.recent ? ' · fresh' : ''}</small>` : '<span class="dim">—</span>'}</td>
+        <td>${s?.cls === 'crypto' ? '<span class="dim">n/a</span>' : a ? `${esc(a.consensus || '—')} ${a.buy}B/${a.hold}H/${a.sell}S<small>target ${money(a.target)}${a.changed ? ' · moved' : ''}</small>` : '<span class="dim">—</span>'}</td>
+        <td>${s?.cls === 'crypto' ? '<span class="dim">n/a</span>' : ev ? `${esc(ev.action)} ${esc(ev.rating)}<small>${esc(ev.firm)} · ${ev.date}${ev.targetTo ? ' · ' + money(ev.targetTo) : ''}</small>` : '<span class="dim">—</span>'}</td>
+        <td>${s?.cls === 'crypto' ? '<span class="dim">n/a</span>' : tr ? `<span class="${tr.type === 'BUY' ? 'pos' : 'dim'}">${tr.type}</span> ${money(tr.value)}<small>${esc(tr.role)} · ${tr.filingDate}</small>` : '<span class="dim">none 30d</span>'}</td>
         <td>${n ? `<span class="${cls(n.avgSentiment)}">${n.avgSentiment >= 0 ? '+' : ''}${n.avgSentiment}</span> · ${n.count24h} items${top ? `<small>${esc(top.title.slice(0, 70))}</small>` : ''}` : '<span class="dim">—</span>'}</td>
       </tr>`;
     }).join('');
@@ -1391,7 +1393,7 @@ import { classOf } from '/exits.js';
     const n = await notify([{ id: 'test-' + Date.now(), type: 'big_move', title: 'Test alert from Signal Desk', body: 'If you can read this, notifications work in this browser.', severity: 'low' }]);
     if (!n) alert('The browser refused to show a notification. Check site permissions.');
   });
-  $('watch-add-btn').addEventListener('click', () => { const v = $('watch-add').value.trim().toUpperCase(); if (/^[A-Z.\-]{1,6}$/.test(v) && !watch.includes(v)) { watch.push(v); setWatch(watch); renderWatch(); check(); scheduleSync(); } $('watch-add').value = ''; });
+  $('watch-add-btn').addEventListener('click', () => { const v = $('watch-add').value.trim().toUpperCase(); if (/^[A-Z0-9.\-]{1,6}$/.test(v) && !watch.includes(v)) { watch.push(v); setWatch(watch); renderWatch(); check(); scheduleSync(); } $('watch-add').value = ''; });
   $('watch-add').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('watch-add-btn').click(); });
   $('watch-reset').addEventListener('click', async () => { watch = await defaultWatch(); setWatch(watch); renderWatch(); check(); scheduleSync(); });
   $('hist-clear').addEventListener('click', () => { if (confirm('Clear all alert history on this device?')) { clearHistory(); renderFeed(); } });

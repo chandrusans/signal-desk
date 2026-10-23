@@ -7,6 +7,10 @@ const UA = 'Mozilla/5.0 (compatible; SignalDesk/1.0)';
 const NEWS = (sym) =>
   `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(sym)}&newsCount=15&quotesCount=0`;
 
+// Coins are searched by NAME ("bitcoin" finds news; "BTC-USD" mostly does not)
+// and matched on either the name or the -USD pair in relatedTickers.
+const COIN_NAMES = { BTC: 'Bitcoin', ETH: 'Ethereum', SOL: 'Solana', XRP: 'XRP Ripple', ADA: 'Cardano', DOGE: 'Dogecoin', AVAX: 'Avalanche', LINK: 'Chainlink', DOT: 'Polkadot', LTC: 'Litecoin', BCH: 'Bitcoin Cash', UNI: 'Uniswap', ATOM: 'Cosmos', XLM: 'Stellar', HBAR: 'Hedera', SUI: 'Sui', NEAR: 'NEAR Protocol', AAVE: 'Aave', ICP: 'Internet Computer', ALGO: 'Algorand', SHIB: 'Shiba Inu', PEPE: 'Pepe coin', TAO: 'Bittensor', ONDO: 'Ondo', BNB: 'BNB Binance', ZEC: 'Zcash', HYPE: 'Hyperliquid', TRX: 'Tron', TON: 'Toncoin', ARB: 'Arbitrum', OP: 'Optimism', FIL: 'Filecoin', ETC: 'Ethereum Classic', CRO: 'Cronos', RENDER: 'Render', INJ: 'Injective', GRT: 'The Graph', LDO: 'Lido' };
+
 // ---- General bull/bear lexicon ----
 const BULL = [
   // past tense / gerund forms (added so 'soared' and 'rallying' score, not just 'soar')
@@ -149,8 +153,9 @@ function scorePolitical(text, sector) {
   return total === 0 ? 0 : (b - r) / total;
 }
 
-async function fetchNews(sym, sector) {
-  const res = await fetch(NEWS(sym), { headers: { 'User-Agent': UA } });
+async function fetchNews(sym, sector, isCrypto = false) {
+  const query = isCrypto ? (COIN_NAMES[sym] || sym) : sym;
+  const res = await fetch(NEWS(query), { headers: { 'User-Agent': UA } });
   if (!res.ok) throw new Error(`${sym}: HTTP ${res.status}`);
   const data = await res.json();
   const raw = data.news || [];
@@ -163,7 +168,9 @@ async function fetchNews(sym, sector) {
     // several. `primary` is true when the article is about this name: it is
     // the first related ticker, or one of at most two, or named in the title.
     const rel = Array.isArray(n.relatedTickers) ? n.relatedTickers.map((x) => String(x).toUpperCase()) : [];
-    const primary = rel.length === 0 || rel[0] === sym || (rel.length <= 2 && rel.includes(sym)) || new RegExp(`\\b${sym.replace(/[.-]/g, '[.-]')}\\b`).test(title);
+    const pair = `${sym}-USD`;
+    const nameRe = isCrypto ? new RegExp(`\\b(${sym}|${(COIN_NAMES[sym] || sym).split(' ')[0]})\\b`, 'i') : new RegExp(`\\b${sym.replace(/[.-]/g, '[.-]')}\\b`);
+    const primary = rel.length === 0 || rel[0] === sym || rel[0] === pair || (rel.length <= 2 && (rel.includes(sym) || rel.includes(pair))) || nameRe.test(title);
     return {
       title,
       relatedTickers: rel,
@@ -213,6 +220,7 @@ async function fetchNews(sym, sector) {
 
 export default async function handler(req, res) {
   const raw = (req.query && req.query.tickers) || '';
+  const cryptoList = String((req.query && req.query.crypto) || '').split(',').map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z0-9]{2,10}$/.test(s)).slice(0, 20);
   const sectorsRaw = (req.query && req.query.sectors) || '';
   const sectorMap = {};
   for (const pair of String(sectorsRaw).split(',')) {
@@ -226,16 +234,17 @@ export default async function handler(req, res) {
     .filter((t) => !t.startsWith('^'))
     .slice(0, 20);
 
-  if (tickers.length === 0) {
-    res.status(400).json({ error: 'Pass ?tickers=NVDA,PLTR,...' });
+  if (tickers.length === 0 && cryptoList.length === 0) {
+    res.status(400).json({ error: 'Pass ?tickers=NVDA,PLTR,... and/or ?crypto=BTC,ETH' });
     return;
   }
 
-  const results = await Promise.allSettled(tickers.map((t) => fetchNews(t, sectorMap[t])));
+  const jobs = [...tickers.map((t) => ({ t, p: fetchNews(t, sectorMap[t]) })), ...cryptoList.map((t) => ({ t, p: fetchNews(t, null, true) }))];
+  const results = await Promise.allSettled(jobs.map((j) => j.p));
   const out = {};
   const errors = {};
   results.forEach((r, i) => {
-    const t = tickers[i];
+    const t = jobs[i].t;
     if (r.status === 'fulfilled') out[t] = r.value;
     else errors[t] = String(r.reason && r.reason.message || r.reason);
   });

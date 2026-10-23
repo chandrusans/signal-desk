@@ -23,4 +23,7 @@ if [ "$(uname)" = "Darwin" ]; then
   export NODE_EXTRA_CA_CERTS="$PEM"
 fi
 
-exec node tools/validate.mjs "$@"
+case "$1" in
+  co|crypto|options) shift; exec node tools/validate-crypto-options.mjs "$@" ;;
+  *) exec node tools/validate.mjs "$@" ;;
+esac

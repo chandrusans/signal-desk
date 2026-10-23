@@ -4,7 +4,7 @@
 // one rule each, written down here so every alert can be explained by
 // pointing at the line that fired it:
 //
-//   big_move    |day change| >= min(8%, max(2 x ATR%, 4%)), or 3x average
+//   big_move    |day change| >= min(8% equities / 12% coins, max(2 x ATR%, 4%)), or 3x average
 //               volume with |day change| >= 2%. ATR-relative so a 4% day is
 //               news for Coca-Cola and noise for a small cap — but capped at
 //               8%, because validation against a real session showed the
@@ -120,7 +120,8 @@ export function evaluate(tickers, data, settings = getSettings()) {
 
     // 1. big move — one alert per ticker per day per direction
     if (s && s.c != null) {
-      const thr = Math.min(8, Math.max(2 * (s.atr || 2), 4));
+      // Cap: 8% for equities; 12% for coins, where an 8% day is unremarkable for an alt
+      const thr = Math.min(s.cls === 'crypto' ? 12 : 8, Math.max(2 * (s.atr || 2), 4));
       const bigVol = (s.vr || 0) >= 3 && Math.abs(s.c) >= 2;
       if (Math.abs(s.c) >= thr || bigVol) {
         fire('big_move', t, `${today}:${s.c >= 0 ? 'up' : 'down'}`,
@@ -253,20 +254,41 @@ export function evaluatePositions(portfolio, ctxByPos, settings = getSettings())
 // lets the server inject a fetch with its own options.
 const jget = async (url, fetchFn = fetch) => { const r = await fetchFn(url, { cache: 'no-store' }); if (!r.ok) throw new Error(`${url.split('?')[0]} ${r.status}`); return r.json(); };
 
-/** Market data for a watchlist. `slow` toggles the filings sources (earnings/analyst/insider). */
+// Which watchlist entries are coins. The tradeable-coin universe is cached per
+// process; a symbol in it is routed to the crypto scan and crypto news, the
+// rest to equities. Filings sources (earnings, analyst, insider) have no
+// crypto analogue and are skipped for coins.
+let coinSet = null, coinAt = 0;
+export async function cryptoSymbols({ base = '', fetchFn = fetch } = {}) {
+  if (coinSet && Date.now() - coinAt < 3600e3) return coinSet;
+  try { const d = await jget(`${base}/api/crypto?op=universe&limit=100`, fetchFn); coinSet = new Set((d.constituents || []).map((c) => c.symbol)); coinAt = Date.now(); }
+  catch { coinSet = coinSet || new Set(['BTC', 'ETH', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'LINK', 'DOT', 'LTC']); }
+  return coinSet;
+}
+export function isCoin(t, set) { return set ? set.has(String(t).toUpperCase()) : false; }
+
+/** Market data for a watchlist (equities AND coins). `slow` toggles the filings sources. */
 export async function fetchAlertData(tickers, { base = '', slow = true, fetchFn = fetch } = {}) {
-  const tk = tickers.slice(0, 30);
-  const q = encodeURIComponent(tk.join(','));
-  const [scanR, newsR, earnR, anaR, insR] = await Promise.allSettled([
-    jget(`${base}/api/scan?tickers=${q}`, fetchFn),
-    jget(`${base}/api/news?tickers=${q}`, fetchFn),
-    slow ? jget(`${base}/api/intel?op=earnings&tickers=${q}`, fetchFn) : Promise.resolve(null),
-    slow ? jget(`${base}/api/intel?op=analyst&tickers=${q}`, fetchFn) : Promise.resolve(null),
-    slow ? jget(`${base}/api/intel?op=insider&tickers=${encodeURIComponent(tk.slice(0, 12).join(','))}&days=30`, fetchFn) : Promise.resolve(null),
+  const coins = await cryptoSymbols({ base, fetchFn });
+  const all = tickers.slice(0, 40);
+  const eq = all.filter((t) => !isCoin(t, coins)).slice(0, 30);
+  const cr = all.filter((t) => isCoin(t, coins)).slice(0, 20);
+  const q = encodeURIComponent(eq.join(','));
+  const qc = encodeURIComponent(cr.join(','));
+  const [scanR, newsR, earnR, anaR, insR, cscanR, cnewsR] = await Promise.allSettled([
+    eq.length ? jget(`${base}/api/scan?tickers=${q}`, fetchFn) : Promise.resolve({ rows: [] }),
+    eq.length ? jget(`${base}/api/news?tickers=${q}`, fetchFn) : Promise.resolve({ news: {} }),
+    slow && eq.length ? jget(`${base}/api/intel?op=earnings&tickers=${q}`, fetchFn) : Promise.resolve(null),
+    slow && eq.length ? jget(`${base}/api/intel?op=analyst&tickers=${q}`, fetchFn) : Promise.resolve(null),
+    slow && eq.length ? jget(`${base}/api/intel?op=insider&tickers=${encodeURIComponent(eq.slice(0, 12).join(','))}&days=30`, fetchFn) : Promise.resolve(null),
+    cr.length ? jget(`${base}/api/crypto?op=scan&coins=${qc}`, fetchFn) : Promise.resolve({ rows: [] }),
+    cr.length ? jget(`${base}/api/news?crypto=${qc}`, fetchFn) : Promise.resolve({ news: {} }),
   ]);
-  const scan = {}; if (scanR.status === 'fulfilled') for (const r of scanR.value.rows || []) scan[r.t] = r;
-  const news = newsR.status === 'fulfilled' ? (newsR.value.news || newsR.value) : {};
-  const out = { scan, news, failed: [scanR, newsR, earnR, anaR, insR].filter((x) => x.status === 'rejected').length };
+  const scan = {};
+  if (scanR.status === 'fulfilled') for (const r of scanR.value.rows || []) scan[r.t] = { ...r, cls: 'stock' };
+  if (cscanR.status === 'fulfilled') for (const r of cscanR.value.rows || []) scan[r.t] = { ...r, cls: 'crypto' };
+  const news = { ...(newsR.status === 'fulfilled' ? (newsR.value.news || {}) : {}), ...(cnewsR.status === 'fulfilled' ? (cnewsR.value.news || {}) : {}) };
+  const out = { scan, news, coins: cr, equities: eq, failed: [scanR, newsR, earnR, anaR, insR, cscanR, cnewsR].filter((x) => x.status === 'rejected').length };
   if (slow) {
     out.earnings = earnR.status === 'fulfilled' ? (earnR.value?.results || {}) : null;
     out.analyst = anaR.status === 'fulfilled' ? (anaR.value?.results || {}) : null;
