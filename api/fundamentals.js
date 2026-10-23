@@ -109,7 +109,11 @@ export default async function handler(req, res) {
     const sector = (req.query && req.query.sector) ? String(req.query.sector).slice(0, 60) : null;
     try {
       const [f, profile, summary] = await Promise.all([forensic(t, { sector }), fetchProfile(t), fetchSummary(t)]);
-      res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=86400');   // filings change quarterly; price fields refresh via summary
+      // Filings change quarterly, so cache for hours — but only a COMPLETE answer.
+      // NASDAQ refuses Vercel's egress IPs now and then; a response missing the
+      // profile or summary must not be pinned at the edge for six hours.
+      const complete = profile && summary && f && !f.error;
+      res.setHeader('Cache-Control', complete ? 's-maxage=21600, stale-while-revalidate=86400' : 's-maxage=60, stale-while-revalidate=120');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.status(200).json({ asOf: Date.now(), ticker: t, profile, summary, forensic: f });
     } catch (e) {
