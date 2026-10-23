@@ -37,7 +37,12 @@ const SLOW_MS = 30 * 60 * 1000;        // filings sources every 30 min, like the
 export const config = { maxDuration: 60 };
 
 // ── storage ────────────────────────────────────────────────────────────────
-const hasBlob = () => !!process.env.BLOB_READ_WRITE_TOKEN;
+// Two ways Vercel Blob authenticates: the classic BLOB_READ_WRITE_TOKEN, or
+// (newer store connections) BLOB_STORE_ID plus the runtime OIDC token the SDK
+// exchanges itself. The first deployed version gated on the token alone and
+// reported "not connected" against a store that was connected — caught in
+// the user's first run.
+const hasBlob = () => !!(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 async function loadState() {
   try {
     const r = await get(BLOB_PATH, { access: 'private' });
@@ -124,7 +129,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const op = String((req.query && req.query.op) || '').toLowerCase();
   if (!hasBlob()) {
-    res.status(200).json({ ok: false, storage: 'not-connected', error: 'Server storage is not connected yet. In Vercel: Storage → Create → Blob → connect to signal-desk. That adds BLOB_READ_WRITE_TOKEN and this starts working.' });
+    res.status(200).json({ ok: false, storage: 'not-connected', error: 'Server storage is not connected yet. In Vercel: Storage → Create → Blob → Connect Project → signal-desk, then redeploy.' });
     return;
   }
 
