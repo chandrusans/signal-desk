@@ -1132,9 +1132,27 @@ import { TYPES, evaluate, notify, requestPermission, registerWorker, getSettings
     if (typeof Notification === 'undefined') { st.textContent = 'not supported in this browser'; st.className = 'st no'; $('push-enable').disabled = true; return; }
     const p = Notification.permission;
     settings.notify = p === 'granted'; setSettings(settings);
-    st.textContent = p === 'granted' ? '● enabled — alerts will notify' : p === 'denied' ? '✕ blocked in browser settings' : '○ not enabled';
+    st.textContent = p === 'granted' ? '● enabled — alerts will notify' : p === 'denied' ? '✕ blocked by your browser for this site' : '○ not enabled';
     st.className = 'st ' + (p === 'granted' ? 'on' : p === 'denied' ? 'no' : 'off');
-    $('push-enable').hidden = p === 'granted';
+    $('push-enable').hidden = p !== 'default';
+    // "denied" is the browser's own remembered decision; the app cannot ask
+    // again. Say exactly where to clear it, for the browser actually in use.
+    const note = $('push-note');
+    if (p === 'denied') {
+      const ua = navigator.userAgent;
+      const isIOS = /iPhone|iPad/.test(ua), isSafari = /Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR/.test(ua);
+      const isEdge = /Edg\//.test(ua), isFirefox = /Firefox/.test(ua), isBrave = !!(navigator.brave), isMac = /Mac/.test(ua) && !isIOS;
+      const steps = isIOS
+        ? 'On iPhone, notifications only work after adding the site to your Home Screen (Share → Add to Home Screen) and opening it from there. Then: Settings → Notifications → Signal Desk → Allow.'
+        : isSafari
+        ? 'Safari → Settings → Websites → Notifications → find signal-desk-virid.vercel.app → set to Allow. If it is not listed, Safari → Settings → Websites → Notifications → tick "Allow websites to ask for permission", then reload and press Enable again.' + (isMac ? ' Also check macOS System Settings → Notifications → Safari is allowed.' : '')
+        : isFirefox
+        ? 'Click the lock icon left of the address → Connection secure / Permissions → next to Notifications choose Allow (or clear the blocked entry), then reload.'
+        : (isEdge ? 'Edge' : isBrave ? 'Brave' : 'Chrome') + ': click the lock / tune icon left of the address → Site settings → Notifications → Allow, then reload this page.' + (isMac ? ' If the prompt never appeared at all, check macOS System Settings → Notifications → ' + (isEdge ? 'Microsoft Edge' : isBrave ? 'Brave' : 'Google Chrome') + ' is allowed.' : '');
+      note.innerHTML = `<strong style="color:var(--risk)">The browser has remembered a Block for this site — the app cannot ask again until you clear it.</strong><br/>${steps}`;
+    } else {
+      note.textContent = 'Notifications show while this tab is open anywhere in your browser, including in the background. With the browser fully closed nothing fires — that needs a push server this app does not have yet. On iPhone, add the site to your Home Screen first.';
+    }
   }
 
   // ---- feed ----
@@ -1216,7 +1234,12 @@ import { TYPES, evaluate, notify, requestPermission, registerWorker, getSettings
   }
 
   // ---- wiring ----
-  $('push-enable').addEventListener('click', async () => { await registerWorker(); await requestPermission(); renderPush(); });
+  $('push-enable').addEventListener('click', async () => {
+    await registerWorker();
+    const r = await requestPermission();
+    renderPush();
+    if (r === 'default') $('push-note').textContent = 'The prompt was dismissed without a choice. Press Enable again and choose Allow.';
+  });
   $('push-test').addEventListener('click', async () => {
     if (Notification.permission !== 'granted') { alert('Enable notifications first.'); return; }
     const n = await notify([{ id: 'test-' + Date.now(), type: 'big_move', title: 'Test alert from Signal Desk', body: 'If you can read this, notifications work in this browser.', severity: 'low' }]);
