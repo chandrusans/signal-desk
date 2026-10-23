@@ -4,9 +4,13 @@
 // one rule each, written down here so every alert can be explained by
 // pointing at the line that fired it:
 //
-//   big_move    |day change| >= max(2 x ATR%, 4%), or 3x average volume with
-//               |day change| >= 2%. ATR-relative on purpose: a 4% day is news
-//               for Coca-Cola and noise for a small-cap.
+//   big_move    |day change| >= min(8%, max(2 x ATR%, 4%)), or 3x average
+//               volume with |day change| >= 2%. ATR-relative so a 4% day is
+//               news for Coca-Cola and noise for a small cap — but capped at
+//               8%, because validation against a real session showed the
+//               five largest movers (MRNA -17.6% on a 10% ATR, LRCX -11.8%
+//               on 6.7%) all slipping under a pure 2xATR bar. An 8% day is a
+//               big move for anything in the S&P 500, whatever its history.
 //   news        a headline not seen before with |sentiment| >= 0.5, or any
 //               headline tagged earnings / deal / lawsuit.
 //   earnings    the last report landed inside 3 days: BEAT or MISS with the
@@ -103,7 +107,7 @@ export function evaluate(tickers, data, settings = getSettings()) {
 
     // 1. big move — one alert per ticker per day per direction
     if (s && s.c != null) {
-      const thr = Math.max(2 * (s.atr || 2), 4);
+      const thr = Math.min(8, Math.max(2 * (s.atr || 2), 4));
       const bigVol = (s.vr || 0) >= 3 && Math.abs(s.c) >= 2;
       if (Math.abs(s.c) >= thr || bigVol) {
         fire('big_move', t, `${today}:${s.c >= 0 ? 'up' : 'down'}`,

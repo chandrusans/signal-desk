@@ -481,7 +481,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.9</div>
+      <div class="kicker">Signal Desk · Handbook · v3.10</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -1225,7 +1225,7 @@
       <table class="cadence">
         <thead><tr><th>Alert</th><th>Rule</th><th>Source</th></tr></thead>
         <tbody>
-          <tr><td>Big price move</td><td>|day change| ≥ max(2 × ATR%, 4%), or 3× average volume with |change| ≥ 2%. ATR-relative, because a 4% day is news for Coca-Cola and noise for a small cap.</td><td>live prices</td></tr>
+          <tr><td>Big price move</td><td>|day change| ≥ min(8%, max(2 × ATR%, 4%)), or 3× average volume with |change| ≥ 2%. ATR-relative so a 4% day is news for Coca-Cola and noise for a small cap — but an 8% day always fires, whatever the stock's history.</td><td>live prices</td></tr>
           <tr><td>Breaking news</td><td>A headline not seen before, <em>about this ticker</em> (not merely mentioning it), with strong sentiment or tagged earnings.</td><td>Yahoo Finance headlines</td></tr>
           <tr><td>Earnings report</td><td>The last report landed inside 3 days — BEAT or MISS with the surprise %. The pre-earnings gate (Chapter 04) is a separate thing.</td><td>NASDAQ earnings-surprise</td></tr>
           <tr><td>Analyst rating</td><td>A named firm upgraded, downgraded or initiated coverage, or moved its price target ≥ 5% — with analyst, firm, rating and date. Second layer: the NASDAQ consensus moved since the prior monthly snapshot.</td><td>stockanalysis.com ratings page (events) · NASDAQ (consensus)</td></tr>
@@ -1261,6 +1261,18 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 20</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.10<br/>2026-10-22</div>
+        <div class="what">
+          <h4>Validation against the 2026-10-22 session — one rule corrected</h4>
+          <ul>
+            <li>Ran the deployed app against independent sources for the last session: closes vs NASDAQ's historical quotes, earnings EPS vs NASDAQ's calendar, crypto vs CoinGecko, ATR/stop/target recomputed from raw bars, and point-in-time verdicts vs next-day returns over 20 sessions.</li>
+            <li><strong>Big-move rule corrected.</strong> On a pure 2×ATR bar the day's five largest movers — MRNA −17.6% (ATR 10.4%), COHR −12.5%, LRCX −11.8%, LITE −11.5%, FLEX −11.1% — all failed to trigger while ALLE +11% did, because high-volatility names set the bar above the move. The threshold is now capped at 8%: relative below that, absolute above it.</li>
+            <li>Everything else passed. Over the last 20 sessions the verdict ordering held next day — AVOID names underperformed SPY by 0.47%/day (t = −2.7), the only statistically significant cohort; BUY vs SELL spread +0.13%/day. A 15-day swing framework is not a next-day predictor and this does not claim it is.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.9<br/>2026-10-22</div>

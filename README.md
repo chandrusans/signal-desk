@@ -131,6 +131,19 @@ security find-certificate -a -p /Library/Keychains/System.keychain >> /tmp/ca.pe
 NODE_EXTRA_CA_CERTS=/tmp/ca.pem node tools/devserver.mjs 3000
 ```
 
+### Validate against the last session
+
+```bash
+node tools/validate.mjs
+```
+
+Runs the deployed app against independent sources — NASDAQ historical closes,
+NASDAQ's earnings calendar, CoinGecko — recomputes ATR/stop/target from raw
+bars, checks the big-move alert rule against the day's actual S&P 500 movers,
+and tests point-in-time verdicts against next-day returns over 20 sessions.
+11 checks; the 2026-10-22 run found and fixed one rule gap (high-ATR names
+slipping under a pure 2×ATR big-move bar).
+
 ### Checks before committing
 
 ```bash
