@@ -16,6 +16,7 @@
   "scripts": {
     "validate": "sh tools/validate.sh",
     "lint": "node tools/lint.mjs today.html alerts.html simulate.html index.html dashboard.html options.html crypto.html metals.html handbook.html",
-    "validate:co": "sh tools/validate.sh co"
+    "validate:co": "sh tools/validate.sh co",
+    "validate:risk": "node tools/validate-risk.mjs"
   }
 }

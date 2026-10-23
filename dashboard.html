@@ -685,6 +685,37 @@
   .section-head, .add-form { animation: rise-in 0.5s var(--ease-out) 0.16s both; }
   .positions { animation: rise-in 0.5s var(--ease-out) 0.24s both; }
 
+  /* Risk engine + journal */
+  .risk-panel { border: 1px solid var(--rule); background: var(--panel); margin-bottom: 8px; }
+  .risk-gate { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 18px; border-bottom: 1px solid var(--rule); }
+  .risk-gate .stamp { font-family: var(--mono); font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; padding: 6px 12px; border: 2px solid; font-weight: 700; }
+  .risk-gate .stamp.OPEN { color: var(--signal); border-color: var(--signal); }
+  .risk-gate .stamp.REDUCED { color: var(--caution); border-color: var(--caution); }
+  .risk-gate .stamp.BLOCKED { color: var(--risk); border-color: var(--risk); }
+  .risk-gate .msg { font-size: 13px; color: var(--ink-2); flex: 1 1 260px; min-width: 0; }
+  .risk-gate .cap { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .risk-gate .cap input { width: 110px; font-family: var(--mono); font-size: 13px; padding: 6px 8px; border: 1px solid var(--rule); background: var(--ground); color: var(--ink); }
+  .risk-cells { display: grid; grid-template-columns: repeat(5, 1fr); }
+  @media (max-width: 900px) { .risk-cells { grid-template-columns: repeat(2, 1fr); } }
+  .risk-cells .sum-cell { border-bottom: 1px solid var(--rule); }
+  .risk-cells .bar { height: 4px; background: var(--ground-2); margin-top: 6px; position: relative; }
+  .risk-cells .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--signal); }
+  .risk-cells .bar i.warn { background: var(--caution); } .risk-cells .bar i.bad { background: var(--risk); }
+  .risk-list { padding: 10px 18px 12px; font-size: 13px; color: var(--ink-2); }
+  .risk-list li { margin: 4px 0; } .risk-list li.breach { color: var(--risk); } .risk-list li.warn { color: var(--caution); }
+  .jr-cells { display: grid; grid-template-columns: repeat(6, 1fr); border: 1px solid var(--rule); background: var(--panel); margin-bottom: 8px; }
+  @media (max-width: 900px) { .jr-cells { grid-template-columns: repeat(3, 1fr); } .jr-cells .sum-cell:nth-child(3n) { border-right: none; } }
+  .jr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; background: var(--panel); border: 1px solid var(--rule); }
+  .jr-table th, .jr-table td { padding: 8px 10px; border-bottom: 1px solid var(--rule); text-align: left; white-space: nowrap; }
+  .jr-table th { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+  .jr-table td.num { font-family: var(--mono); text-align: right; }
+  .jr-table .x { background: none; border: 1px solid var(--rule); color: var(--ink-3); cursor: pointer; padding: 2px 8px; font-size: 11px; }
+  .jr-table .x:hover { color: var(--risk); border-color: var(--risk); }
+  .jr-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .jr-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; }
+  .jr-tools button { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 12px; cursor: pointer; }
+  .jr-tools button:hover { border-color: var(--accent); color: var(--ink); }
+  .jr-note { font-size: 12.5px; color: var(--ink-3); margin: 8px 0 0; max-width: 78ch; }
   .disclosure {
     margin-top: 36px; padding: 20px 24px;
     border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule);
@@ -945,9 +976,21 @@ AAPL 30 @ 218.75"></textarea>
     </div>
   </div>
 
+  <div class="section-head">
+    <h2>Risk engine · can the book take another trade?</h2>
+    <span class="aside" id="risk-aside">1% per trade · 3% daily · 5% heat · 6 positions</span>
+  </div>
+  <div class="risk-panel" id="risk-panel"></div>
+
+  <div class="section-head">
+    <h2>Trade journal · your own record</h2>
+    <span class="aside" id="jr-aside">0 closed trades</span>
+  </div>
+  <div class="journal" id="journal"></div>
+
   <div class="disclosure">
     <h4>Not investment advice</h4>
-    <p>The verdicts on each position (SELL / TRIM / HOLD / WATCH) are mechanical outputs of the same momentum-swing framework used on the Stocks page, applied to your specific entry price. They are decision-support, not orders. You are still the one clicking the sell button. Positions are stored only in your browser's localStorage — nothing is sent to any server. Export the JSON regularly if you value your data. See the Handbook Dashboard chapter for how the verdicts are computed.</p>
+    <p>The verdicts on each position (SELL / TRIM / HOLD / WATCH) are mechanical outputs of the same momentum-swing framework used on the Stocks page, applied to your specific entry price. They are decision-support, not orders. You are still the one clicking the sell button. Positions and the journal are stored in your browser's localStorage; the positions (not the journal) are also copied to the phone-alert runner if you have set it up. Export the JSON regularly if you value your data. See the Handbook Dashboard chapter for how the verdicts are computed.</p>
   </div>
 
 </div>
@@ -993,6 +1036,7 @@ AAPL 30 @ 218.75"></textarea>
 <script type="module">
 import { analyze, regime, cryptoRegime } from './analyze.js';
 import { positionVerdict, defaultStop, classOf } from './exits.js';
+import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget } from './risk.js';
 
 (function () {
   const root = document.documentElement;
@@ -1043,6 +1087,10 @@ import { positionVerdict, defaultStop, classOf } from './exits.js';
 
   // ---- Portfolio state ----
   let portfolio = load();
+  let journal = loadJournal();
+  let lastRows = [];                 // the most recent per-position analytics, for close + risk
+  let capital = 10000;
+  try { const c = parseFloat(localStorage.getItem('sd-capital')); if (c >= 500) capital = c; } catch {}
   let latestQuotes = {};
   let latestOptionQuotes = {};   // OCC symbol -> live contract quote
   let vixPrice = null;
@@ -1154,6 +1202,7 @@ import { positionVerdict, defaultStop, classOf } from './exits.js';
     if (!portfolio.length) {
       positionsEl.innerHTML = `<div class="empty-state"><strong>No positions yet.</strong><br/>Add one above and the desk will track it live and tell you when to sell.</div>`;
       summaryEl.innerHTML = '';
+      lastRows = []; renderRisk([]); renderJournal();
       return;
     }
 
@@ -1197,6 +1246,7 @@ import { positionVerdict, defaultStop, classOf } from './exits.js';
       const daysHeld = Math.floor((Date.now() - Date.parse(pos.buyDate)) / (24 * 3600 * 1000));
       return { pos, q, price, analysis, verdict: v, buy, stop, R, gain, gainDollars, gainPct, gainR, daysHeld, mult, optQ, optPremiumStale };
     });
+    lastRows = rows;
 
     // Portfolio summary
     const totalCost = rows.reduce((s, r) => s + (r.buy * r.pos.qty * r.mult), 0);
@@ -1294,7 +1344,7 @@ import { positionVerdict, defaultStop, classOf } from './exits.js';
           </div>
           <div class="pos-actions">
             <button class="edit-btn" data-edit="${r.pos.id}" title="Edit position">Edit</button>
-            <button class="close-btn" data-close="${r.pos.id}" title="Remove position (as if sold)">Close</button>
+            <button class="close-btn" data-close="${r.pos.id}" title="Record the sale in your journal and remove the position">Close</button>
           </div>
         </div>
 
@@ -1390,10 +1440,16 @@ import { positionVerdict, defaultStop, classOf } from './exits.js';
         const id = b.dataset.close;
         const pos = portfolio.find(p => p.id === id);
         if (!pos) return;
-        if (confirm(`Close position ${pos.ticker}? This removes it from the dashboard.`)) {
-          portfolio = portfolio.filter(p => p.id !== id);
-          save(); render();
-        }
+        const r = lastRows.find(x => x.pos.id === id);
+        const cur = r ? r.price : pos.buyPrice;
+        const inp = prompt(`Close ${pos.ticker}\n\nExit price per ${pos.isOption ? 'contract (premium)' : 'unit'}?\nThe trade is recorded in your journal with its R-multiple; the position leaves the dashboard.`, cur >= 1 ? cur.toFixed(2) : cur.toPrecision(4));
+        if (inp == null) return;
+        const exitPrice = parseFloat(String(inp).replace(/[$,]/g, ''));
+        if (!(exitPrice > 0)) { alert('Enter the price you sold at.'); return; }
+        journal.push(closeTrade(pos, { exitPrice, stop: r ? r.stop : null, rule: r ? r.verdict.rule : null }));
+        saveJournal(journal);
+        portfolio = portfolio.filter(p => p.id !== id);
+        save(); render();
       });
     });
     positionsEl.querySelectorAll('[data-edit]').forEach(b => {
@@ -1407,6 +1463,104 @@ import { positionVerdict, defaultStop, classOf } from './exits.js';
         if (!isNaN(s) && s > 0) { pos.stop = s; save(); render(); }
         else if (newStop === '') { delete pos.stop; save(); render(); }
       });
+    });
+    renderRisk(rows); renderJournal();
+  }
+
+  // ---- Risk engine: the book-level limits (risk.js) ----
+  function renderRisk(rows) {
+    const el = document.getElementById('risk-panel');
+    const prices = {}, stops = {};
+    for (const r of rows) { prices[r.pos.id] = r.price; stops[r.pos.id] = r.stop; }
+    const b = riskBudget({ capital, positions: portfolio, prices, stops, journal });
+    const L = b.limits;
+    const msg = b.gate === 'BLOCKED'
+      ? `<strong>No new trades.</strong> ${b.breaches[0]?.text || 'Risk budget used up.'}`
+      : b.gate === 'REDUCED'
+        ? `<strong>Room for one more at ${Math.round(b.sizeMult * 100)}% size</strong> — ${b.roomRiskPct}% of capital ($${fmt(b.roomRiskDollars)}) is all the risk the book can add${b.warnings[0] ? '. ' + b.warnings[0].text : '.'}`
+        : `<strong>Room for ${b.slots} more position${b.slots === 1 ? '' : 's'}</strong>, each risking up to ${L.riskPerTradePct}% ($${fmt(b.roomRiskDollars)}). Today's picks are sized to this.`;
+    const bar = (v, lim) => `<div class="bar"><i class="${v >= lim ? 'bad' : v >= lim * 0.7 ? 'warn' : ''}" style="width:${Math.min(100, (v / lim) * 100)}%"></i></div>`;
+    el.innerHTML = `
+      <div class="risk-gate">
+        <span class="stamp ${b.gate}">${b.gate === 'OPEN' ? '✓ open' : b.gate === 'REDUCED' ? '◐ reduced' : '✕ blocked'}</span>
+        <div class="msg">${msg}</div>
+        <label class="cap">capital $<input id="risk-capital" type="number" min="500" step="500" value="${capital}" inputmode="numeric" /></label>
+      </div>
+      <div class="risk-cells">
+        <div class="sum-cell"><div class="label">Open positions</div><div class="value ${b.openCount >= L.maxPositions ? 'down' : ''}">${b.openCount} <small style="font-size:12px;color:var(--ink-3);">of ${L.maxPositions}</small></div>${bar(b.openCount, L.maxPositions)}</div>
+        <div class="sum-cell"><div class="label">Open risk at stops</div><div class="value ${b.openRiskPct >= L.maxOpenRiskPct ? 'down' : ''}">${b.openRiskPct.toFixed(1)}% <small style="font-size:12px;color:var(--ink-3);">of ${L.maxOpenRiskPct}%</small></div><div class="delta flat">$${fmt(b.openRisk)} if every stop hit</div>${bar(b.openRiskPct, L.maxOpenRiskPct)}</div>
+        <div class="sum-cell"><div class="label">Closed today</div><div class="value ${b.realizedTodayPct < 0 ? 'down' : b.realizedTodayPct > 0 ? 'up' : ''}">${b.realizedTodayPct >= 0 ? '+' : ''}${b.realizedTodayPct.toFixed(2)}%</div><div class="delta flat">limit −${L.dailyLossPct}% · $${fmt(Math.abs(b.realizedToday))}</div>${bar(Math.max(0, -b.realizedTodayPct), L.dailyLossPct)}</div>
+        <div class="sum-cell"><div class="label">Exposure</div><div class="value">${b.exposurePct.toFixed(0)}%</div><div class="delta flat">$${fmt(b.notional)} notional</div></div>
+        <div class="sum-cell"><div class="label">Largest name</div><div class="value ${b.largest && b.largest.pct > L.maxSingleNamePct ? 'down' : ''}">${b.largest ? b.largest.pct.toFixed(0) + '%' : '—'}</div><div class="delta flat">${b.largest ? b.largest.ticker + ' · limit ' + L.maxSingleNamePct + '%' : 'no positions'}</div></div>
+      </div>
+      ${b.breaches.length || b.warnings.length ? `<ul class="risk-list">${b.breaches.map(x => `<li class="breach">✕ ${x.text}</li>`).join('')}${b.warnings.map(x => `<li class="warn">⚠ ${x.text}</li>`).join('')}</ul>` : `<div class="risk-list">Every limit has room. The Today tab reads these same numbers and sizes its picks to the remaining budget.</div>`}`;
+    document.getElementById('risk-capital').addEventListener('change', (e) => {
+      const v = parseFloat(e.target.value);
+      if (v >= 500) { capital = v; try { localStorage.setItem('sd-capital', String(v)); } catch {} renderRisk(lastRows); }
+    });
+  }
+
+  // ---- Trade journal: your own win rate and expectancy ----
+  const RULE_WORDS = { stop: 'stop hit', regime: 'regime', earnings_soon: 'earnings', broken: 'setup broken', broken_fresh: 'broken (fresh)', time_stop: 'time stop', target: 'target', overbought_winner: 'overbought', extended_winner: 'extended', trend_fading: 'trend fading', trail_1r: 'trailing', trail_be: 'trailing', near_stop: 'near stop', near_target: 'near target', hold: 'discretionary', fresh: 'discretionary', option_expired: 'expired', option_stop: 'premium stop', option_dte: '7-day rule', option_target_1: '+50% target', option_target_2: '+100% target', option_dte_near: 'near expiry', option_near_stop: 'near stop', option_hold: 'discretionary', manual: 'manual entry' };
+  function renderJournal() {
+    const el = document.getElementById('journal');
+    const s = journalStats(journal);
+    document.getElementById('jr-aside').textContent = `${s.n} closed trade${s.n === 1 ? '' : 's'}`;
+    const R = (x) => (x == null ? '—' : `${x >= 0 ? '+' : ''}${x.toFixed(2)}R`);
+    const sig = s.n >= 2 && s.expectancySE != null ? (Math.abs(s.expectancyR) > 1.96 * s.expectancySE ? 'statistically clear' : `±${(1.96 * s.expectancySE).toFixed(2)}R, not yet distinguishable from zero`) : 'too few trades to judge';
+    const cells = `
+      <div class="jr-cells">
+        <div class="sum-cell"><div class="label">Trades</div><div class="value">${s.n}</div><div class="delta flat">${s.wins}W · ${s.losses}L${s.scratches ? ' · ' + s.scratches + ' flat' : ''}</div></div>
+        <div class="sum-cell"><div class="label">Win rate</div><div class="value">${s.winRate != null ? s.winRate.toFixed(0) + '%' : '—'}</div><div class="delta flat">streak ${s.streak > 0 ? s.streak + 'W' : s.streak < 0 ? -s.streak + 'L' : '—'}</div></div>
+        <div class="sum-cell"><div class="label">Expectancy</div><div class="value ${s.expectancyR > 0 ? 'up' : s.expectancyR < 0 ? 'down' : ''}">${R(s.expectancyR)}</div><div class="delta flat">per trade · ${sig}</div></div>
+        <div class="sum-cell"><div class="label">Avg win / loss</div><div class="value">${s.avgWinR != null ? '+' + s.avgWinR.toFixed(1) : '—'} / ${s.avgLossR != null ? s.avgLossR.toFixed(1) : '—'}</div><div class="delta flat">R-multiples</div></div>
+        <div class="sum-cell"><div class="label">Profit factor</div><div class="value">${s.profitFactor == null ? '—' : s.profitFactor === Infinity ? '∞' : s.profitFactor.toFixed(2)}</div><div class="delta flat">gross win ÷ gross loss</div></div>
+        <div class="sum-cell"><div class="label">Realized P&amp;L</div><div class="value ${s.totalPL > 0 ? 'up' : s.totalPL < 0 ? 'down' : ''}">${s.totalPL >= 0 ? '+' : '−'}$${fmt(Math.abs(s.totalPL))}</div><div class="delta flat">avg hold ${s.avgDays != null ? s.avgDays.toFixed(0) + 'd' : '—'}</div></div>
+      </div>`;
+    const byClass = Object.entries(s.byClass).map(([c, v]) => `${c}: ${v.n} trades, ${v.winRate}% win, ${R(v.expectancyR)}`).join(' · ');
+    const byRule = Object.entries(s.byRule).sort((a, b) => b[1].n - a[1].n).slice(0, 5).map(([r, v]) => `${RULE_WORDS[r] || r || 'discretionary'}: ${v.n}× ${R(v.expectancyR)}`).join(' · ');
+    const rows = [...journal].sort((a, b) => (b.exitDate || '').localeCompare(a.exitDate || '') || (b.id > a.id ? 1 : -1)).slice(0, 50);
+    const table = s.n ? `
+      <div class="jr-wrap"><table class="jr-table">
+        <thead><tr><th>Closed</th><th>Name</th><th>Class</th><th>Entry → exit</th><th>Days</th><th>P&amp;L</th><th>R</th><th>Exit rule</th><th></th></tr></thead>
+        <tbody>${rows.map(t => `<tr>
+          <td>${escapeHtml(t.exitDate || '')}</td><td><strong>${escapeHtml(t.label || t.ticker)}</strong></td><td>${escapeHtml(t.cls)}</td>
+          <td class="num">${t.buyPrice >= 1 ? fmt(t.buyPrice) : t.buyPrice} → ${t.exitPrice >= 1 ? fmt(t.exitPrice) : t.exitPrice}</td>
+          <td class="num">${t.daysHeld}</td><td class="num ${t.pl > 0 ? 'up' : t.pl < 0 ? 'down' : ''}">${t.pl >= 0 ? '+' : '−'}$${fmt(Math.abs(t.pl))}</td>
+          <td class="num ${t.r > 0 ? 'up' : t.r < 0 ? 'down' : ''}">${R(t.r)}</td><td>${escapeHtml(RULE_WORDS[t.rule] || t.rule || 'discretionary')}</td>
+          <td><button class="x" data-jr-del="${escapeHtml(t.id)}" title="Delete this record">×</button></td></tr>`).join('')}</tbody>
+      </table></div>` : `<div class="empty-state"><strong>No closed trades yet.</strong><br/>Press Close on a position and enter the price you sold at; the trade lands here with its R-multiple. The Simulate tab's expectancy is the backtest — this is yours.</div>`;
+    el.innerHTML = cells + (s.n ? `<p class="jr-note">${byClass}${byRule ? '<br/>By exit rule — ' + byRule : ''}</p>` : '') + table + `
+      <div class="jr-tools">
+        <button id="jr-add">+ Add a past trade</button>
+        ${s.n ? '<button id="jr-csv">Export CSV</button><button id="jr-json">Export JSON</button>' : ''}
+      </div>
+      <p class="jr-note">R = profit divided by the risk you took at entry (entry minus the initial stop). +2R means you made twice what you were prepared to lose. Expectancy is the average R per trade; the rulebook's backtest runs about +0.07R on stocks, so fewer than ~30 of your own trades cannot tell you whether you are beating it. Stored only in this browser — export it.</p>`;
+    el.querySelectorAll('[data-jr-del]').forEach(b => b.addEventListener('click', () => {
+      if (!confirm('Delete this journal record?')) return;
+      journal = journal.filter(t => t.id !== b.dataset.jrDel); saveJournal(journal); renderJournal(); renderRisk(lastRows);
+    }));
+    document.getElementById('jr-add').addEventListener('click', () => {
+      const raw = prompt('Add a past trade\n\nTICKER QTY BUY EXIT [BUYDATE] [EXITDATE] [class]\ne.g.  NVDA 10 120 131.50 2026-09-01 2026-09-12\n      BTC 0.2 61000 58000 crypto\nStop is assumed at the class default (−5% stocks, −7% crypto, −2% metals, −50% options) unless you add stop=PRICE.');
+      if (!raw) return;
+      const parts = raw.trim().replace(/[@$,]/g, ' ').split(/\s+/).filter(Boolean);
+      if (parts.length < 4) { alert('Need at least TICKER QTY BUY EXIT'); return; }
+      const [tk, q, bp, xp] = [parts[0].toUpperCase(), +parts[1], +parts[2], +parts[3]];
+      if (!(q > 0 && bp > 0 && xp > 0)) { alert('Quantity and prices must be positive numbers'); return; }
+      const dates = parts.slice(4).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x));
+      const cls = parts.slice(4).map(x => x.toLowerCase()).find(x => ['stock', 'crypto', 'metal', 'option'].includes(x)) || 'stock';
+      const stopTok = parts.slice(4).find(x => /^stop=/i.test(x));
+      const pos = { id: `${tk}-past-${Date.now()}`, ticker: tk, qty: q, buyPrice: bp, buyDate: dates[0] || new Date().toISOString().slice(0, 10), assetClass: cls, isOption: cls === 'option', multiplier: cls === 'option' ? 100 : 1 };
+      journal.push(closeTrade(pos, { exitPrice: xp, exitDate: dates[1] || dates[0] || new Date().toISOString().slice(0, 10), stop: stopTok ? +stopTok.split('=')[1] : null, rule: 'manual' }));
+      saveJournal(journal); renderJournal(); renderRisk(lastRows);
+    });
+    document.getElementById('jr-csv')?.addEventListener('click', () => {
+      const cols = ['exitDate', 'ticker', 'label', 'cls', 'qty', 'buyPrice', 'buyDate', 'exitPrice', 'stop', 'target', 'pl', 'plPct', 'r', 'daysHeld', 'rule'];
+      const csv = [cols.join(','), ...journal.map(t => cols.map(c => JSON.stringify(t[c] ?? '')).join(','))].join('\n');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `signal-desk-journal-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    });
+    document.getElementById('jr-json')?.addEventListener('click', () => {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(journal, null, 2)], { type: 'application/json' })); a.download = `signal-desk-journal-${new Date().toISOString().slice(0, 10)}.json`; a.click();
     });
   }
 

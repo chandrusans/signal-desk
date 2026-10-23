@@ -77,6 +77,7 @@ signal-desk/
 ├── options.html       Options recommendations
 ├── crypto.html        Crypto — rankings + measured-edge reality check
 ├── metals.html        Gold / silver
+├── risk.js            Risk engine (book-level limits) + trade journal, shared by Today and Dashboard
 ├── handbook.html      Beginner reference + changelog (see CLAUDE.md — keep current)
 ├── analyze.js         Pure computation — indicators, score, setup, trade plan
 ├── exits.js           The ONE exit rulebook — shared by Dashboard and Alerts
@@ -179,6 +180,14 @@ arithmetic on every live option recommendation, and that an option SELL
 verdict produces a position alert. 12 checks. The 20-session crypto BUY/SELL
 cohort comparison is printed as a finding, not a pass/fail — a month is too
 small a sample, and the multi-year backtest on the Crypto tab is the verdict.
+
+```bash
+npm run validate:risk
+```
+
+Pure arithmetic, no network: the risk engine (`risk.js`) — per-trade risk,
+portfolio heat, daily loss limit, position cap, concentration warning — and the
+journal's R-multiples, win rate, expectancy and profit factor. 20 checks.
 
 ### Checks before committing
 

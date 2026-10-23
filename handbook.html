@@ -481,7 +481,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.13</div>
+      <div class="kicker">Signal Desk · Handbook · v3.14</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -564,6 +564,7 @@
         <li><a href="#alerts">Alerts — the seven things that move a stock</a></li>
         <li><a href="#exits">When to sell what you hold</a></li>
         <li><a href="#phone">Alerts on your phone — Telegram, WhatsApp, ntfy</a></li>
+        <li><a href="#riskengine">Risk engine &amp; trade journal</a></li>
       </ul>
     </div>
 
@@ -1308,9 +1309,52 @@
       <p>Your watchlist, settings and positions sync to the server automatically whenever you change them on the Alerts or Dashboard tabs. The first device to sync owns the server configuration; another device is refused rather than silently overwriting it.</p>
     </section>
 
+    <section id="riskengine">
+      <h2><span class="chnum">Chapter 22</span>Risk engine &amp; trade journal — the book has the final say</h2>
+      <p>The exit rulebook (Chapter 20) decides when one position is sold. The <strong>risk engine</strong> decides whether the whole book can take another position at all. Both the Today tab and the Dashboard read it; Today sizes every pick to what is left of the budget, and when the budget is gone it shows no picks — by design, the same way a closed macro gate does.</p>
+      <h3>The five limits</h3>
+      <table>
+        <thead><tr><th>Limit</th><th>Value</th><th>What it stops</th></tr></thead>
+        <tbody>
+          <tr><td>Risk per trade</td><td>1% of capital</td><td>One bad trade costing more than a routine loss. A 1% stop-out needs a 1.01% gain to recover; a 10% one needs 11%.</td></tr>
+          <tr><td>Open risk at stops ("heat")</td><td>5% of capital</td><td>Six stops hitting on the same red day and taking a tenth of the account. Computed from <em>current</em> price to stop, so a trailed stop frees budget.</td></tr>
+          <tr><td>Open positions</td><td>6</td><td>Holding more than you can watch. Six momentum names already move together on an index day.</td></tr>
+          <tr><td>Daily loss</td><td>3% of capital, realized</td><td>Revenge trading. Once closed trades are down 3% on the day the desk is closed until tomorrow — the Today tab shows no picks.</td></tr>
+          <tr><td>Single name</td><td>25% of capital, notional</td><td>A warning, not a block: an earnings gap in one name should not be able to take a quarter of the book.</td></tr>
+        </tbody>
+      </table>
+      <p>The stamp reads <strong>OPEN</strong> (full 1% per new trade), <strong>REDUCED</strong> (the heat or daily limit leaves less than 1% — every pick on Today is scaled to exactly what is left) or <strong>BLOCKED</strong>. The reason is always printed next to the stamp. Track still works when blocked, after a confirmation that says you are acting against the rules — the desk does not stop you, it makes you say so.</p>
+      <p>The limits live in one place, <code>risk.js</code>, and are shared by both tabs. They are the values most systematic desks run; the handbook states them so you can disagree with them knowingly.</p>
+      <h3>The journal — your own expectancy, not the backtest's</h3>
+      <p>Press <strong>Close</strong> on a Dashboard position and enter the price you sold at. The trade lands in the journal with its <strong>R-multiple</strong>: profit divided by the risk you took at entry (entry minus the initial stop). +2R means you made twice what you were prepared to lose; −1R is a clean stop-out. The journal then shows what the Simulate tab shows for the backtest, measured on <em>you</em>:</p>
+      <ul>
+        <li><strong>Win rate</strong>, average win and average loss in R, and <strong>expectancy</strong> — average R per trade. Positive and you are being paid to follow the rules; negative and either the rules or the following is broken.</li>
+        <li><strong>Profit factor</strong> (gross wins ÷ gross losses) and realized P&amp;L in dollars.</li>
+        <li>Breakdown by asset class and by the <strong>exit rule</strong> that was showing when you closed — so you can see whether your stop-outs, targets and time stops behave like the backtest's.</li>
+        <li>A confidence note: with fewer than ~30 trades the expectancy is not distinguishable from zero. The rulebook backtests at about +0.07R on stocks; it takes dozens of trades to see that in your own numbers. Do not change the rules on ten trades.</li>
+      </ul>
+      <p>Trades you made outside the app can be added by hand (<strong>+ Add a past trade</strong>). Export CSV or JSON any time — the journal is stored only in this browser, and is not sent to the phone-alert server.</p>
+      <div class="callout">
+        <span class="callout-label">Why "closed today" uses realized losses only</span>
+        <p>Open losses are already counted in the heat limit. Counting them twice would close the desk every time a position wobbled. The daily limit is for losses you have taken; the heat limit is for losses you could take.</p>
+      </div>
+    </section>
+
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 22</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 23</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.14<br/>2026-10-23</div>
+        <div class="what">
+          <h4>Risk engine and trade journal (Chapter 22)</h4>
+          <ul>
+            <li>Book-level limits now gate new trades: 1% risk per trade, 5% total risk at stops, 6 open positions, 3% realized daily loss, 25% single-name warning. The Today tab sizes every pick to the remaining budget and shows none when it is gone; the Dashboard shows the same meters with the reasons.</li>
+            <li>Closing a position records the trade: exit price, R-multiple, days held and the exit rule that was showing. The journal reports win rate, average win/loss, expectancy, profit factor, realized P&amp;L, by class and by rule, with a note on how many trades it takes before the number means anything. Past trades can be added by hand; CSV/JSON export.</li>
+            <li>One module, <code>risk.js</code>, shared by both tabs; <code>npm run validate:risk</code> checks its arithmetic.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.13<br/>2026-10-23</div>

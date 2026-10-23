@@ -931,6 +931,19 @@
   .pick .score .lbl { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
   .pick .score a { display: inline-block; margin-top: 10px; font-size: 10.5px; color: var(--accent); text-decoration: none; letter-spacing: 0.06em; }
 
+  /* Risk engine box — book-level limits from risk.js */
+  .risk-box { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; border: 1px solid var(--rule); background: var(--panel); padding: 14px 18px; margin: -10px 0 22px; }
+  .risk-box .stamp { font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; padding: 6px 10px; border: 2px solid; font-weight: 700; white-space: nowrap; }
+  .risk-box .stamp.OPEN { color: var(--signal); border-color: var(--signal); }
+  .risk-box .stamp.REDUCED { color: var(--caution); border-color: var(--caution); }
+  .risk-box .stamp.BLOCKED { color: var(--risk); border-color: var(--risk); }
+  .risk-box .msg { font-size: 13.5px; color: var(--ink-2); min-width: 0; }
+  .risk-box .msg strong { color: var(--ink); }
+  .risk-box .meter { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.04em; }
+  .risk-box .meter b { color: var(--ink); font-weight: 600; }
+  .risk-box .meter .bad { color: var(--risk); } .risk-box .meter .warn { color: var(--caution); }
+  .risk-box a { color: var(--accent); }
+  @media (max-width: 640px) { .risk-box { grid-template-columns: 1fr; gap: 8px; } }
   .none {
     border: 1px dashed var(--rule); border-radius: 6px; padding: 26px 22px; text-align: center;
     color: var(--ink-2); font-size: 14px; line-height: 1.65;
@@ -1007,6 +1020,7 @@
     <input id="capital" type="number" min="500" step="500" value="10000" inputmode="numeric" />
     <span class="hint">every position below is sized from this · saved on this device</span>
   </div>
+  <div class="risk-box" id="risk-box"><span class="stamp REDUCED">◌ risk</span><div class="msg">Reading your open positions and today's closed trades…</div></div>
 
   <!-- STEP 2: what qualifies -->
   <div class="step"><span class="n">2</span><h3>What qualifies right now</h3><span class="sub" id="qual-sub">across stocks, options, crypto and metals</span></div>
@@ -1095,6 +1109,7 @@
 
 <script type="module">
 import { analyze, regime, cryptoRegime } from '/analyze.js';
+import { loadJournal, riskBudget } from '/risk.js';
 
 (() => {
   'use strict';
@@ -1179,6 +1194,45 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
   }
   function riskDollars(mult) { return capital * (RISK_PCT / 100) * mult; }
 
+  // ═══ the risk engine has the final say ═══
+  // Reads the Dashboard's open positions and the journal's closed trades from
+  // this browser, and asks risk.js whether the book can take another trade:
+  // 6 positions max, 5% of capital at risk across all stops, 3% daily loss.
+  let riskB = null;
+  function computeRisk() {
+    let positions = [];
+    try { positions = JSON.parse(localStorage.getItem('sd-portfolio-v1') || '[]'); if (!Array.isArray(positions)) positions = []; } catch {}
+    const prices = {};
+    for (const r of stocks) prices[r.sym || r.t] = r.p;
+    for (const c of coins) prices[c.t] = c.p;
+    riskB = riskBudget({ capital, positions, prices, journal: loadJournal() });
+    return riskB;
+  }
+  function renderRiskBox() {
+    const b = riskB || computeRisk();
+    const el = $('risk-box'); if (!el) return;
+    const L = b.limits;
+    const cls = (v, lim) => (v >= lim ? 'bad' : v >= lim * 0.7 ? 'warn' : '');
+    const msg = b.gate === 'BLOCKED'
+      ? `<strong>Risk engine says no new trades.</strong> ${b.breaches.map(x => x.text).join(' ') || 'The risk budget is used up.'} Nothing is sized or shown until the book has room — manage what you hold first.`
+      : b.gate === 'REDUCED'
+        ? `<strong>Room for one more trade at ${Math.round(b.sizeMult * 100)}% size.</strong> The book already carries ${b.openRiskPct.toFixed(1)}% at stops${b.realizedTodayPct < 0 ? ` and is down ${Math.abs(b.realizedTodayPct).toFixed(1)}% today` : ''}, so only ${b.roomRiskPct}% of capital (${money(b.roomRiskDollars, 0)}) can be added. Every pick below is sized to that.${b.warnings[0] ? ' ' + b.warnings[0].text : ''}`
+        : b.openCount
+          ? `<strong>Room for ${b.slots} more position${b.slots === 1 ? '' : 's'}</strong> at full ${L.riskPerTradePct}% risk (${money(b.roomRiskDollars, 0)} each).${b.warnings[0] ? ' ' + b.warnings[0].text : ''}`
+          : `<strong>Book is empty — full risk budget available.</strong> Up to ${L.maxPositions} positions, each risking ${L.riskPerTradePct}% (${money(b.roomRiskDollars, 0)}); never more than ${L.maxOpenRiskPct}% at stops in total; a ${L.dailyLossPct}% losing day closes the desk.`;
+    el.innerHTML = `<span class="stamp ${b.gate}">${b.gate === 'OPEN' ? '✓ open' : b.gate === 'REDUCED' ? '◐ reduced' : '✕ blocked'}</span>
+      <div class="msg">${msg}
+        <div class="meter">
+          <span class="${cls(b.openCount, L.maxPositions)}">positions <b>${b.openCount}/${L.maxPositions}</b></span>
+          <span class="${cls(b.openRiskPct, L.maxOpenRiskPct)}">at stops <b>${b.openRiskPct.toFixed(1)}%</b> of ${L.maxOpenRiskPct}%</span>
+          <span class="${cls(-b.realizedTodayPct, L.dailyLossPct)}">closed today <b>${b.realizedTodayPct >= 0 ? '+' : ''}${b.realizedTodayPct.toFixed(2)}%</b> limit −${L.dailyLossPct}%</span>
+          <span>exposure <b>${b.exposurePct.toFixed(0)}%</b></span>
+          <a href="/dashboard">positions &amp; journal →</a>
+        </div>
+      </div>`;
+  }
+  window.addEventListener('storage', (e) => { if (e.key === 'sd-portfolio-v1' || e.key === 'sd-journal-v1') { computeRisk(); renderPicks(); } });
+
   // ═══ STEP 1 · the light ═══
   function renderLight() {
     const el = $('light');
@@ -1194,14 +1248,16 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
     } else if (stocksBad && cryptoBad) {
       cls = 'stop'; title = 'No new trades today.';
       text = `Both the stock and crypto regimes are risk-off. ${stockRegime.note}`;
-    } else if (half) {
+    } else if (half && Math.round(sizeMult() * 100) < 100) {
       cls = 'half'; title = `Trade — but at ${Math.round(sizeMult() * 100)}% of normal size.`;
       text = macro && macro.level === 'caution'
         ? `${macro.note} Every position below is already sized for that.`
         : `Volatility is elevated. Every position below is already sized down for it.`;
     } else {
       cls = 'go'; title = 'Clear to trade at full size.';
-      text = 'No major release inside 48 hours and volatility is normal. The candidates below are sized at full risk.';
+      text = 'No major release inside 48 hours and volatility is normal. The candidates below are sized at full risk.'
+        + (cryptoReg && cryptoReg.sizeMult < 1 ? ` Crypto is the exception — its regime is ${cryptoReg.level.toUpperCase()}, so coins are ${cryptoBad ? 'closed' : 'sized down'}.` : '')
+        + ' The risk engine below can still reduce or block this based on what you already hold.';
     }
     if (!macro && !stockRegime) { cls = 'half'; title = 'Checking the gates…'; text = 'Reading the macro calendar and the volatility regime.'; }
 
@@ -1248,6 +1304,7 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
     const b = e.target.closest('.track-btn'); if (!b) return;
     let p; try { p = JSON.parse(b.dataset.track); } catch { return; }
     const unit = p.assetClass === 'option' ? 'contracts' : p.assetClass === 'crypto' ? `${p.ticker} (fractions fine)` : p.assetClass === 'metal' ? 'units (1 = 1 oz equivalent)' : 'shares';
+    if (riskB && riskB.gate === 'BLOCKED' && !confirm(`The risk engine is BLOCKED:\n${riskB.breaches.map(x => x.text).join('\n')}\n\nTrack it anyway (against the rules)?`)) return;
     const q = parseFloat(prompt(`Track ${p.label || p.ticker} in Dashboard\n\nHow many ${unit}?\nStop $${p.stop} and target $${p.target} from this card will be stored.`, String(p.suggestQty || 1)));
     if (!(q > 0)) return;
     try {
@@ -1261,7 +1318,9 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
 
   function renderPicks() {
     const el = $('picks');
-    const mult = sizeMult();
+    const rb = computeRisk(); renderRiskBox();
+    const riskBlocked = !PREVIEW && rb.gate === 'BLOCKED';
+    const mult = sizeMult() * (PREVIEW ? 1 : rb.sizeMult);
     const macroBlocked = !PREVIEW && macro && macro.level === 'blocked';
     const stocksBad = !PREVIEW && bad(stockRegime);
     const cryptoBad = !PREVIEW && bad(cryptoReg);
@@ -1337,11 +1396,13 @@ import { analyze, regime, cryptoRegime } from '/analyze.js';
 
     const qualifying = out.length;
     $('qual-sub').textContent = qualifying
-      ? `${qualifying} candidate${qualifying > 1 ? 's' : ''} across stocks, options, crypto and metals — sized for ${money(capital, 0)}`
+      ? `${qualifying} candidate${qualifying > 1 ? 's' : ''} across stocks, options, crypto and metals — sized for ${money(capital, 0)}${!PREVIEW && rb.sizeMult < 1 && rb.gate !== 'BLOCKED' ? ` at ${Math.round(rb.sizeMult * 100)}% (risk engine)` : ''}`
       : 'across stocks, options, crypto and metals';
 
     if (macroBlocked || (stocksBad && cryptoBad)) {
       el.innerHTML = `<div class="none"><strong>Nothing to buy today — by design.</strong>The gate above is closed. Anything that looks good on a chart is still a no while it is.</div>`;
+    } else if (riskBlocked) {
+      el.innerHTML = `<div class="none"><strong>The risk engine is blocked — no new trades.</strong>${rb.breaches.map(x => x.text).join(' ')} ${qualifying ? `${qualifying} candidate${qualifying > 1 ? 's' : ''} qualified on the chart; they are not shown because the book cannot take them. Manage what you hold on the <a href="/dashboard">Dashboard</a>.` : ''}</div>`;
     } else if (!qualifying) {
       el.innerHTML = `<div class="none"><strong>Nothing qualifies right now.</strong>That is the screen doing its job, not a bug. Most days there is no clean entry; the money is made by waiting for one and then following the plan.${scanNote ? `<br/><span style="font-size:12px;color:var(--ink-3);">${scanNote}</span>` : ''}</div>`;
     } else if (out.length > SHOW_FIRST && !showAll) {
