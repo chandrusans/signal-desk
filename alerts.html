@@ -988,7 +988,26 @@
 
   <div class="al-grid">
     <aside class="side">
-      <h3>Notifications</h3>
+      <h3>Phone alerts · WhatsApp</h3>
+      <div class="push" id="phone-panel">
+        <div class="st off" id="phone-st">checking server…</div>
+        <div class="f" style="display:grid;grid-template-columns:1fr;gap:6px;margin:6px 0;">
+          <input id="cb-phone" placeholder="WhatsApp number, e.g. +14155551234" inputmode="tel" style="font-family:var(--mono);font-size:12px;padding:7px 9px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
+          <input id="cb-key" placeholder="CallMeBot API key" type="password" autocomplete="off" style="font-family:var(--mono);font-size:12px;padding:7px 9px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
+        </div>
+        <button class="primary" id="phone-save">Save &amp; sync to server</button>
+        <button id="phone-test">Send a test to my phone</button>
+        <p id="phone-note">One-time setup: save the CallMeBot number from <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener" style="color:var(--accent);">callmebot.com</a> as a contact, send it the message <em>I allow callmebot to send me messages</em> on WhatsApp, and paste the API key it replies with. Alerts are then sent from the server every 5 minutes in market hours and every 30 minutes otherwise — with your browser closed.</p>
+        <details style="margin-top:8px;"><summary style="font-family:var(--mono);font-size:10px;color:var(--ink-3);cursor:pointer;letter-spacing:0.08em;">OTHER CHANNELS (optional)</summary>
+          <div style="display:grid;gap:6px;margin-top:6px;">
+            <input id="ntfy-topic" placeholder="ntfy.sh topic (install the ntfy app, subscribe to this)" style="font-family:var(--mono);font-size:11px;padding:6px 8px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
+            <input id="tg-token" placeholder="Telegram bot token" type="password" autocomplete="off" style="font-family:var(--mono);font-size:11px;padding:6px 8px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
+            <input id="tg-chat" placeholder="Telegram chat id" style="font-family:var(--mono);font-size:11px;padding:6px 8px;background:var(--ground-2);border:1px solid var(--rule);border-radius:4px;color:var(--ink);" />
+          </div>
+        </details>
+      </div>
+
+      <h3>Browser notifications</h3>
       <div class="push">
         <div class="st off" id="push-st">checking…</div>
         <button class="primary" id="push-enable">Enable notifications</button>
@@ -1111,8 +1130,7 @@
 
 
 <script type="module">
-import { TYPES, evaluate, evaluatePositions, notify, requestPermission, registerWorker, getSettings, setSettings, getWatch, setWatch, getHistory, clearHistory } from '/alerts.js';
-import { analyze, regime, cryptoRegime } from '/analyze.js';
+import { TYPES, evaluate, evaluatePositions, fetchAlertData, fetchPositionContext, notify, requestPermission, registerWorker, getSettings, setSettings, getWatch, setWatch, getHistory, clearHistory } from '/alerts.js';
 import { classOf } from '/exits.js';
 
 (() => {
@@ -1155,12 +1173,12 @@ import { classOf } from '/exits.js';
   function renderToggles() {
     $('toggles').innerHTML = Object.entries(TYPES).map(([k, v]) => `
       <label class="tog"><span>${v.icon} ${v.label}<span class="k">${k}</span></span><input type="checkbox" data-k="${k}" ${settings.enabled[k] ? 'checked' : ''}/></label>`).join('');
-    $('toggles').querySelectorAll('input').forEach((i) => i.addEventListener('change', () => { settings.enabled[i.dataset.k] = i.checked; setSettings(settings); renderFeed(); }));
+    $('toggles').querySelectorAll('input').forEach((i) => i.addEventListener('change', () => { settings.enabled[i.dataset.k] = i.checked; setSettings(settings); renderFeed(); scheduleSync(); }));
   }
   function renderWatch() {
     $('watch-n').textContent = watch.length;
     $('watch').innerHTML = watch.map((t) => `<span>${esc(t)}<b data-rm="${esc(t)}" title="remove">✕</b></span>`).join('') || '<span style="color:var(--ink-3);border:none;">empty</span>';
-    $('watch').querySelectorAll('[data-rm]').forEach((b) => b.addEventListener('click', () => { watch = watch.filter((x) => x !== b.dataset.rm); setWatch(watch); renderWatch(); }));
+    $('watch').querySelectorAll('[data-rm]').forEach((b) => b.addEventListener('click', () => { watch = watch.filter((x) => x !== b.dataset.rm); setWatch(watch); renderWatch(); scheduleSync(); }));
   }
   async function renderPush() {
     const st = $('push-st');
@@ -1241,6 +1259,54 @@ import { classOf } from '/exits.js';
     wrap.hidden = false;
   }
 
+  // ---- server sync: the phone runner needs the watchlist, positions, settings and channel ----
+  const SYNC_KEY = 'sd-sync-key-v1';
+  const syncKey = () => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch { return ''; } };
+  let syncTimer = null;
+  async function syncToServer(extra = {}) {
+    const body = { syncKey: syncKey(), watch, settings, portfolio: portfolio(), ...extra };
+    try {
+      const r = await fetch('/api/notify?op=sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const d = await r.json();
+      if (d.ok && d.syncKey) { try { localStorage.setItem(SYNC_KEY, d.syncKey); } catch {} }
+      return d;
+    } catch (e) { return { ok: false, error: e.message }; }
+  }
+  const scheduleSync = () => { clearTimeout(syncTimer); syncTimer = setTimeout(() => syncToServer().then(refreshPhoneStatus), 1500); };
+
+  async function refreshPhoneStatus() {
+    const st = $('phone-st'); const note = $('phone-note');
+    try {
+      const d = await (await fetch(`/api/notify?op=status&syncKey=${encodeURIComponent(syncKey())}`)).json();
+      if (d.storage === 'not-connected') { st.textContent = '✕ server storage not connected yet'; st.className = 'st no'; note.innerHTML = `<strong style="color:var(--risk)">One-time step in Vercel:</strong> Storage → Create → <strong>Blob</strong> → connect it to <em>signal-desk</em>. That adds the storage token and phone alerts start working. Nothing else changes.`; return; }
+      if (d.ok === false && /mismatch/.test(d.error || '')) { st.textContent = '✕ another device owns the server config'; st.className = 'st no'; return; }
+      const wa = d.channels?.whatsapp; const any = wa || d.channels?.ntfy || d.channels?.telegram;
+      const last = d.lastRun ? ` · last run ${Math.round((Date.now() - d.lastRun.at) / 60000)}m ago, ${d.lastRun.fired} fired` : ' · runner has not run yet';
+      st.textContent = any ? `● ${wa ? 'WhatsApp ' + wa.phone : ''}${d.channels?.ntfy ? ' ntfy' : ''}${d.channels?.telegram ? ' telegram' : ''} · ${d.watch} tickers, ${d.positions} positions synced${last}` : `○ synced (${d.watch} tickers, ${d.positions} positions) — no phone channel yet`;
+      st.className = 'st ' + (any ? 'on' : 'off');
+      if (!d.runnerConfigured) st.textContent += ' · RUN_KEY not set on Vercel';
+      if (wa) $('cb-phone').value = $('cb-phone').value || '';
+    } catch (e) { st.textContent = '✕ server unreachable'; st.className = 'st no'; }
+  }
+  $('phone-save').addEventListener('click', async () => {
+    const phone = $('cb-phone').value.trim(), apikey = $('cb-key').value.trim();
+    const channels = {};
+    if (phone || apikey) { if (!/^\+\d{8,15}$/.test(phone)) { alert('Enter the WhatsApp number in international format, e.g. +14155551234'); return; } if (!apikey) { alert('Paste the API key CallMeBot sent you.'); return; } channels.callmebot = { phone, apikey }; }
+    const topic = $('ntfy-topic').value.trim(); if (topic) channels.ntfy = { topic };
+    const token = $('tg-token').value.trim(), chat = $('tg-chat').value.trim(); if (token && chat) channels.telegram = { token, chatId: chat };
+    const b = $('phone-save'); b.disabled = true; b.textContent = 'Syncing…';
+    const d = await syncToServer({ channels });
+    b.disabled = false; b.textContent = 'Save & sync to server';
+    if (!d.ok) alert(d.error || 'sync failed'); else { $('cb-key').value = ''; $('tg-token').value = ''; }
+    refreshPhoneStatus();
+  });
+  $('phone-test').addEventListener('click', async () => {
+    const b = $('phone-test'); b.disabled = true; b.textContent = 'Sending…';
+    try { const d = await (await fetch('/api/notify?op=test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ syncKey: syncKey() }) })).json();
+      alert(d.ok ? 'Sent. Check your phone.' : ('Not sent: ' + (d.error || JSON.stringify(d.results))));
+    } catch (e) { alert('Failed: ' + e.message); } finally { b.disabled = false; b.textContent = 'Send a test to my phone'; }
+  });
+
   // ---- positions: price every held thing, run the shared exit rulebook, alert ----
   const portfolio = () => { try { return JSON.parse(localStorage.getItem('sd-portfolio-v1') || '[]'); } catch { return []; } };
   const fmtp = (x) => (x == null ? '—' : x >= 1000 ? '$' + Math.round(x).toLocaleString('en-US') : x >= 1 ? '$' + x.toFixed(2) : '$' + Number(x).toPrecision(3));
@@ -1248,32 +1314,7 @@ import { classOf } from '/exits.js';
     const pf = portfolio();
     const wrap = $('pos-wrap');
     if (!pf.length) { wrap.hidden = true; return []; }
-    const stocks = [...new Set(pf.filter(x => ['stock', 'metal'].includes(classOf(x)) || x.isOption).map(x => x.isOption ? x.underlying : x.ticker).filter(Boolean))];
-    const coins = [...new Set(pf.filter(x => classOf(x) === 'crypto').map(x => x.ticker.toUpperCase()))];
-    const occ = pf.filter(x => x.isOption).map(x => x.ticker);
-    const stockOnly = pf.filter(x => classOf(x) === 'stock').map(x => x.ticker);
-    const [qR, cR, oR, eR] = await Promise.allSettled([
-      stocks.length ? j(`/api/quotes?tickers=${encodeURIComponent([...stocks, '^VIX'].join(','))}&range=1y`) : Promise.resolve({ quotes: {} }),
-      coins.length ? j(`/api/crypto?op=bars&coins=${encodeURIComponent([...new Set([...coins, 'BTC'])].join(','))}&days=400`) : Promise.resolve({ bars: {} }),
-      occ.length ? j(`/api/option-quote?occ=${encodeURIComponent(occ.join(','))}`) : Promise.resolve({ quotes: {} }),
-      stockOnly.length ? j(`/api/fundamentals?tickers=${encodeURIComponent([...new Set(stockOnly)].join(','))}`) : Promise.resolve({ fundamentals: {} }),
-    ]);
-    const quotes = qR.status === 'fulfilled' ? (qR.value.quotes || {}) : {};
-    const cbars = cR.status === 'fulfilled' ? (cR.value.bars || {}) : {};
-    const oq = oR.status === 'fulfilled' ? (oR.value.quotes || {}) : {};
-    const fund = eR.status === 'fulfilled' ? (eR.value.fundamentals || {}) : {};
-    const vix = quotes['^VIX']?.price;
-    const eqRegime = vix != null ? Object.assign(regime(vix), { vix }) : null;
-    const crRegime = cbars.BTC ? cryptoRegime(cbars.BTC) : null;
-    const ctx = {};
-    for (const pos of pf) {
-      const cls = classOf(pos);
-      if (cls === 'option') { const q = oq[pos.ticker]; ctx[pos.id] = { price: q?.mid ?? null, underlying: quotes[pos.underlying]?.price ?? null, regime: eqRegime }; continue; }
-      if (cls === 'crypto') { const b = cbars[pos.ticker.toUpperCase()]; if (!b?.length) continue; const an = b.length >= 60 ? analyze(b, { assetClass: 'crypto', benchBars: cbars.BTC }) : null; ctx[pos.id] = { price: b[b.length - 1].c, analysis: an && !an.insufficient ? an : null, regime: crRegime }; continue; }
-      const q = quotes[pos.ticker]; if (!q?.price) continue;
-      const an = q.bars?.length >= 60 ? analyze(q.bars, { assetClass: cls === 'metal' ? 'metal' : 'equity' }) : null;
-      ctx[pos.id] = { price: q.price, analysis: an && !an.insufficient ? an : null, regime: eqRegime, earnings: fund[pos.ticker]?.earnings || null };
-    }
+    const ctx = await fetchPositionContext(pf);
     const fired = evaluatePositions(pf, ctx, settings);
     const order = { SELL: 0, TRIM: 1, WATCH: 2, HOLD: 3 };
     const rows = fired.verdicts.sort((x, y) => order[x.v.action] - order[y.v.action]);
@@ -1299,21 +1340,10 @@ import { classOf } from '/exits.js';
     try {
       const tk = watch.slice(0, 30);
       const need = Date.now() - slow.at > SLOW_MS;
-      const [scanR, newsR, earnR, anaR, insR] = await Promise.allSettled([
-        j(`/api/scan?tickers=${encodeURIComponent(tk.join(','))}`),
-        j(`/api/news?tickers=${encodeURIComponent(tk.join(','))}`),
-        need ? j(`/api/intel?op=earnings&tickers=${encodeURIComponent(tk.join(','))}`) : Promise.resolve(null),
-        need ? j(`/api/intel?op=analyst&tickers=${encodeURIComponent(tk.join(','))}`) : Promise.resolve(null),
-        need ? j(`/api/intel?op=insider&tickers=${encodeURIComponent(tk.slice(0, 12).join(','))}&days=30`) : Promise.resolve(null),
-      ]);
-      const scan = {}; if (scanR.status === 'fulfilled') for (const r of scanR.value.rows || []) scan[r.t] = r;
-      const news = newsR.status === 'fulfilled' ? (newsR.value.news || newsR.value) : {};
-      if (need) {
-        if (earnR.status === 'fulfilled' && earnR.value?.results) slow.earnings = earnR.value.results;
-        if (anaR.status === 'fulfilled' && anaR.value?.results) slow.analyst = anaR.value.results;
-        if (insR.status === 'fulfilled' && insR.value?.results) slow.insider = insR.value.results;
-        slow.at = Date.now();
-      }
+      const data = await fetchAlertData(tk, { slow: need });
+      const scan = data.scan, news = data.news;
+      if (need) { if (data.earnings) slow.earnings = data.earnings; if (data.analyst) slow.analyst = data.analyst; if (data.insider) slow.insider = data.insider; slow.at = Date.now(); }
+      const failed = data.failed;
       snap = { scan, news };
       renderSnapshot(tk);
       const fresh = evaluate(tk, { scan, news, earnings: slow.earnings, analyst: slow.analyst, insider: slow.insider }, settings);
@@ -1321,7 +1351,6 @@ import { classOf } from '/exits.js';
       const all = [...posFired, ...fresh];
       const shown = await notify(all);
       renderFeed();
-      const failed = [scanR, newsR, earnR, anaR, insR].filter((x) => x.status === 'rejected').length;
       $('run-ts').textContent = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
       $('feed-dot').style.background = failed ? 'var(--caution)' : 'var(--signal)';
       $('feed-label').textContent = fresh.baseline
@@ -1361,9 +1390,9 @@ import { classOf } from '/exits.js';
     const n = await notify([{ id: 'test-' + Date.now(), type: 'big_move', title: 'Test alert from Signal Desk', body: 'If you can read this, notifications work in this browser.', severity: 'low' }]);
     if (!n) alert('The browser refused to show a notification. Check site permissions.');
   });
-  $('watch-add-btn').addEventListener('click', () => { const v = $('watch-add').value.trim().toUpperCase(); if (/^[A-Z.\-]{1,6}$/.test(v) && !watch.includes(v)) { watch.push(v); setWatch(watch); renderWatch(); check(); } $('watch-add').value = ''; });
+  $('watch-add-btn').addEventListener('click', () => { const v = $('watch-add').value.trim().toUpperCase(); if (/^[A-Z.\-]{1,6}$/.test(v) && !watch.includes(v)) { watch.push(v); setWatch(watch); renderWatch(); check(); scheduleSync(); } $('watch-add').value = ''; });
   $('watch-add').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('watch-add-btn').click(); });
-  $('watch-reset').addEventListener('click', async () => { watch = await defaultWatch(); setWatch(watch); renderWatch(); check(); });
+  $('watch-reset').addEventListener('click', async () => { watch = await defaultWatch(); setWatch(watch); renderWatch(); check(); scheduleSync(); });
   $('hist-clear').addEventListener('click', () => { if (confirm('Clear all alert history on this device?')) { clearHistory(); renderFeed(); } });
   $('refresh-now').addEventListener('click', () => { slow.at = 0; check(); });
 
@@ -1373,6 +1402,8 @@ import { classOf } from '/exits.js';
     if (!watch || !watch.length) { $('feed-label').textContent = 'building watchlist…'; watch = await defaultWatch(); setWatch(watch); }
     renderWatch();
     await check();
+    scheduleSync();                                 // keep the server's copy current every visit
+    refreshPhoneStatus();
     setInterval(check, POLL_MS);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
   })();

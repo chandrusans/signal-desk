@@ -1057,6 +1057,8 @@ import { positionVerdict, defaultStop, classOf } from './exits.js';
     } catch (e) { return []; }
   }
   function save() {
+    // Keep the phone-alert runner's copy of the portfolio current (fire-and-forget).
+    try { const k = localStorage.getItem('sd-sync-key-v1'); if (k) fetch('/api/notify?op=sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ syncKey: k, portfolio }) }).catch(() => {}); } catch {}
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(portfolio)); } catch (e) {}
   }
 

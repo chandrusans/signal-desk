@@ -1,0 +1,37 @@
+name: Signal Desk alert runner
+
+# Vercel's free plan allows cron only once a day, so the schedule lives here.
+# Each tick asks the deployed app to run the alert engine once; the app holds
+# all state and dedup, so a missed or duplicated tick is harmless.
+#
+# Secrets/variables on the repo:
+#   RUN_KEY   (secret)   must equal the RUN_KEY env var on Vercel
+#   APP_URL   (variable) https://signal-desk-virid.vercel.app
+
+on:
+  schedule:
+    # US cash session, every 5 min, Mon–Fri (13:30–20:00 UTC = 09:30–16:00 ET during DST; shift by an hour in winter)
+    - cron: '*/5 13-21 * * 1-5'
+    # Around the clock every 30 min: crypto, positions, overnight filings
+    - cron: '0,30 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: alert-runner
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ask the app to run the alert engine
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          RUN_KEY: ${{ secrets.RUN_KEY }}
+        run: |
+          set -e
+          if [ -z "$RUN_KEY" ] || [ -z "$APP_URL" ]; then echo "RUN_KEY secret or APP_URL variable missing"; exit 1; fi
+          out=$(curl -sS --max-time 90 "$APP_URL/api/notify?op=run&key=$RUN_KEY")
+          echo "$out" | head -c 2000; echo
+          echo "$out" | grep -q '"ok":true' || { echo "runner did not report ok"; exit 1; }

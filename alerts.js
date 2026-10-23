@@ -34,7 +34,8 @@
 // store on a server, which this app does not have; that limit is stated on
 // the page rather than papered over.
 
-import { positionVerdict, alertKey, classOf } from '/exits.js';
+import { positionVerdict, alertKey, classOf } from './exits.js';
+import { analyze, regime, cryptoRegime } from './analyze.js';
 
 const LS = {
   seen: 'sd-alerts-seen-v1',
@@ -46,8 +47,17 @@ const LS = {
 const MAX_HISTORY = 400;
 const MAX_SEEN = 3000;
 
-const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } };
-const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* quota or private mode */ } };
+// Storage is pluggable so the SAME engine runs in the browser (localStorage)
+// and on the server (a JSON object persisted by /api/notify). Keys are
+// identical in both places, so a device and the server can even share state.
+let store = {
+  get: (k) => { try { if (typeof localStorage === 'undefined') return null; return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set: (k, v) => { try { if (typeof localStorage !== 'undefined') localStorage.setItem(k, JSON.stringify(v)); } catch { /* quota or private mode */ } },
+};
+export function useStore(s) { store = s; }
+export function memoryStore(obj = {}) { return { get: (k) => (k in obj ? obj[k] : null), set: (k, v) => { obj[k] = v; }, data: obj }; }
+const load = (k, d) => { const v = store.get(k); return v == null ? d : v; };
+const save = (k, v) => store.set(k, v);
 
 export const TYPES = {
   big_move:  { label: 'Big price move',   icon: '📈' },
@@ -238,11 +248,70 @@ export function evaluatePositions(portfolio, ctxByPos, settings = getSettings())
   return Object.assign(out, { verdicts });
 }
 
+// ── Data gathering shared by the Alerts page and the server runner ─────────
+// `base` is '' in the browser and the deployed origin on the server. `fetchFn`
+// lets the server inject a fetch with its own options.
+const jget = async (url, fetchFn = fetch) => { const r = await fetchFn(url, { cache: 'no-store' }); if (!r.ok) throw new Error(`${url.split('?')[0]} ${r.status}`); return r.json(); };
+
+/** Market data for a watchlist. `slow` toggles the filings sources (earnings/analyst/insider). */
+export async function fetchAlertData(tickers, { base = '', slow = true, fetchFn = fetch } = {}) {
+  const tk = tickers.slice(0, 30);
+  const q = encodeURIComponent(tk.join(','));
+  const [scanR, newsR, earnR, anaR, insR] = await Promise.allSettled([
+    jget(`${base}/api/scan?tickers=${q}`, fetchFn),
+    jget(`${base}/api/news?tickers=${q}`, fetchFn),
+    slow ? jget(`${base}/api/intel?op=earnings&tickers=${q}`, fetchFn) : Promise.resolve(null),
+    slow ? jget(`${base}/api/intel?op=analyst&tickers=${q}`, fetchFn) : Promise.resolve(null),
+    slow ? jget(`${base}/api/intel?op=insider&tickers=${encodeURIComponent(tk.slice(0, 12).join(','))}&days=30`, fetchFn) : Promise.resolve(null),
+  ]);
+  const scan = {}; if (scanR.status === 'fulfilled') for (const r of scanR.value.rows || []) scan[r.t] = r;
+  const news = newsR.status === 'fulfilled' ? (newsR.value.news || newsR.value) : {};
+  const out = { scan, news, failed: [scanR, newsR, earnR, anaR, insR].filter((x) => x.status === 'rejected').length };
+  if (slow) {
+    out.earnings = earnR.status === 'fulfilled' ? (earnR.value?.results || {}) : null;
+    out.analyst = anaR.status === 'fulfilled' ? (anaR.value?.results || {}) : null;
+    out.insider = insR.status === 'fulfilled' ? (insR.value?.results || {}) : null;
+  }
+  return out;
+}
+
+/** Per-position context (price, analysis, regime, earnings) for the exit rulebook. */
+export async function fetchPositionContext(pf, { base = '', fetchFn = fetch } = {}) {
+  const ctx = {};
+  if (!pf.length) return ctx;
+  const stocks = [...new Set(pf.filter((x) => ['stock', 'metal'].includes(classOf(x)) || x.isOption).map((x) => (x.isOption ? x.underlying : x.ticker)).filter(Boolean))];
+  const coins = [...new Set(pf.filter((x) => classOf(x) === 'crypto').map((x) => x.ticker.toUpperCase()))];
+  const occ = pf.filter((x) => x.isOption).map((x) => x.ticker);
+  const stockOnly = [...new Set(pf.filter((x) => classOf(x) === 'stock').map((x) => x.ticker))];
+  const [qR, cR, oR, eR] = await Promise.allSettled([
+    stocks.length ? jget(`${base}/api/quotes?tickers=${encodeURIComponent([...stocks, '^VIX'].join(','))}&range=1y`, fetchFn) : Promise.resolve({ quotes: {} }),
+    coins.length ? jget(`${base}/api/crypto?op=bars&coins=${encodeURIComponent([...new Set([...coins, 'BTC'])].join(','))}&days=400`, fetchFn) : Promise.resolve({ bars: {} }),
+    occ.length ? jget(`${base}/api/option-quote?occ=${encodeURIComponent(occ.join(','))}`, fetchFn) : Promise.resolve({ quotes: {} }),
+    stockOnly.length ? jget(`${base}/api/fundamentals?tickers=${encodeURIComponent(stockOnly.join(','))}`, fetchFn) : Promise.resolve({ fundamentals: {} }),
+  ]);
+  const quotes = qR.status === 'fulfilled' ? (qR.value.quotes || {}) : {};
+  const cbars = cR.status === 'fulfilled' ? (cR.value.bars || {}) : {};
+  const oq = oR.status === 'fulfilled' ? (oR.value.quotes || {}) : {};
+  const fund = eR.status === 'fulfilled' ? (eR.value.fundamentals || {}) : {};
+  const vix = quotes['^VIX']?.price;
+  const eqRegime = vix != null ? Object.assign(regime(vix), { vix }) : null;
+  const crRegime = cbars.BTC ? cryptoRegime(cbars.BTC) : null;
+  for (const pos of pf) {
+    const cls = classOf(pos);
+    if (cls === 'option') { const q = oq[pos.ticker]; ctx[pos.id] = { price: q?.mid ?? null, underlying: quotes[pos.underlying]?.price ?? null, regime: eqRegime }; continue; }
+    if (cls === 'crypto') { const b = cbars[pos.ticker.toUpperCase()]; if (!b?.length) continue; const an = b.length >= 60 ? analyze(b, { assetClass: 'crypto', benchBars: cbars.BTC }) : null; ctx[pos.id] = { price: b[b.length - 1].c, analysis: an && !an.insufficient ? an : null, regime: crRegime }; continue; }
+    const q = quotes[pos.ticker]; if (!q?.price) continue;
+    const an = q.bars?.length >= 60 ? analyze(q.bars, { assetClass: cls === 'metal' ? 'metal' : 'equity' }) : null;
+    ctx[pos.id] = { price: q.price, analysis: an && !an.insufficient ? an : null, regime: eqRegime, earnings: fund[pos.ticker]?.earnings || null };
+  }
+  return ctx;
+}
+
 /** Show browser notifications for new alerts, via the service worker when present. */
 export async function notify(alerts) {
   if (!alerts.length || typeof Notification === 'undefined' || Notification.permission !== 'granted') return 0;
   let shown = 0;
-  const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration().catch(() => null) : null;
+  const reg = typeof navigator !== 'undefined' && 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration().catch(() => null) : null;
   for (const a of alerts.slice(0, 5)) {              // never spam — the page has the rest
     const opts = { body: a.body, tag: a.id, icon: '/favicon.svg', data: { url: '/alerts' } };
     try {
@@ -262,6 +331,6 @@ export async function requestPermission() {
 }
 
 export async function registerWorker() {
-  if (!('serviceWorker' in navigator)) return null;
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return null;
   try { return await navigator.serviceWorker.register('/sw.js'); } catch { return null; }
 }
