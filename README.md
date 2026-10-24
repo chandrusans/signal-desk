@@ -77,7 +77,10 @@ signal-desk/
 ├── options.html       Options recommendations
 ├── crypto.html        Crypto — rankings + measured-edge reality check
 ├── metals.html        Gold / silver
-├── research.html      Research tab — the seven research questions from SEC filings (api/_forensic.js)
+├── research.html      Research tab — forensics, earnings brief, DCF, patterns, compare, dividends, plan
+├── dcf.js             Forward DCF (editable assumptions, two terminal methods, sensitivity)
+├── indicators.js      Display-only indicators + seasonality / drawdown / liquidity / rate-beta tests
+├── views.js           Compare, dividend blueprint and allocation-plan views
 ├── risk.js            Risk engine (book-level limits) + trade journal, shared by Today and Dashboard
 ├── handbook.html      Beginner reference + changelog (see CLAUDE.md — keep current)
 ├── analyze.js         Pure computation — indicators, score, setup, trade plan
@@ -207,7 +210,8 @@ npm test
 ```
 
 Unit tests (node:test) for the pure modules — exit rulebook, risk engine and
-journal, UI escaping/formatting, analysis plan — no network. CI runs them with
+journal, UI escaping/formatting, analysis plan, forward DCF, indicators and
+statistical tests — no network. 32 tests. CI runs them with
 the lint and `npm audit` on every push.
 
 ### Security model

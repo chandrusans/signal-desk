@@ -1088,6 +1088,7 @@ import { analyze, regime, cryptoRegime } from './analyze.js';
 import { positionVerdict, defaultStop, classOf } from './exits.js';
 import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget } from './risk.js';
 import { px, num, tradingDateISO, parseNum, noteBuild } from './ui.js';
+import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from './indicators.js';
 
 (function () {
   const root = document.documentElement;
@@ -1150,6 +1151,17 @@ import { px, num, tradingDateISO, parseNum, noteBuild } from './ui.js';
   let capital = 10000;
   try { const c = parseFloat(localStorage.getItem('sd-capital')); if (c >= 500) capital = c; } catch {}
   let latestQuotes = {};
+  let latestLong = {};           // ticker -> 5y bars (stress test, rate beta); SPY and ^TNX included
+  let latestLongAt = 0, longInFlight = false;
+  async function pullLong() {
+    const names = [...new Set(portfolio.filter(p => classOf(p) === 'stock' || classOf(p) === 'metal' || p.isOption).map(p => (p.isOption ? p.underlying : p.ticker)).filter(Boolean))];
+    if (!names.length || longInFlight || Date.now() - latestLongAt < 30 * 60 * 1000) return;
+    longInFlight = true;
+    try {
+      const r = await fetch(`/api/quotes?tickers=${encodeURIComponent([...names.slice(0, 40), 'SPY', '^TNX'].join(','))}&range=10y`, { cache: 'no-store' });   // ten years: covers the 2020 crash and the 2022 bear
+      if (r.ok) { const d = await r.json(); latestLong = d.quotes || {}; latestLongAt = Date.now(); renderPortfolioRisk(lastRows); }
+    } catch {} finally { longInFlight = false; }
+  }
   let latestOptionQuotes = {};   // OCC symbol -> live contract quote
   let vixPrice = null;
   const prevPrices = {};
@@ -1235,6 +1247,7 @@ import { px, num, tradingDateISO, parseNum, noteBuild } from './ui.js';
       vixPrice = quotes['^VIX']?.price ?? null;
       lastGoodAt = data.asOf || Date.now();
       lastError = null;
+      pullLong();
       updateRunDate(lastGoodAt);
       render();
       applyPendingFlashes();
@@ -1577,6 +1590,42 @@ import { px, num, tradingDateISO, parseNum, noteBuild } from './ui.js';
     if (byClass.length === 1 && rows.length >= 3) vulns.push(`<strong>Everything is one asset class (${escapeHtml(byClass[0][0])}).</strong> Nothing in the book hedges anything else.`);
     const unknown = bySector.find(([k]) => k === 'Other / non-S&P');
     if (unknown && unknown[1] > 30) vulns.push(`${unknown[1].toFixed(0)}% of the book is outside the S&P 500 sector map, so sector exposure is understated.`);
+    // ── Stress test, liquidity, rate sensitivity (from 5-year history; crypto uses its own bars) ──
+    const spy5 = latestLong.SPY?.bars || [], tnx5 = latestLong['^TNX']?.bars || [];
+    const stress = STRESS_WINDOWS.map((w) => {
+      let port = 0, covered = 0, parts = [];
+      for (const r of rows) {
+        const wgt = (r.price * r.pos.qty * r.mult) / total;
+        const bars = classOf(r.pos) === 'crypto' ? (r.q?.bars || []) : (latestLong[name(r)]?.bars || []);
+        let ret = w.rolling ? (bars.length > w.rolling ? worstRolling(bars, w.rolling).pct : null) : (bars.length ? windowReturn(bars, w.from, w.to) : null);
+        let proxy = false;
+        if (ret == null && !w.rolling && spy5.length) { ret = windowReturn(spy5, w.from, w.to); proxy = true; }   // no history then: the index as a stand-in
+        if (ret == null) continue;
+        covered += wgt; port += wgt * ret; parts.push({ t: name(r), ret, proxy });
+        if (r.pos.isOption) { port += wgt * ret * 2; parts[parts.length - 1].ret = ret * 3; parts[parts.length - 1].note = 'option: ~3× the underlying'; }   // crude delta/gamma stand-in
+      }
+      return { ...w, portPct: covered > 0 ? port / covered : null, covered, parts };
+    });
+    const liq = rows.map((r) => ({ t: name(r), l: liquidity(r.q?.bars || latestLong[name(r)]?.bars || [], r.price * r.pos.qty * r.mult), cls: classOf(r.pos) }));
+    const rb = rows.map((r) => ({ t: name(r), b: tnx5.length && !r.pos.isOption ? rateBeta(latestLong[name(r)]?.bars || [], tnx5) : null }));
+    const portRateBeta = (() => { let s = 0, w = 0; for (const r of rows) { const x = rb.find((z) => z.t === name(r))?.b; if (!x) continue; const wgt = (r.price * r.pos.qty * r.mult) / total; s += wgt * x.betaPerPoint; w += wgt; } return w > 0 ? s / w : null; })();
+    const worstStress = stress.filter((s) => s.portPct != null).sort((a, b) => a.portPct - b.portPct)[0];
+    if (worstStress && worstStress.portPct <= -30) vulns.push(`<strong>A ${escapeHtml(worstStress.name)} repeat would cost about ${worstStress.portPct.toFixed(0)}% of the book.</strong> Capital at risk ${fmt(Math.abs(total * worstStress.portPct / 100))} — more than the risk engine's 5% heat limit by a wide margin, because stops gap in crashes.`);
+    const illiq = liq.filter((x) => x.l && (x.l.rating === 'thin' || x.l.rating === 'illiquid'));
+    if (illiq.length) vulns.push(`<strong>${illiq.map((x) => escapeHtml(x.t)).join(', ')} would take ${illiq.map((x) => x.l.sessionsToExit.toFixed(1)).join(' / ')} sessions to exit at a tenth of normal volume.</strong> A stop in a thin name fills far below the line.`);
+    if (portRateBeta != null && Math.abs(portRateBeta) >= 3) vulns.push(`<strong>The book moves about ${portRateBeta.toFixed(1)}% for every +1 point in the 10-year yield.</strong> ${portRateBeta < 0 ? 'A rate shock hits every position at once; nothing here benefits from higher yields.' : 'It is positioned for higher yields; a rate rally hurts it.'}`);
+    const stressHtml = stress.length ? `
+      <div class="pr-col" style="border-right:none;border-top:1px solid var(--rule);">
+        <h5>Stress test · what these windows would do to this book</h5>
+        <div class="pr-corr-wrap"><table class="pr-corr"><tr><th>Scenario</th><th>Book</th>${rows.map((r) => `<th>${escapeHtml(name(r))}</th>`).join('')}</tr>${stress.map((s) => `<tr><th style="text-align:left">${escapeHtml(s.name)}${s.from ? `<br/><span style="font-weight:400">${s.from} → ${s.to}</span>` : ''}</th><td style="color:${s.portPct != null && s.portPct <= -20 ? 'var(--risk)' : s.portPct != null && s.portPct <= -10 ? 'var(--caution)' : 'var(--ink)'}"><strong>${s.portPct != null ? s.portPct.toFixed(1) + '%' : '—'}</strong></td>${rows.map((r) => { const p = s.parts.find((x) => x.t === name(r)); return `<td style="color:${p && p.ret <= -20 ? 'var(--risk)' : 'var(--ink)'}">${p ? p.ret.toFixed(0) + '%' + (p.proxy ? '*' : '') + (p.note ? '†' : '') : '—'}</td>`; }).join('')}</tr>`).join('')}</table></div>
+        <p style="font-size:11.5px;color:var(--ink-3);margin:6px 0 0;">Weighted by today's position values; realised history, not a model. * = no history for that name, the S&amp;P 500's move used instead. † = options taken as three times the underlying's move. ${latestLongAt ? '' : 'Loading 5-year history…'}</p>
+        <h5 style="margin-top:12px;">Liquidity · rate sensitivity</h5>
+        <div class="pr-corr-wrap"><table class="pr-corr"><tr><th></th>${rows.map((r) => `<th>${escapeHtml(name(r))}</th>`).join('')}</tr>
+          <tr><th style="text-align:left">Sessions to exit (10% of volume)</th>${rows.map((r) => { const x = liq.find((z) => z.t === name(r))?.l; return `<td style="color:${x && (x.rating === 'thin' || x.rating === 'illiquid') ? 'var(--risk)' : 'var(--ink)'}">${x ? `${x.sessionsToExit < 0.01 ? '<0.01' : x.sessionsToExit.toFixed(2)} · ${x.rating}` : '—'}</td>`; }).join('')}</tr>
+          <tr><th style="text-align:left">% move per +1 pt 10-yr yield</th>${rows.map((r) => { const x = rb.find((z) => z.t === name(r))?.b; return `<td style="color:${x && Math.abs(x.betaPerPoint) >= 3 ? 'var(--caution)' : 'var(--ink)'}">${x ? (x.betaPerPoint >= 0 ? '+' : '') + x.betaPerPoint.toFixed(1) + '%' : '—'}</td>`; }).join('')}<td></td></tr>
+        </table></div>
+        <p style="font-size:11.5px;color:var(--ink-3);margin:6px 0 0;">Book rate sensitivity ${portRateBeta != null ? (portRateBeta >= 0 ? '+' : '') + portRateBeta.toFixed(1) + '% per +1 pt' : '—'} (value-weighted, last ~120 sessions). Geographic and currency exposure is not in structured filings; the Research page's copy-prompt carries each name's data for that question.</p>
+      </div>` : '';
     const headline = vulns[0] || `<strong style="color:var(--signal)">No single dominant exposure.</strong> Largest name ${byName[0][1].toFixed(0)}%, largest sector ${bySector[0][1].toFixed(0)}%${avgCorr != null ? `, average correlation ${avgCorr.toFixed(2)}` : ''}. The remaining risk is the one the heat meter above measures: every stop hitting on the same day.`;
     document.getElementById('pr-aside').textContent = `${rows.length} position${rows.length === 1 ? '' : 's'} · $${fmt(total)}`;
     el.innerHTML = `
@@ -1589,6 +1638,7 @@ import { px, num, tradingDateISO, parseNum, noteBuild } from './ui.js';
           ${keys.length <= 7 ? `<div class="pr-corr-wrap"><table class="pr-corr"><tr><th></th>${keys.map((k) => `<th>${escapeHtml(k)}</th>`).join('')}</tr>${keys.map((a) => `<tr><th>${escapeHtml(a)}</th>${keys.map((b) => { if (a === b) return '<td>—</td>'; const p = pairs.find((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a)); const c = p ? p.c : null; return `<td style="color:${c == null ? 'var(--ink-3)' : c > 0.6 ? 'var(--risk)' : c > 0.35 ? 'var(--caution)' : 'var(--ink)'}">${c == null ? '·' : c.toFixed(2)}</td>`; }).join('')}</tr>`).join('')}</table></div>` : ''}`
           : `<p style="font-size:12.5px;color:var(--ink-3);margin:0;">${rows.length < 2 ? 'Needs two or more positions.' : 'Needs 20+ sessions of price history on at least two positions.'}</p>`}</div>
       </div>
+      ${stressHtml}
       <div class="pr-vuln">Biggest vulnerability: ${headline}${vulns.length > 1 ? `<ul class="risk-list" style="padding:6px 0 0 18px;">${vulns.slice(1).map((v) => `<li>${v}</li>`).join('')}</ul>` : ''}</div>`;
   }
 

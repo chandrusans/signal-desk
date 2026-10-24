@@ -485,7 +485,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.17</div>
+      <div class="kicker">Signal Desk · Handbook · v3.18</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -570,6 +570,7 @@
         <li><a href="#phone">Alerts on your phone — Telegram, WhatsApp, ntfy</a></li>
         <li><a href="#riskengine">Risk engine &amp; trade journal</a></li>
         <li><a href="#research">Research — the seven questions from the filings</a></li>
+        <li><a href="#deepdives">Research deep-dives — earnings brief, DCF, patterns, compare, dividends, plan</a></li>
       </ul>
     </div>
 
@@ -1388,9 +1389,46 @@
       <p>Every section ends in a <strong>copy-prompt</strong> button: the thirteen research prompts (the seven above plus the forensic ones) pre-filled with the filed numbers, so the qualitative work — transcripts, 10-K prose, the kind of moat — can be done in Claude with the right figures in front of it instead of from memory.</p>
     </section>
 
+    <section id="deepdives">
+      <h2><span class="chnum">Chapter 24</span>Research deep-dives — the "institutional prompt" set, done with data</h2>
+      <p>The popular "act as a Goldman / Morgan Stanley / Bridgewater analyst" prompts ask for ten things each. Most of them are arithmetic on public data, so the Research tab now does that part itself and hands only the narrative part (SWOT, guidance language, Fed outlook) to a pre-filled prompt. Every section says where its numbers come from and what it refused to invent.</p>
+      <h3>Technical report card (display only)</h3>
+      <p>Daily, weekly and monthly trend from the 50/100/200-day, 10/40-week and 6/12-month averages; RSI 14; MACD 12-26-9 with its cross; Bollinger %B and bandwidth; 20-session support and resistance; volume ratio; the rulebook's plan and R:R. It is labelled display-only because none of MACD, Bollinger or chart patterns added to the backtest — only the setup, score and ATR plan drive verdicts. Chart-pattern names and Fibonacci levels are omitted on purpose.</p>
+      <h3>Pre-earnings brief</h3>
+      <p>From NASDAQ: the next report date (flagged as an estimate until confirmed), consensus EPS for the coming quarters with the estimate count and four-week revisions, and the last reports' EPS vs consensus. From price history: the gap at the open, the close-to-close move and the five-session drift after each of those reports. From the option chain: the at-the-money straddle for the first expiry on or after the report, as % of price — the move the market is paying for — compared with the realised average. From the short-interest table: shares short, days to cover and the change since the prior settlement. The decision summary is the desk's rule: no new entry inside five days, holders with +1R trim before the print. Segment detail and guidance language need the transcript and are left to the prompt.</p>
+      <h3>Forward DCF</h3>
+      <p>Five years of revenue (growth fading linearly from the trailing CAGR, capped at 25%, to the terminal rate) and operating margin (3-year average), NOPAT, D&amp;A and capex as % of revenue, 2% of new revenue tied up in working capital, free cash flow discounted at a WACC built from the 10-year yield, the stock's beta and a 5% equity-risk premium, plus the after-tax cost of debt weighted by market cap and debt. Terminal value both ways: perpetuity growth and an exit multiple (the stock's own median EV/EBITDA, capped at 25×), each shown with what it implies about the other. A sensitivity grid across WACC ±2 pts and terminal growth ±1 pt, and a list of which assumptions swing the answer most. Every box is editable; the verdict needs a 20% margin either way. It is a calculator: the moment you change a box the answer is yours.</p>
+      <h3>Patterns</h3>
+      <p>Seasonality by calendar month and day-of-week on up to ten years of daily bars, each with a t-statistic and Bonferroni correction (twelve and five tests respectively), so a month must clear p &lt; 0.004 to be marked. Earnings behaviour (up-days, average gap, five-day drift), short interest and squeeze potential, options premium vs realised, insider filings in the last 90 days, and the statistical-edge summary. Institutional 13F trends and Fed-day correlations are named as not available rather than approximated.</p>
+      <h3>Macro from official data</h3>
+      <p>FRED series (BLS, BEA, Treasury): CPI year-over-year and three-month annualised with its trend, unemployment with the Sahm-rule check, three-month payroll average, real GDP last quarter and year-over-year, fed funds level and direction, the 10-year yield and the 10y−2y curve. A rule-based regime read — expansion, reflation, slowdown, stagflation-risk — with the textbook sector tendencies for it. Fed forecasts and geopolitics are not in any feed and are left to the prompt.</p>
+      <h3>Compare</h3>
+      <p>Two to seven tickers side by side from their own filings: market cap, revenue and its growth, gross and operating margin, ROIC, R&amp;D intensity, free cash flow, net debt/EBITDA, P/E, EV/EBITDA, FCF yield, moat score, credibility, the profits / allocation / valuation verdicts and the five-year share-count change. A rank-sum across the quality and value metrics names the best business by the numbers, with the explicit caution that it is not the same as the best stock. "Compare with the biggest names in its sector" picks the five largest peers by market cap.</p>
+      <h3>Dividend blueprint</h3>
+      <p>A fixed universe of 84 long-record payers. Yield is cash actually paid in the last twelve months (Yahoo dividend events) divided by price, not a quote field. Payout from trailing GAAP EPS; for the top 24, dividends vs free cash flow over five years and consecutive years of rising dividends per share from the filings (capped by the six years read). Safety score 1–10 from stated rules; unsustainable flags at payout above 80% or dividends above free cash flow. Income for your amount, the capital needed for an income goal, a ten-year DRIP projection with its assumptions printed, and tax treatment by account type and bracket.</p>
+      <h3>Allocation plan</h3>
+      <p>A policy statement from rules you can see: equity share 110 − age, ±10 for tolerance, capped by horizon; core index sleeves (US total market, international, aggregate bonds, TIPS, cash, gold) with example funds; the desk's momentum sleeve as a capped satellite; expected long-run return and a bad-year figure blended from each sleeve's approximate historical averages; a 5-point rebalancing band with new money to the most underweight sleeve; asset location by account type; a benchmark; and a one-page statement to copy. It is a template, not advice.</p>
+      <h3>Dashboard stress test</h3>
+      <p>For each holding, its own move in the COVID crash window (19 Feb – 23 Mar 2020), the 2022 bear market (3 Jan – 12 Oct 2022) and its worst 60 sessions in ten years, weighted by today's values into a book figure; the S&amp;P 500's move stands in where a name has no history and options are taken as three times the underlying. Liquidity as sessions to exit at a tenth of average dollar volume. Rate sensitivity as % move per +1 point in the 10-year yield over the last 120 sessions, per name and for the book. Each feeds the biggest-vulnerability sentence. Geographic and currency exposure are not in structured filings.</p>
+    </section>
+
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 24</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 25</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.18<br/>2026-10-24</div>
+        <div class="what">
+          <h4>The institutional prompt set, implemented with data (Chapter 24)</h4>
+          <ul>
+            <li>Research: technical report card (daily/weekly/monthly trend, MACD, Bollinger, RSI, S/R, display only); pre-earnings brief (consensus and revisions, beat/miss, reaction after each report, options-implied move vs realised, short interest, the desk's rule as the decision); forward DCF with editable assumptions, both terminal methods, sensitivity grid and model-breakers; patterns (seasonality and day-of-week with Bonferroni, earnings behaviour, short interest, options premium, insiders); macro cycle from FRED with a rule-based regime and sector tendencies; price performance and a 1–10 risk rating on every stock.</li>
+            <li>New views: <strong>Compare</strong> (2–7 tickers from their filings, ranked by the numbers; one click compares a stock with its five largest sector peers), <strong>Dividend blueprint</strong> (84-name universe, cash-paid yield, payout, FCF coverage, years of growth, safety score, income and DRIP projection, tax by account) and <strong>Allocation plan</strong> (policy statement from stated rules).</li>
+            <li>Dashboard: stress test over the 2020 crash, the 2022 bear and each name's worst 60 sessions; liquidity in sessions-to-exit; rate sensitivity per name and for the book.</li>
+            <li>New data: NASDAQ earnings forecast, short interest and option chain (via <code>/api/intel?op=preview</code>); FRED series (<code>op=macrodata</code>); ten-year price history and trailing dividends on <code>/api/quotes</code>. Modules <code>dcf.js</code>, <code>indicators.js</code>, <code>views.js</code> with unit tests (32 in total).</li>
+            <li>Still not done, and said so on each page: transcripts, segment and geographic breakdowns, 13F trends, Fed and geopolitical forecasts, chart-pattern names, Fibonacci.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.17<br/>2026-10-24</div>

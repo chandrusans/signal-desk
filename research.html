@@ -1009,17 +1009,17 @@
 </head>
 <body>
 <div class="wrap">
-  <nav class="tabbar" aria-label="Views">
+  <nav class="tabbar" role="tablist" aria-label="Views">
     <div class="tabbar-tabs">
-      <a href="/today" class="tab" data-view="today">Today</a>
-      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
-      <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
-      <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
-      <a href="/" class="tab" data-view="stocks">Stocks</a>
-      <a href="/options" class="tab" data-view="options">Options</a>
-      <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
-      <a href="/metals" class="tab" data-view="metals">Metals</a>
-      <a href="/research" class="tab on" data-view="research" aria-current="page">Research</a>
+      <a href="/today" class="tab" data-view="today" role="tab" aria-selected="false">Today</a>
+      <a href="/alerts" class="tab" data-view="alerts" role="tab" aria-selected="false">Alerts</a>
+      <a href="/simulate" class="tab" data-view="simulate" role="tab" aria-selected="false">Simulate</a>
+      <a href="/dashboard" class="tab" data-view="dashboard" role="tab" aria-selected="false">Dashboard</a>
+      <a href="/" class="tab" data-view="stocks" role="tab" aria-selected="false">Stocks</a>
+      <a href="/options" class="tab" data-view="options" role="tab" aria-selected="false">Options</a>
+      <a href="/crypto" class="tab" data-view="crypto" role="tab" aria-selected="false">Crypto</a>
+      <a href="/metals" class="tab" data-view="metals" role="tab" aria-selected="false">Metals</a>
+      <a href="/research" class="tab on" data-view="research" role="tab" aria-selected="true">Research</a>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -1077,36 +1077,17 @@
   const closeBtn = document.getElementById('hb-close');
   const frame = document.getElementById('hb-frame');
   if (!btn || !drawer || !frame) return;
-  // Keep keyboard focus inside the open drawer (aria-modal promises this); Escape closes it.
-  let untrap = null;
-  function trapFocus(el) {
-    if (untrap) untrap();
-    const sel = 'a[href], button:not([disabled]), input, select, textarea, iframe, [tabindex]:not([tabindex="-1"])';
-    const onKey = (e) => {
-      if (e.key === 'Escape') { close(); return; }
-      if (e.key !== 'Tab') return;
-      const f = [...el.querySelectorAll(sel)].filter((x) => x.offsetParent !== null || x.tagName === 'IFRAME');
-      if (!f.length) return;
-      const first = f[0], last = f[f.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    };
-    document.addEventListener('keydown', onKey);
-    untrap = () => { document.removeEventListener('keydown', onKey); untrap = null; btn.focus(); };
-  }
   let loaded = false;
   function open() {
     if (!loaded) { frame.src = '/handbook'; loaded = true; }
     drawer.classList.add('open');
     backdrop.classList.add('open');
     drawer.removeAttribute('hidden');
-    trapFocus(drawer);
     backdrop.removeAttribute('hidden');
     document.body.style.overflow = 'hidden';
     setTimeout(() => closeBtn.focus(), 100);
   }
   function close() {
-    if (untrap) untrap();
     drawer.classList.remove('open');
     backdrop.classList.remove('open');
     drawer.setAttribute('hidden', '');
@@ -1150,7 +1131,10 @@
 
 
 <script type="module">
-import { regime } from '/analyze.js';
+import { regime, analyze } from '/analyze.js';
+import { multiTimeframeTrend, macd, bollinger, rsi, seasonality, dayOfWeek, maxDrawdown, riskRating } from '/indicators.js';
+import { defaultAssumptions, runDcf, sensitivity, breakers } from '/dcf.js';
+import { renderCompare, comparePrompt, DIVIDEND_UNIVERSE, dividendSafety, dividendGrowthYears, renderDividends, buildPlan, renderPlan } from '/views.js';
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -1172,6 +1156,12 @@ import { regime } from '/analyze.js';
   renderRecent();
 
   $('rsearch').addEventListener('submit', (e) => { e.preventDefault(); const t = $('ticker').value.trim().toUpperCase(); if (t) { history.replaceState(null, '', `?t=${t}`); research(t); } });
+  // sub-views: ?compare=A,B,C · ?view=dividends · ?view=plan
+  const subnav = document.createElement('div');
+  subnav.style.cssText = 'display:flex;gap:14px;flex-wrap:wrap;margin:-8px 0 16px;font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;';
+  subnav.innerHTML = '<a href="/research" style="color:var(--accent)">one stock</a><a href="/research?view=dividends" style="color:var(--accent)">dividend blueprint</a><a href="/research?view=plan" style="color:var(--accent)">allocation plan</a><a href="#" id="cmp-link" style="color:var(--accent)">compare tickers…</a>';
+  $('rsearch').after(subnav);
+  document.getElementById('cmp-link').addEventListener('click', (e) => { e.preventDefault(); const v = prompt('Tickers to compare (2 to 7, comma-separated):', 'NVDA, AMD, AVGO, INTC'); if (!v) return; const list = v.toUpperCase().split(/[,\s]+/).filter((x) => /^[A-Z][A-Z0-9.\-]{0,9}$/.test(x)).slice(0, 7); if (list.length >= 2) { history.replaceState(null, '', `?compare=${list.join(',')}`); compare(list); } });
   $('recent').addEventListener('click', (e) => { const a = e.target.closest('a'); if (!a) return; e.preventDefault(); const t = new URL(a.href).searchParams.get('t'); $('ticker').value = t; history.replaceState(null, '', `?t=${t}`); research(t); });
 
   const retTo = (bars, days) => { if (!bars || bars.length < days + 1) return null; const a = bars[bars.length - 1 - days].c, b = bars[bars.length - 1].c; return a > 0 ? ((b / a) - 1) * 100 : null; };
@@ -1184,7 +1174,7 @@ import { regime } from '/analyze.js';
     const sector = me?.sector || null;
     const etf = me?.sectorEtf || null;
     const peers = (uni.constituents || []).filter((c) => c.sector === sector && c.symbol !== t).map((c) => c.symbol).slice(0, 40);
-    const [res, an, nw, sc, pf, qt, mc] = await Promise.all([
+    const [res, an, nw, sc, pf, qt, mc, pv, md, hist, ins] = await Promise.all([
       j(`/api/fundamentals?op=research&ticker=${t}${sector ? '&sector=' + encodeURIComponent(sector) : ''}`).catch((e) => ({ error: e.message })),
       j(`/api/intel?op=analyst&tickers=${t}`).then((d) => d.results?.[t] || null).catch(() => null),
       j(`/api/news?tickers=${t}`).then((d) => { const v = d.news?.[t]; return Array.isArray(v) ? v : (v?.items || []); }).catch(() => []),
@@ -1192,15 +1182,25 @@ import { regime } from '/analyze.js';
       peers.length ? j(`/api/fundamentals?tickers=${peers.join(',')}`).then((d) => d.fundamentals || {}).catch(() => ({})) : Promise.resolve({}),
       j(`/api/quotes?tickers=${['SPY', ...Object.keys(SECTOR_ETFS), '^VIX', '^TNX', 'DX-Y.NYB'].join(',')}&range=6mo`).then((d) => d.quotes || {}).catch(() => ({})),
       j('/api/intel?op=macro&hours=96').catch(() => null),
+      j(`/api/intel?op=preview&ticker=${t}`).catch(() => null),
+      j('/api/intel?op=macrodata').catch(() => null),
+      j(`/api/quotes?tickers=${t},%5ETNX&range=5y`).then((d) => d.quotes || {}).catch(() => ({})),
+      j(`/api/intel?op=insider&tickers=${t}&days=90`).then((d) => d.results?.[t] || null).catch(() => null),
     ]);
     $('run-ts').textContent = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
     $('feed-label').textContent = res?.error ? `SEC read failed · ${res.error}` : 'live';
     const r = recent().filter((x) => x !== t); r.unshift(t); try { localStorage.setItem('sd-research-recent', JSON.stringify(r.slice(0, 8))); } catch {} renderRecent();
-    render(t, { res, an, nw, sc, pf, qt, mc, sector, etf, peers, me });
+    render(t, { res, an, nw, sc, pf, qt, mc, pv, md, hist, ins, sector, etf, peers, me });
   }
 
   function render(t, D) {
-    const { res, an, nw, sc, pf, qt, mc, sector, etf } = D;
+    const { res, an, nw, sc, pf, qt, mc, pv, md, hist, ins, sector, etf } = D;
+    const bars5 = hist?.[t]?.bars || [], tnxBars = hist?.['^TNX']?.bars || [];
+    const closes5 = bars5.map((b) => b.c);
+    const perf = (days) => (closes5.length > days ? ((closes5[closes5.length - 1] / closes5[closes5.length - 1 - days]) - 1) * 100 : null);
+    const dd5 = bars5.length > 60 ? maxDrawdown(bars5) : null;
+    const an1y = bars5.length >= 250 ? analyze(bars5.slice(-260)) : null;
+    const atrPct = an1y && !an1y.insufficient && an1y.indicators?.atr14 && an1y.price ? (an1y.indicators.atr14 / an1y.price) * 100 : null;
     const f = res?.forensic && !res.forensic.error ? res.forensic : null;
     const P = res?.profile || null, S = res?.summary || null;
     const name = P?.name || f?.name || t;
@@ -1234,7 +1234,10 @@ import { regime } from '/analyze.js';
         <div class="c"><div class="l">Operating margin</div><div class="v">${pct(last.om, 1, false)}</div><div class="s">net ${pct(netM, 1, false)}</div></div>
         <div class="c"><div class="l">R&amp;D intensity</div><div class="v">${pct(rndPct, 1, false)}</div><div class="s">of revenue</div></div>
         <div class="c"><div class="l">Market cap</div><div class="v">${S?.marketCapRaw ? big(S.marketCapRaw) : big(f?.valuation?.marketCap)}</div><div class="s">price ${money(price)}${S?.beta != null ? ` · beta ${S.beta}` : ''}</div></div>
+        <div class="c"><div class="l">Price performance</div><div class="v">${pct(perf(21))}</div><div class="s">1m · 3m ${pct(perf(63))} · 1y ${pct(perf(252))}${dd5 ? ` · worst 5-yr drawdown ${dd5.maxDrawdownPct}%` : ''}</div></div>
+        ${(() => { const nde = last.debt != null && last.ebitda > 0 ? (last.debt - (last.cash || 0)) / last.ebitda : null; const rr = riskRating({ atrPct, maxDrawdownPct: dd5?.maxDrawdownPct, beta: S?.beta, netDebtToEbitda: nde }); return `<div class="c"><div class="l">Risk rating</div><div class="v" style="color:${rr >= 7 ? 'var(--risk)' : rr >= 4 ? 'var(--caution)' : 'var(--signal)'}">${rr} / 10</div><div class="s">${atrPct != null ? `ATR ${atrPct.toFixed(1)}%` : ''}${dd5 ? ` · drawdown ${dd5.maxDrawdownPct}%` : ''}${S?.beta != null ? ` · beta ${S.beta}` : ''}${nde != null ? ` · net debt ${nde.toFixed(1)}× EBITDA` : ''}</div></div>`; })()}
       </div>
+      <p style="margin:0 0 10px;"><button class="copy" data-peers="${esc(t)}">Compare with the biggest names in ${esc(sector || 'its sector')} →</button></p>
       <h4>Key risks (from the numbers)</h4>${risks.length ? `<ul>${risks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="na">No filings-based risks could be computed.</p>'}
       <h4>Competitive advantage</h4>
       ${f?.moat ? `<span class="verdict ${vcls(f.moat.verdict)}">moat ${esc(f.moat.verdict)}${f.moat.score != null ? ` · ${f.moat.score}/10` : ''}</span><p>${esc(f.moat.note)}</p>${f.moat.factors.length ? `<ul>${f.moat.factors.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}${f.moat.roicNote ? `<p class="na">${esc(f.moat.roicNote)}</p>` : ''}` : '<p class="na">—</p>'}
@@ -1256,19 +1259,50 @@ import { regime } from '/analyze.js';
       </div><p class="plain">One plan, not two or three: the rulebook has a single entry rule per setup and the Handbook explains it. The <a href="/" style="color:var(--accent)">Stocks tab</a> shows the chart, the <a href="/today" style="color:var(--accent)">Today tab</a> sizes it to your capital and the risk engine, and <a href="/options" style="color:var(--accent)">Options</a> has the contract version. Only a BUY verdict there is a trade; everything on this page is the homework behind it.</p>`
       : `<p class="na">${esc(t)} is not in the S&P 500 scan, so there is no mechanical plan. The research below still applies.</p>`}</div>`);
 
+    // ── 2b · Technical report card (display only — none of this changes the verdict) ──
+    if (bars5.length >= 250) {
+      const tf = multiTimeframeTrend(bars5), m = macd(closes5), bb = bollinger(closes5), r14 = rsi(closes5);
+      const recent = bars5.slice(-20), sup = Math.min(...recent.map((b) => b.l)), resi = Math.max(...recent.map((b) => b.h));
+      const bull = ['bullish cross', 'above signal'].includes(m?.cross);
+      const tl = (x) => `<span class="verdict ${x.label === 'uptrend' ? 'v-good' : x.label === 'downtrend' ? 'v-bad' : 'v-warn'}">${esc(x.label)}</span>`;
+      const anSetup = an1y && !an1y.insufficient ? an1y : null;
+      const rr = anSetup?.plan ? ((anSetup.plan.target - anSetup.plan.entry) / (anSetup.plan.entry - anSetup.plan.stop)).toFixed(1) : null;
+      const conf = !anSetup ? '—' : anSetup.setup === 'BREAKOUT' && anSetup.score >= 65 ? 'BUY' : anSetup.setup === 'PULLBACK' && anSetup.score >= 60 ? 'BUY' : anSetup.setup === 'BROKEN' ? (anSetup.score < 30 ? 'SELL' : 'AVOID') : 'NEUTRAL';
+      sections.push(`<div class="sec"><h4>Technical report card · display only</h4>
+        <div class="kv">
+          <div class="c"><div class="l">Daily trend</div><div class="v">${tl(tf.daily)}</div><div class="s">price ${money(tf.daily.price)} · 50d ${money(tf.daily.fast)} · 100d ${money(tf.daily.ma100)} · 200d ${money(tf.daily.slow)}</div></div>
+          <div class="c"><div class="l">Weekly trend</div><div class="v">${tl(tf.weekly)}</div><div class="s">10-wk ${money(tf.weekly.fast)} · 40-wk ${money(tf.weekly.slow)}</div></div>
+          <div class="c"><div class="l">Monthly trend</div><div class="v">${tl(tf.monthly)}</div><div class="s">6-mo ${money(tf.monthly.fast)} · 12-mo ${money(tf.monthly.slow)}</div></div>
+          <div class="c"><div class="l">RSI 14 · MACD</div><div class="v">${num(r14, 0)} · ${m ? (bull ? '▲' : '▼') : '—'}</div><div class="s">${r14 > 70 ? 'overbought' : r14 < 30 ? 'oversold' : 'neutral'} · MACD ${m ? esc(m.cross) : '—'}${m ? ` (hist ${m.histogram.toFixed(2)})` : ''}</div></div>
+          <div class="c"><div class="l">Bollinger %B</div><div class="v">${bb ? bb.percentB.toFixed(2) : '—'}</div><div class="s">${bb ? (bb.percentB > 1 ? 'above the upper band' : bb.percentB < 0 ? 'below the lower band' : bb.percentB > 0.8 ? 'near the upper band' : bb.percentB < 0.2 ? 'near the lower band' : 'mid-band') + ` · width ${bb.bandwidthPct.toFixed(1)}%` : ''}</div></div>
+          <div class="c"><div class="l">Support · resistance</div><div class="v">${money(sup)} · ${money(resi)}</div><div class="s">20-session low and high</div></div>
+          <div class="c"><div class="l">Volume</div><div class="v">${anSetup?.indicators?.volumeRatio != null ? anSetup.indicators.volumeRatio.toFixed(2) + '×' : '—'}</div><div class="s">5-day vs 20-day average${anSetup?.indicators?.volumeRatio > 1.3 ? ' — buyers pressing' : anSetup?.indicators?.volumeRatio < 0.7 ? ' — thinning' : ''}</div></div>
+          <div class="c"><div class="l">Plan · R:R</div><div class="v">${anSetup?.plan ? `${money(anSetup.plan.entry)} / ${money(anSetup.plan.stop)} / ${money(anSetup.plan.target)}` : '—'}</div><div class="s">entry / stop / target${rr ? ` · ${rr}:1` : ''} · rulebook says <strong>${conf}</strong></div></div>
+        </div>
+        <p class="na">The trend labels, MACD and Bollinger readings are shown because people ask for them; only the rulebook's setup, score and ATR plan (Chapter 3–5) drive BUY/SELL, because only those survived the backtest. Chart-pattern names and Fibonacci levels are left out on purpose: neither measured as an edge, and both are easy to see after the fact.</p></div>`);
+    }
+
     // ── 3 · News filter ──
     const matters = (x) => !!x.primary && x.category && x.category !== 'other';
     sections.push(`<div class="sec"><div class="step"><span class="n">3</span><h3>News filter</h3><span class="sub">what moves the price vs noise — rule: company-specific and categorised</span></div>
       ${nw.length ? nw.slice(0, 10).map((x) => `<div class="news-item"><span class="tag ${matters(x) ? 'matters' : 'noise'}">${matters(x) ? 'matters' : 'noise'}</span><div><a href="${esc(x.link || x.url || '#')}" target="_blank" rel="noopener">${esc(x.title)}</a><br/><small>${esc(x.category || '')}${x.sentiment != null ? ` · tone ${x.sentiment > 0 ? '+' : ''}${x.sentiment}` : ''}${x.publisher || x.source ? ' · ' + esc(x.publisher || x.source) : ''}${x.ts ? ' · ' + new Date(x.ts).toISOString().slice(0, 10) : ''}</small></div></div>`).join('') : '<p class="na">No headlines in the feed right now.</p>'}
       <p class="na" style="margin-top:8px;">"Matters" = the article is about this company (not a passing mention) and falls in an alert category — earnings, guidance, deal, lawsuit, regulatory, analyst, product. The same rule feeds the Alerts tab.</p></div>`);
 
-    // ── 4 · Earnings call ──
+    // ── 4 · Pre-earnings brief ──
     const cq = f?.credibility?.quarters || [];
-    sections.push(`<div class="sec"><div class="step"><span class="n">4</span><h3>Earnings call</h3><span class="sub">the quantitative half from the record; the transcript half by prompt</span></div>
-      ${f?.credibility?.score != null ? `<span class="verdict ${f.credibility.score >= 8 ? 'v-good' : f.credibility.score >= 5 ? 'v-warn' : 'v-bad'}">credibility ${f.credibility.score}/10</span>` : ''}
-      <p>${esc(f?.credibility?.note || 'No consensus history.')}</p>
-      ${cq.length ? `<div class="tbl-wrap"><table class="r"><thead><tr><th>Quarter</th><th>Reported</th><th>EPS</th><th>Consensus</th><th>Surprise</th></tr></thead><tbody>${cq.map((q) => `<tr><td>${esc(q.q || '')}</td><td>${esc(q.date || '')}</td><td>${q.eps != null ? money(q.eps) : '—'}</td><td>${q.est != null ? money(q.est) : '—'}</td><td class="${q.surprise > 0 ? 'up' : q.surprise < 0 ? 'down' : ''}">${pct(q.surprise)}</td></tr>`).join('')}</tbody></table></div>` : ''}
-      <p class="na">No free source carries call transcripts. ${P?.website ? `Get the latest one from the <a href="${esc(P.website)}" target="_blank" rel="noopener" style="color:var(--accent)">investor site</a>, then` : 'Get the latest one from the investor site, then'} use the pre-filled prompt — it carries the beat/miss record above so the model can check what management said against what landed.</p>
+    const P1 = pv && !pv.error ? pv : null;
+    const decision = !P1 ? '' : (P1.next && P1.next.daysAway != null && P1.next.daysAway <= 5 && P1.next.daysAway >= 0) ? `<span class="verdict v-bad">NO NEW ENTRY · report in ${P1.next.daysAway} day${P1.next.daysAway === 1 ? '' : 's'}</span>` : P1.next && P1.next.daysAway > 5 ? `<span class="verdict v-good">OPEN · ${P1.next.daysAway} days to the report</span>` : '';
+    sections.push(`<div class="sec"><div class="step"><span class="n">4</span><h3>Earnings</h3><span class="sub">the pre-earnings brief: record, consensus, implied move, reaction history</span></div>
+      ${decision}${f?.credibility?.score != null ? `<span class="verdict ${f.credibility.score >= 8 ? 'v-good' : f.credibility.score >= 5 ? 'v-warn' : 'v-bad'}">credibility ${f.credibility.score}/10</span>` : ''}
+      ${P1 ? `<ul>${P1.read.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : `<p>${esc(f?.credibility?.note || 'No consensus history.')}</p>`}
+      ${P1?.consensus?.length ? `<h4>Consensus ahead</h4><div class="tbl-wrap"><table class="r"><thead><tr><th>Quarter</th><th>Consensus EPS</th><th>Low</th><th>High</th><th>Estimates</th><th>Revisions 4w ▲/▼</th></tr></thead><tbody>${P1.consensus.map((c) => `<tr><td>${esc(c.period)}</td><td>${c.consensusEps != null ? money(c.consensusEps) : '—'}</td><td>${c.lowEps != null ? money(c.lowEps) : '—'}</td><td>${c.highEps != null ? money(c.highEps) : '—'}</td><td>${c.estimates ?? '—'}</td><td>${c.revisionsUp ?? 0} / ${c.revisionsDown ?? 0}</td></tr>`).join('')}</tbody></table></div>` : ''}
+      ${(P1?.history?.length || cq.length) ? `<h4>Record and reaction</h4><div class="tbl-wrap"><table class="r"><thead><tr><th>Quarter</th><th>Reported</th><th>EPS</th><th>Consensus</th><th>Surprise</th><th>Gap at open</th><th>Close-to-close</th><th>5 sessions</th></tr></thead><tbody>${(P1?.history || cq).map((q) => { const r = (P1?.reactions || []).find((x) => x.quarter === q.quarter) || {}; return `<tr><td>${esc(q.quarter || q.q || '')}</td><td>${esc(q.date || '')}</td><td>${q.eps != null ? money(q.eps) : '—'}</td><td>${(q.consensus ?? q.est) != null ? money(q.consensus ?? q.est) : '—'}</td><td class="${(q.surprisePct ?? q.surprise) > 0 ? 'up' : (q.surprisePct ?? q.surprise) < 0 ? 'down' : ''}">${pct(q.surprisePct ?? q.surprise)}</td><td class="${r.gapPct > 0 ? 'up' : r.gapPct < 0 ? 'down' : ''}">${pct(r.gapPct)}</td><td class="${r.closePct > 0 ? 'up' : r.closePct < 0 ? 'down' : ''}">${pct(r.closePct)}</td><td class="${r.fiveDayPct > 0 ? 'up' : r.fiveDayPct < 0 ? 'down' : ''}">${pct(r.fiveDayPct)}</td></tr>`; }).join('')}</tbody></table></div>` : ''}
+      ${P1?.impliedMove || P1?.shortInterest ? `<div class="kv">
+        ${P1.impliedMove ? `<div class="c"><div class="l">Options-implied move</div><div class="v">±${P1.impliedMove.impliedMovePct}%</div><div class="s">ATM ${money(P1.impliedMove.strike, 0)} straddle ${money(P1.impliedMove.straddle)} · expiry ${esc(P1.impliedMove.expiry)}${P1.avgAbsMovePct != null ? ` · realised avg ${P1.avgAbsMovePct}%` : ''}</div></div>` : ''}
+        ${P1.shortInterest?.latest ? `<div class="c"><div class="l">Short interest</div><div class="v">${(P1.shortInterest.latest.shares / 1e6).toFixed(1)}M</div><div class="s">${(+P1.shortInterest.latest.daysToCover).toFixed(1)} days to cover · ${pct(P1.shortInterest.changePct)} vs prior · ${esc(P1.shortInterest.latest.date)}</div></div>` : ''}
+        ${P1.avgAbsMovePct != null ? `<div class="c"><div class="l">Bull / bear next report</div><div class="v">±${P1.avgAbsMovePct}%</div><div class="s">the average realised move: a beat that lands like the last ones ≈ +${P1.avgAbsMovePct}%, a miss ≈ −${P1.avgAbsMovePct}% — options say ±${P1.impliedMove?.impliedMovePct ?? '?'}%</div></div>` : ''}
+      </div>` : ''}
+      <p class="na">Not available free, and not guessed: ${esc((P1?.notAvailable || ['segment breakdown', 'guidance language', 'key metrics the Street watches']).join(', '))}. ${P?.website ? `Fetch the transcript from the <a href="${esc(P.website)}" target="_blank" rel="noopener" style="color:var(--accent)">investor site</a> and` : 'Fetch the transcript and'} use the pre-filled prompt; it carries the record above.</p>
       <button class="copy" data-copy="call">Copy earnings-call prompt</button></div>`);
 
     // ── 5 · Portfolio risk ──
@@ -1300,6 +1334,14 @@ import { regime } from '/analyze.js';
       ${f.isFinancial ? '<p class="na">Financials: only P/E is compared — operating cash flow and EBITDA are not meaningful for a balance-sheet business.</p>' : ''}
       <p class="na">Conventions: ${esc(f.conventions)}</p>` : '<p class="na">No valuation history without filings.</p>'}</div>`);
 
+    // ── 6b · Forward DCF with every assumption visible ──
+    if (f && f.years.length >= 3 && f.years[f.years.length - 1].revenue > 0) {
+      const tnxNow0 = tnxBars.length ? tnxBars[tnxBars.length - 1].c : null;
+      const A0 = defaultAssumptions({ years: f.years, price, marketCap: f.valuation.marketCap, beta: S?.beta, riskFreePct: tnxNow0, medianEvEbitda: f.valuation.median5y.evEbitda });
+      window.__dcfBase = { a: A0, price, t };
+      sections.push(`<div class="sec"><h4>Forward DCF · your assumptions, the model's arithmetic</h4><div id="dcf-out">${renderDcf(A0, price)}</div></div>`);
+    }
+
     // ── 7 · Macro & sector ──
     const spy = qt.SPY?.bars, tnx = qt['^TNX']?.bars, vix = qt['^VIX']?.price ?? (qt['^VIX']?.bars?.slice(-1)[0]?.c), dxy = qt['DX-Y.NYB']?.bars;
     const rows = Object.keys(SECTOR_ETFS).map((e) => { const b = qt[e]?.bars; const m1 = retTo(b, 21), m3 = retTo(b, 63), s1 = retTo(spy, 21), s3 = retTo(spy, 63); return { e, name: SECTOR_ETFS[e], m1, m3, r1: m1 != null && s1 != null ? m1 - s1 : null, r3: m3 != null && s3 != null ? m3 - s3 : null }; }).filter((x) => x.m1 != null).sort((a, b) => (b.r3 ?? -99) - (a.r3 ?? -99));
@@ -1317,9 +1359,51 @@ import { regime } from '/analyze.js';
         <div class="c"><div class="l">Macro calendar</div><div class="v">${mc?.macroRisk ? esc(mc.macroRisk.level.toUpperCase()) : '—'}</div><div class="s">${mc?.macroRisk?.note ? esc(mc.macroRisk.note) : ''}</div></div>
       </div>
       <p class="plain">${rateText}${rg && (rg.level === 'stress' || rg.level === 'crisis') ? ' Volatility is in a risk-off regime: the rulebook cuts new momentum entries regardless of sector.' : ''}</p>
+      ${md && md.read ? `<h4>The cycle, from official data (FRED)</h4><span class="verdict ${md.regime === 'expansion' ? 'v-good' : md.regime === 'slowdown' || md.regime === 'stagflation-risk' ? 'v-bad' : 'v-warn'}">${esc(md.regime)}</span>
+      <div class="kv">
+        ${md.inflation ? `<div class="c"><div class="l">Inflation (CPI)</div><div class="v">${md.inflation.yoyPct}%</div><div class="s">YoY · 3-mo annualised ${md.inflation.threeMonthAnnualisedPct}% · ${esc(md.inflation.trend)} · ${esc(md.inflation.asOf)}</div></div>` : ''}
+        ${md.unemployment ? `<div class="c"><div class="l">Unemployment</div><div class="v">${md.unemployment.ratePct}%</div><div class="s">year ago ${md.unemployment.yearAgoPct}% · ${md.unemployment.sahmSignal ? 'Sahm rule TRIGGERED' : 'Sahm rule not triggered'}</div></div>` : ''}
+        ${md.payrolls ? `<div class="c"><div class="l">Payrolls</div><div class="v">${md.payrolls.threeMonthAvgChangeK >= 0 ? '+' : ''}${md.payrolls.threeMonthAvgChangeK}K</div><div class="s">3-month average · last ${md.payrolls.lastChangeK >= 0 ? '+' : ''}${md.payrolls.lastChangeK}K</div></div>` : ''}
+        ${md.gdp ? `<div class="c"><div class="l">Real GDP</div><div class="v">${md.gdp.lastQuarterAnnualisedPct}%</div><div class="s">last quarter annualised · ${md.gdp.yoyPct}% YoY · ${esc(md.gdp.asOf)}</div></div>` : ''}
+        ${md.fedFunds ? `<div class="c"><div class="l">Fed funds</div><div class="v">${md.fedFunds.ratePct}%</div><div class="s">${esc(md.fedFunds.direction)} · ${md.fedFunds.sixMonthChangePts >= 0 ? '+' : ''}${md.fedFunds.sixMonthChangePts} pts / 6m</div></div>` : ''}
+        ${md.curve ? `<div class="c"><div class="l">Yield curve 10y−2y</div><div class="v">${md.curve.tenMinusTwoPts > 0 ? '+' : ''}${md.curve.tenMinusTwoPts}</div><div class="s">${md.curve.inverted ? 'inverted' : 'positive'}</div></div>` : ''}
+      </div>
+      <ul>${md.read.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+      <p class="plain"><strong>Textbook tendencies for a ${esc(md.regime)} regime:</strong> ${esc((md.sectorTendencies || []).join('; '))}.</p>
+      <p class="na">${esc(md.caveat)} Fed-policy forecasts and geopolitics are not in any free data feed and are left to the prompt.</p>` : ''}
       ${rows.length ? `<div class="tbl-wrap"><table class="r"><thead><tr><th>Sector ETF</th><th>1m</th><th>3m</th><th>vs SPY 1m</th><th>vs SPY 3m</th></tr></thead><tbody>${rows.map((x) => `<tr${x.e === etf ? ' style="background:color-mix(in srgb, var(--accent) 10%, transparent)"' : ''}><td>${x.e} · ${esc(x.name)}${x.e === etf ? ' ← this stock' : ''}</td><td class="${x.m1 >= 0 ? 'up' : 'down'}">${pct(x.m1)}</td><td class="${x.m3 >= 0 ? 'up' : 'down'}">${pct(x.m3)}</td><td class="${x.r1 >= 0 ? 'up' : 'down'}">${pct(x.r1)}</td><td class="${x.r3 >= 0 ? 'up' : 'down'}">${pct(x.r3)}</td></tr>`).join('')}</tbody></table></div>
       <p class="plain">Leading over 3 months: <strong>${rows.slice(0, 3).map((x) => x.e).join(', ')}</strong>. Lagging: <strong>${rows.slice(-3).map((x) => x.e).join(', ')}</strong>.${mine ? ` ${esc(t)}'s sector (${mine.e}) is ${mine.r3 >= 0 ? 'ahead of' : 'behind'} the market by ${pct(Math.abs(mine.r3), 1, false)} over 3 months${sc?.rs != null ? `, and ${esc(t)} itself is ${sc.rs >= 0 ? 'ahead of' : 'behind'} the market by ${pct(Math.abs(sc.rs), 1, false)} over 20 days` : ''} — ${mine.r3 >= 0 ? 'a sector tailwind, which the composite score already credits' : 'the right stock in a lagging sector still fights the tape'}.` : ''}</p>` : '<p class="na">Sector ETF quotes unavailable.</p>'}
       <p class="na">"Textbook tendency" means the historical pattern, not a forecast; the composite score already includes sector-relative strength so this is context, not a signal.</p></div>`);
+
+    // ── 9 · Patterns, with the multiple-testing discipline the crypto hour test used ──
+    if (bars5.length >= 500) {
+      const se = seasonality(bars5), dw = dayOfWeek(bars5);
+      const mn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const P1 = pv && !pv.error ? pv : null;
+      const insN = ins ? (ins.trades || []).filter((x) => /officer|director|ceo|cfo|president/i.test(x.role || x.title || '')) : [];
+      const insBuys = insN.filter((x) => /buy|purchase|P/i.test(x.type || x.code || '')).length, insSells = insN.length - insBuys;
+      const edges = [];
+      if (se.anySignificant) edges.push(`a calendar-month effect survives Bonferroni (${se.rows.filter((r) => r.significantAfterBonferroni).map((r) => mn[r.month - 1]).join(', ')})`); else edges.push('no calendar-month effect survives correction');
+      if (dw.anySignificant) edges.push('a day-of-week effect survives correction'); else edges.push('no day-of-week effect');
+      if (P1?.avgAbsMovePct != null) edges.push(`earnings sessions move ${P1.avgAbsMovePct}% on average vs ${atrPct != null ? atrPct.toFixed(1) : '?'}% on a normal day`);
+      if (sc?.rs != null) edges.push(`${sc.rs >= 0 ? 'positive' : 'negative'} 20-day relative strength (${pct(sc.rs)}) — the one factor that did measure in the backtest`);
+      sections.push(`<div class="sec"><div class="step"><span class="n">9</span><h3>Patterns</h3><span class="sub">seasonality, day of week, earnings behaviour, short interest, insiders — tested, not eyeballed</span></div>
+        <div class="tbl-wrap"><table class="r"><thead><tr><th>Month</th>${se.rows.map((r) => `<th>${mn[r.month - 1]}</th>`).join('')}</tr></thead><tbody>
+          <tr><td>Avg return</td>${se.rows.map((r) => `<td class="${r.meanPct > 0 ? 'up' : r.meanPct < 0 ? 'down' : ''}">${pct(r.meanPct)}</td>`).join('')}</tr>
+          <tr><td>Win rate</td>${se.rows.map((r) => `<td>${r.winRate != null ? r.winRate.toFixed(0) + '%' : '—'}</td>`).join('')}</tr>
+          <tr><td>n · significant?</td>${se.rows.map((r) => `<td>${r.n}${r.significantAfterBonferroni ? ' ★' : ''}</td>`).join('')}</tr>
+        </tbody></table></div>
+        <p class="na">${se.yearsCovered} years of data. Best ${se.best ? mn[se.best.month - 1] + ' ' + pct(se.best.meanPct) : '—'}, worst ${se.worst ? mn[se.worst.month - 1] + ' ' + pct(se.worst.meanPct) : '—'}. ${esc(se.note)}</p>
+        <div class="tbl-wrap"><table class="r"><thead><tr><th>Day</th>${dw.rows.map((r) => `<th>${r.day}</th>`).join('')}</tr></thead><tbody><tr><td>Avg daily return</td>${dw.rows.map((r) => `<td class="${r.meanPct > 0 ? 'up' : 'down'}">${pct(r.meanPct, 3)}</td>`).join('')}</tr><tr><td>t · significant?</td>${dw.rows.map((r) => `<td>${r.t != null ? r.t.toFixed(2) : '—'}${r.significantAfterBonferroni ? ' ★' : ''}</td>`).join('')}</tr></tbody></table></div>
+        <p class="na">${esc(dw.note)}</p>
+        <div class="kv">
+          <div class="c"><div class="l">Insider filings · 90 days</div><div class="v">${ins ? `${insBuys} buy · ${insSells} sell` : '—'}</div><div class="s">officers and directors, Form 4 · ${ins ? 'measured: officer sells have no predictive value; buys too rare to score' : 'no filings read'}</div></div>
+          ${P1?.shortInterest?.latest ? `<div class="c"><div class="l">Short interest</div><div class="v">${(+P1.shortInterest.latest.daysToCover).toFixed(1)}d to cover</div><div class="s">${(P1.shortInterest.latest.shares / 1e6).toFixed(1)}M shares · ${pct(P1.shortInterest.changePct)} vs prior · squeeze potential ${P1.shortInterest.latest.daysToCover >= 5 ? 'meaningful' : P1.shortInterest.latest.daysToCover >= 3 ? 'modest' : 'low'}</div></div>` : ''}
+          ${P1?.impliedMove ? `<div class="c"><div class="l">Options activity</div><div class="v">±${P1.impliedMove.impliedMovePct}%</div><div class="s">implied into the next report vs ${P1.avgAbsMovePct ?? '?'}% realised — ${P1.avgAbsMovePct != null && P1.impliedMove.impliedMovePct > P1.avgAbsMovePct * 1.2 ? 'rich premium' : 'in line'}</div></div>` : ''}
+          ${P1?.reactions?.length ? `<div class="c"><div class="l">Earnings behaviour</div><div class="v">${P1.reactions.filter((r) => r.closePct > 0).length}/${P1.reactions.length} up</div><div class="s">avg gap ${pct(P1.reactions.reduce((a, r) => a + r.gapPct, 0) / P1.reactions.length)} · avg 5-day ${pct(P1.reactions.reduce((a, r) => a + r.fiveDayPct, 0) / P1.reactions.length)}</div></div>` : ''}
+        </div>
+        <h4>Statistical edge summary</h4><p class="plain">${esc(edges.join('; '))}. Institutional ownership trends need 13F aggregation, which no free source provides cleanly; Fed-day and CPI-day correlations need an event calendar going back years — both are left to the prompt rather than approximated.</p></div>`);
+    }
 
     // ── Forensic deep-dive ──
     if (f) {
@@ -1364,6 +1448,112 @@ import { regime } from '/analyze.js';
     }));
   }
 
+  // ── Forward DCF rendering: inputs, year table, terminal both ways, sensitivity, breakers ──
+  function renderDcf(a, price) {
+    const r = runDcf(a, price), sg = sensitivity(a, price), br = breakers(a, price);
+    const inp = (k, label, step, fmt = (v) => v) => `<label style="display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--ink-3);font-family:var(--mono);">${label}<input data-dcf="${k}" type="number" step="${step}" value="${fmt(a[k])}" style="font-family:var(--mono);font-size:13px;padding:6px 8px;border:1px solid var(--rule);background:var(--ground);color:var(--ink);width:110px;" /></label>`;
+    const pc = (v) => (v == null ? '—' : (v * 100).toFixed(1) + '%');
+    return `
+      <span class="verdict ${r.verdict === 'UNDERVALUED' ? 'v-good' : r.verdict === 'OVERVALUED' ? 'v-bad' : r.verdict === 'N/A' ? 'v-na' : 'v-warn'}">${esc(r.verdict)}</span>
+      <p class="plain">Midpoint value <strong>${money(r.perShare.midpoint)}</strong> per share vs price ${money(price)} (${pct(r.upsidePct)}): perpetuity method ${money(r.perShare.perpetuity)}, exit-multiple method ${money(r.perShare.exitMultiple)}. ${(r.terminalShareOfValue * 100).toFixed(0)}% of the value sits in the terminal year — as in every DCF, so the WACC and terminal rows below matter more than year 1.</p>
+      <form id="dcf-form" style="display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 12px;" onsubmit="return false;">
+        ${inp('growthStart', 'growth yr 1 (%)', 0.5, (v) => (v * 100).toFixed(1))}${inp('growthTerminal', 'terminal growth (%)', 0.25, (v) => (v * 100).toFixed(2))}${inp('operatingMargin', 'operating margin (%)', 0.5, (v) => (v * 100).toFixed(1))}${inp('taxRate', 'tax rate (%)', 1, (v) => (v * 100).toFixed(0))}${inp('capexPct', 'capex % rev', 0.5, (v) => (v * 100).toFixed(1))}${inp('daPct', 'D&A % rev', 0.5, (v) => (v * 100).toFixed(1))}${inp('wacc', 'WACC (%)', 0.25, (v) => (v * 100).toFixed(2))}${inp('exitMultiple', 'exit EV/EBITDA ×', 0.5)}
+        <button type="button" class="copy" data-dcf-reset="1" style="align-self:flex-end;">Reset to defaults</button>
+      </form>
+      <p class="na">WACC ${pc(a.wacc)} = (1 − ${pc(a.debtWeight)}) × cost of equity ${pc(a.riskFree + a.beta * a.equityRiskPremium)} [risk-free ${pc(a.riskFree)} + beta ${a.beta} × ERP ${pc(a.equityRiskPremium)}] + ${pc(a.debtWeight)} × after-tax cost of debt ${pc(a.costOfDebt * (1 - a.taxRate))}. Growth fades linearly from year 1 to the terminal rate; margin, tax, capex and D&A are the last 3-year averages${a.basis.revenueCagrPct != null ? `; the ${a.basis.historyYears}-year revenue CAGR was ${a.basis.revenueCagrPct}%` : ''}.</p>
+      <div class="tbl-wrap"><table class="r"><thead><tr><th>Year</th><th>Growth</th><th>Revenue</th><th>EBIT</th><th>NOPAT</th><th>+ D&A</th><th>− Capex</th><th>− ΔNWC</th><th>FCF</th><th>PV</th></tr></thead><tbody>
+        ${r.rows.map((y) => `<tr><td>${y.year}</td><td>${pc(y.growth)}</td><td>${big(y.revenue)}</td><td>${big(y.ebit)}</td><td>${big(y.nopat)}</td><td>${big(y.da)}</td><td>${big(y.capex)}</td><td>${big(y.dNwc)}</td><td><strong>${big(y.fcf)}</strong></td><td>${big(y.pv)}</td></tr>`).join('')}
+        <tr><td colspan="9">PV of 5-year FCF</td><td><strong>${big(r.pvFcf)}</strong></td></tr>
+        <tr><td colspan="9">Terminal value · perpetuity at ${pc(a.growthTerminal)} (implies ${r.terminal.impliedExitMultipleFromPerp != null ? r.terminal.impliedExitMultipleFromPerp.toFixed(1) + '× EBITDA' : '—'})</td><td>${big(r.terminal.perpetuity)}</td></tr>
+        <tr><td colspan="9">Terminal value · ${a.exitMultiple}× exit EBITDA (implies ${r.terminal.impliedGrowthFromExit != null ? pc(r.terminal.impliedGrowthFromExit) + ' perpetual growth' : '—'})</td><td>${big(r.terminal.exitMultiple)}</td></tr>
+        <tr><td colspan="9">Enterprise value (perpetuity / exit) − net debt ${big(a.netDebt)} ÷ ${a.shares ? (a.shares / 1e6).toFixed(0) + 'M shares' : '? shares'}</td><td>${big(r.enterpriseValue.perpetuity)} / ${big(r.enterpriseValue.exitMultiple)}</td></tr>
+      </tbody></table></div>
+      <h4>Sensitivity · value per share (perpetuity method)</h4>
+      <div class="tbl-wrap"><table class="r"><thead><tr><th>WACC \\ terminal g</th>${sg.gs.map((g) => `<th>${pc(g)}</th>`).join('')}</tr></thead><tbody>${sg.waccs.map((w, i) => `<tr><td>${pc(w)}</td>${sg.grid[i].map((v) => `<td class="${v != null && price && v > price * 1.2 ? 'up' : v != null && price && v < price * 0.8 ? 'down' : ''}">${money(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <h4>What breaks the model</h4><ul>${br.slice(0, 4).map((b) => `<li><strong>${esc(b.label)}</strong>: a ±10% change in the assumption moves the value ±${b.swingPct}%.</li>`).join('')}</ul>
+      <p class="na">This is a calculator, not a forecast. The defaults are the company's own history and market inputs; the moment you change a box the answer is yours. A 20% margin of safety is required before the verdict says anything but FAIRLY VALUED.</p>`;
+  }
+  document.addEventListener('input', (e) => {
+    const el = e.target.closest('[data-dcf]'); if (!el || !window.__dcfBase) return;
+    const form = el.closest('#dcf-form'); const a = { ...window.__dcfCur || window.__dcfBase.a };
+    form.querySelectorAll('[data-dcf]').forEach((x) => { const v = parseFloat(x.value); if (!isFinite(v)) return; a[x.dataset.dcf] = x.dataset.dcf === 'exitMultiple' ? v : v / 100; });
+    window.__dcfCur = a;
+    const out = document.getElementById('dcf-out'); const focusKey = el.dataset.dcf;
+    out.innerHTML = renderDcf(a, window.__dcfBase.price);
+    const again = out.querySelector(`[data-dcf="${focusKey}"]`); if (again) { again.focus(); try { again.selectionStart = again.selectionEnd = again.value.length; } catch {} }
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-dcf-reset]') || !window.__dcfBase) return;
+    window.__dcfCur = null; document.getElementById('dcf-out').innerHTML = renderDcf(window.__dcfBase.a, window.__dcfBase.price);
+  });
+
+  // ── Compare mode ──
+  let lastCompare = null;
+  async function compare(list) {
+    $('out').innerHTML = `<div class="none"><strong>Reading ${esc(list.join(', '))}…</strong><span class="loading">one SEC companyfacts read per name</span></div>`;
+    const uni = await getUniverse();
+    const rows = await Promise.all(list.map(async (tk) => {
+      const sector = (uni.constituents || []).find((c) => c.symbol === tk)?.sector || null;
+      try { const d = await j(`/api/fundamentals?op=research&ticker=${tk}${sector ? '&sector=' + encodeURIComponent(sector) : ''}`); return { ticker: tk, forensic: d.forensic, summary: d.summary, profile: d.profile }; }
+      catch (e) { return { ticker: tk, forensic: { error: e.message } }; }
+    }));
+    lastCompare = rows;
+    $('out').innerHTML = renderCompare(rows) + `<div class="sec"><p class="na">Missing names: ${rows.filter((r) => !r.forensic || r.forensic.error).map((r) => esc(r.ticker)).join(', ') || 'none'}. Click a ticker in the search box above for its full page.</p></div>`;
+    $('run-ts').textContent = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC'; $('feed-label').textContent = 'live';
+    $('out').querySelector('[data-copy="compare"]')?.addEventListener('click', async (e) => { try { await navigator.clipboard.writeText(comparePrompt(rows)); e.target.textContent = '✓ copied'; } catch { prompt('Copy this:', comparePrompt(rows)); } });
+  }
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-peers]'); if (!b) return;
+    b.textContent = 'finding the largest peers…';
+    const uni = await getUniverse(); const t = b.dataset.peers;
+    const sector = (uni.constituents || []).find((c) => c.symbol === t)?.sector;
+    const peers = (uni.constituents || []).filter((c) => c.sector === sector && c.symbol !== t).map((c) => c.symbol).slice(0, 40);
+    let top = [];
+    try { const f = (await j(`/api/fundamentals?tickers=${peers.join(',')}`)).fundamentals || {}; top = Object.entries(f).filter(([, v]) => v.marketCapRaw > 0).sort((a, b) => b[1].marketCapRaw - a[1].marketCapRaw).slice(0, 5).map(([k]) => k); } catch {}
+    const list = [t, ...top].slice(0, 6);
+    history.replaceState(null, '', `?compare=${list.join(',')}`); compare(list);
+  });
+
+  // ── Dividend blueprint ──
+  let divPicks = null, divOpts = { amount: 100000, account: 'taxable', bracket: 22, incomeGoal: 0 };
+  async function dividends() {
+    $('out').innerHTML = `<div class="none"><strong>Screening ${DIVIDEND_UNIVERSE.length} long-record dividend payers…</strong><span class="loading">NASDAQ yield, price, EPS · then the filings for the top 20</span></div>`;
+    const uni = await getUniverse(); const sectorOf = (tk) => (uni.constituents || []).find((c) => c.symbol === tk)?.sector || null;
+    const chunks = []; for (let i = 0; i < DIVIDEND_UNIVERSE.length; i += 40) chunks.push(DIVIDEND_UNIVERSE.slice(i, i + 40));
+    const fund = Object.assign({}, ...(await Promise.all(chunks.map((c) => j(`/api/fundamentals?tickers=${c.join(',')}`).then((d) => d.fundamentals || {}).catch(() => ({}))))));
+    // Yield from the actual cash paid in the last 12 months (Yahoo dividend events) ÷ price — not from a quote field that is often blank.
+    const qb = []; for (let i = 0; i < DIVIDEND_UNIVERSE.length; i += 50) qb.push(DIVIDEND_UNIVERSE.slice(i, i + 50));
+    const prices = Object.assign({}, ...(await Promise.all(qb.map((c) => j(`/api/quotes?tickers=${c.join(',')}&range=1y&dividends=1`).then((d) => d.quotes || {}).catch(() => ({}))))));
+    let picks = DIVIDEND_UNIVERSE.map((tk) => { const f = fund[tk] || {}; const qq = prices[tk]; const price = qq?.price ?? null; const ttm = qq?.dividends?.ttmPerShare ?? null; const yieldPct = ttm > 0 && price > 0 ? +((ttm / price) * 100).toFixed(2) : (f.yieldPct ?? null); return { ticker: tk, sector: sectorOf(tk), price, yieldPct, ttmDividend: ttm, eps: f.eps ?? null, pe: f.peRatio ?? null }; }).filter((p) => p.yieldPct > 0 && p.price > 0);
+    picks.forEach((p) => { p.safety = dividendSafety(p); });
+    picks.sort((a, b) => (b.safety?.score || 0) - (a.safety?.score || 0) || b.yieldPct - a.yieldPct);
+    // filings for the top 24: dividends vs FCF and consecutive DPS growth — staggered to respect SEC's rate limit
+    const top = picks.slice(0, 24);
+    for (let i = 0; i < top.length; i += 6) {
+      await Promise.all(top.slice(i, i + 6).map(async (p) => { try { const d = await j(`/api/fundamentals?op=research&ticker=${p.ticker}${p.sector ? '&sector=' + encodeURIComponent(p.sector) : ''}`); const f = d.forensic; if (f && !f.error) { const ly = f.years[f.years.length - 1] || {}; if (!(p.eps > 0) && ly.eps > 0) p.eps = ly.eps; if (p.pe == null && p.eps > 0) p.pe = +(p.price / p.eps).toFixed(1); p.fcfPayoutPct = f.allocation?.totals?.fcf > 0 ? +((f.allocation.totals.dividends / f.allocation.totals.fcf) * 100).toFixed(0) : null; p.growth = dividendGrowthYears(f); p.safety = dividendSafety({ ...p, fcfPayoutPct: p.fcfPayoutPct, growthYears: p.growth.consecutive }); } } catch {} }));
+    }
+    divPicks = picks;
+    renderDiv();
+  }
+  function renderDiv() {
+    $('out').innerHTML = renderDividends(divPicks, divOpts);
+    $('run-ts').textContent = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC'; $('feed-label').textContent = 'live';
+    $('out').querySelector('[data-copy="dividends"]')?.addEventListener('click', async (e) => { const txt = `DATA (NASDAQ yields, SEC filings, ${new Date().toISOString().slice(0, 10)}):\n` + divPicks.slice(0, 20).map((p) => `${p.ticker}: yield ${p.yieldPct}%, payout ${p.safety?.payoutPct ?? '?'}% of EPS, dividends ${p.fcfPayoutPct ?? '?'}% of 5-yr FCF, ${p.growth ? p.growth.consecutive + ' consecutive years of DPS growth (of ' + (p.growth.measuredOver - 1) + ' measured), DPS CAGR ' + p.growth.dpsCagrPct + '%' : 'growth n/a'}, safety ${p.safety?.score}/10`).join('\n') + `\n\nBuild a dividend income portfolio from these for ${money(divOpts.amount, 0)} in a ${divOpts.account} account at a ${divOpts.bracket}% bracket: pick 15–20, flag unsustainable payouts, project monthly income and 10-year DRIP compounding, summarise tax treatment, rank safest to most aggressive. State assumptions.`; try { await navigator.clipboard.writeText(txt); e.target.textContent = '✓ copied'; } catch { prompt('Copy this:', txt); } });
+  }
+  document.addEventListener('input', (e) => { const el = e.target.closest('[data-div]'); if (!el || !divPicks) return; const k = el.dataset.div; divOpts = { ...divOpts, [k]: k === 'account' ? el.value : (parseNum(el.value) || 0) }; const focus = k; renderDiv(); const again = $('out').querySelector(`[data-div="${focus}"]`); if (again) again.focus(); });
+  document.addEventListener('change', (e) => { const el = e.target.closest('select[data-div]'); if (!el || !divPicks) return; divOpts = { ...divOpts, account: el.value }; renderDiv(); });
+
+  // ── Allocation plan ──
+  let planIn = { age: 40, horizonYears: 20, tolerance: 'balanced', account: 'taxable', monthly: 1000, savings: 100000 };
+  function plan() {
+    const p = buildPlan(planIn);
+    $('out').innerHTML = renderPlan(p);
+    $('run-ts').textContent = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC'; $('feed-label').textContent = 'rules, no feed';
+    $('out').querySelector('[data-copy="plan"]')?.addEventListener('click', async (e) => { const txt = $('out').querySelector('pre').innerText; try { await navigator.clipboard.writeText(txt); e.target.textContent = '✓ copied'; } catch { prompt('Copy this:', txt); } });
+  }
+  document.addEventListener('input', (e) => { const el = e.target.closest('[data-plan]'); if (!el || el.tagName === 'SELECT') return; const k = el.dataset.plan; const v = parseNum(el.value); if (!isFinite(v)) return; planIn = { ...planIn, [k]: v }; plan(); const again = $('out').querySelector(`[data-plan="${k}"]`); if (again) again.focus(); });
+  document.addEventListener('change', (e) => { const el = e.target.closest('select[data-plan]'); if (!el) return; planIn = { ...planIn, [el.dataset.plan]: el.value }; plan(); });
+
   const bn = (x) => (x == null ? '?' : Math.abs(x) >= 1e9 ? (x / 1e9).toFixed(2) + 'B' : (x / 1e6).toFixed(0) + 'M');
   function dataBlock(t, D) {
     const f = D.res?.forensic && !D.res.forensic.error ? D.res.forensic : null; const P = D.res?.profile, an = D.an;
@@ -1390,8 +1580,12 @@ import { regime } from '/analyze.js';
     return `${dataBlock(t, D)}\n\nUsing ONLY the data above plus anything I paste, answer the following. Be direct, state every assumption, and say "not determinable from the data" where that is true.\n\n1. STOCK ANALYST — Act as a stock analyst. Break down ${t}: business model, revenue drivers, profit margins, key risks, competitive advantages, and current market sentiment. Understand the business, not just the chart.\n\n2. CFO vs PAT AUDIT — Using the FY table: years where net income grew but operating cash flow fell; the gap between reported profit and cash generated; whether the gap is narrowing or widening; years with negative CFO despite positive profit. Are the profits real or manufactured?\n\n3. WORKING CAPITAL TRAP — Using the DSO/DIO/DPO/CCC series: is the business getting more efficient or slowly consuming cash?\n\n4. REVENUE CONCENTRATION — I will paste the "Customers" and segment sections of the latest 10-K here: [PASTE]. Revenue from the top 3 customers as a % of total; how it changed over 5 years; geographic and segment concentration; what happens to earnings if the largest customer exits. Pricing power or dangerous dependency?\n\n5. MOAT STRENGTH — Rate the moat 1–10 using the gross-margin trend, ROCE and its trajectory, whether margins held through the 2022–23 inflation cycle, and how many direct competitors can replicate the product. Name the type of moat, if any, and what could erode it.\n\n6. INSIDER & EXECUTIVE QUALITY (US version of the promoter scan) — Using the CEO pay figure and the capital-allocation totals, plus any Form 4 insider trades I paste here: [PASTE], does executive behaviour signal long-term conviction or short-term extraction?\n\n7. CAPITAL ALLOCATION AUDIT — Dividends and buybacks vs free cash flow; capex and R&D in the core vs acquisitions; did acquisitions create or destroy value (ROIC trend); any loans to related entities (from the 10-K related-party note: [PASTE]). Rate management as value creators or destroyers with reasoning.\n\n8. VALUATION REALITY CHECK — Current P/E vs own 5-year median; EV/EBITDA vs own median; P/FCF — is free cash flow justifying the price; what earnings growth rate is baked into today's valuation (use the implied-growth figure and challenge it). Cheap, fair, or expensive — with evidence.\n\n9. MANAGEMENT CREDIBILITY — Using the EPS-vs-consensus record and the last 4 call transcripts I paste here: [PASTE]. Per quarter: guidance given; met/beat/missed; language change quarter on quarter; misses explained or deflected. Score out of 10 with 3 examples.\n\n10. MULTIBAGGER CRITERIA — Score ${t} on: expanding addressable market; ROCE improving and sustained above 15%; owner alignment (insider ownership — I will paste the proxy's beneficial-ownership table: [PASTE]); analyst coverage (note: S&P 500 names are heavily covered by construction); profits reinvested in the core, not unrelated ventures. Total out of 5 with data.\n\n11. PORTFOLIO RISK CHECK — Here is my portfolio: [PASTE positions and % allocation from the Dashboard]. Concentration risk, sector exposure, correlation between positions, and the biggest vulnerability I might be missing.\n\n12. MACRO AND SECTOR CONTEXT — How does the current macro environment (rates, inflation, cycle) affect ${t}'s sector? Which types of stock in this sector do well in it, and which are at risk?\n\n13. MASTER SYNTHESIS — You are a forensic equity analyst. Produce: top 3 reasons to be bullish with supporting data; top 3 red flags to monitor with evidence; a fair value range with every key assumption stated; the single most important question for the next earnings call.`;
   }
 
-  const t0 = new URLSearchParams(location.search).get('t');
-  if (t0) { $('ticker').value = t0.toUpperCase(); research(t0.toUpperCase()); }
+  const qs = new URLSearchParams(location.search);
+  const t0 = qs.get('t'), cmp = qs.get('compare'), view = qs.get('view');
+  if (cmp) { const list = cmp.toUpperCase().split(',').filter((x) => /^[A-Z][A-Z0-9.\-]{0,9}$/.test(x)).slice(0, 7); if (list.length >= 2) compare(list); }
+  else if (view === 'dividends') dividends();
+  else if (view === 'plan') plan();
+  else if (t0) { $('ticker').value = t0.toUpperCase(); research(t0.toUpperCase()); }
 })();
 </script>
 </body>

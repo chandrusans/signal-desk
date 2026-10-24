@@ -1,4 +1,4 @@
-// Vercel serverless: /api/intel?op=macro|congress|earnings|analyst|insider
+// Vercel serverless: /api/intel?op=macro|congress|earnings|analyst|insider|preview|macrodata
 //
 // One function fronting the event-and-filings sources. Merged for the same
 // reason as api/crypto.js: Vercel's Hobby plan allows 12 Serverless Functions
@@ -17,8 +17,10 @@ import congress from './_congress.js';
 import earnings from './_earnings.js';
 import analyst from './_analyst.js';
 import insider from './_insider.js';
+import preview from './_earnings-preview.js';
+import macrodata from './_macro-data.js';
 
-const OPS = { macro, congress, earnings, analyst, insider };
+const OPS = { macro, congress, earnings, analyst, insider, preview, macrodata };
 
 // congress parses PDFs and insider walks EDGAR under a 10 req/s ceiling.
 export const config = { maxDuration: 60 };

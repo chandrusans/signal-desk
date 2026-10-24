@@ -3,11 +3,11 @@
 // Returns 1y OHLC + volume — enough for 200d MA, RSI(14), ATR(14), volume expansion.
 
 const UA = 'Mozilla/5.0 (compatible; SignalDesk/1.0)';
-const CHART = (sym, range) =>
-  `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=${range}`;
+const CHART = (sym, range, withDivs) =>
+  `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=${range}${withDivs ? '&events=div' : ''}`;
 
-async function fetchOne(sym, range) {
-  const res = await fetch(CHART(sym, range), { headers: { 'User-Agent': UA } });
+async function fetchOne(sym, range, withDivs = false) {
+  const res = await fetch(CHART(sym, range, withDivs), { headers: { 'User-Agent': UA } });
   if (!res.ok) throw new Error(`${sym}: HTTP ${res.status}`);
   const data = await res.json();
   const r = data && data.chart && data.chart.result && data.chart.result[0];
@@ -28,7 +28,16 @@ async function fetchOne(sym, range) {
   const prevClose = bars.length >= 2 ? bars[bars.length - 2].c : null;
   const change = prevClose != null && price != null ? price - prevClose : null;
   const changePct = prevClose && price != null ? (change / prevClose) * 100 : null;
+  // Trailing-12-month cash dividends per share from Yahoo's dividend events (for yield screens).
+  let dividends = null;
+  if (withDivs) {
+    const ev = Object.values(r?.events?.dividends || {});
+    const cutoff = Date.now() / 1000 - 370 * 86400;
+    const ttm = ev.filter((d) => d.date >= cutoff);
+    dividends = { ttmPerShare: +ttm.reduce((s, d) => s + (d.amount || 0), 0).toFixed(4), payments12m: ttm.length, last: ttm.length ? { date: new Date(Math.max(...ttm.map((d) => d.date)) * 1000).toISOString().slice(0, 10), amount: ttm.sort((a, b) => b.date - a.date)[0].amount } : null };
+  }
   return {
+    ...(dividends ? { dividends } : {}),
     price,
     prevClose,
     change,
@@ -47,7 +56,7 @@ async function fetchOne(sym, range) {
 export default async function handler(req, res) {
   const raw = (req.query && req.query.tickers) || '';
   const range = ((req.query && req.query.range) || '1y').toString();
-  const validRange = ['3mo', '6mo', '1y', '2y'].includes(range) ? range : '1y';
+  const validRange = ['3mo', '6mo', '1y', '2y', '5y', '10y', 'max'].includes(range) ? range : '1y';   // 5y/max: stress tests and seasonality need the 2020 and 2022 drawdowns
 
   const tickers = String(raw)
     .split(',')
@@ -60,7 +69,8 @@ export default async function handler(req, res) {
     return;
   }
 
-  const results = await Promise.allSettled(tickers.map((t) => fetchOne(t, validRange)));
+  const withDivs = String(req.query?.dividends || '') === '1';
+  const results = await Promise.allSettled(tickers.map((t) => fetchOne(t, validRange, withDivs)));
   const out = {};
   const errors = {};
   results.forEach((r, i) => {
