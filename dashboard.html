@@ -1062,6 +1062,7 @@ AAPL 30 @ 218.75"></textarea>
 import { analyze, regime, cryptoRegime } from './analyze.js';
 import { positionVerdict, defaultStop, classOf } from './exits.js';
 import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget } from './risk.js';
+import { px, num, tradingDateISO } from './ui.js';
 
 (function () {
   const root = document.documentElement;
@@ -1102,9 +1103,15 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
     const p = (n) => String(n).padStart(2, '0');
     runDateEl.textContent = `RUN · ${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
   }
+  let lastError = null, pullInFlight = false;
+  const STALE_MS = 3 * REFRESH_MS;
   function updateLiveLabel() {
     if (!lastGoodAt) return;
     const age = Math.max(0, Math.round((Date.now() - lastGoodAt) / 1000));
+    // An error or a stale feed must never be painted over by the "live" ticker: on this
+    // page the verdicts say SELL, and a stale price would say it with false confidence.
+    if (lastError) { setLive('error', `feed error · ${lastError} · last good price ${age}s ago`); return; }
+    if (Date.now() - lastGoodAt > STALE_MS) { setLive('stale', `stale · last good price ${age}s ago`); return; }
     const nextIn = Math.max(0, Math.round((REFRESH_MS - (Date.now() - lastGoodAt)) / 1000));
     setLive('live', `live · updated ${age}s ago · next in ${nextIn}s`);
   }
@@ -1113,6 +1120,7 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
   // ---- Portfolio state ----
   let portfolio = load();
   let journal = loadJournal();
+  const JOURNAL_KEY_NAME = 'sd-journal-v1';
   let lastRows = [];                 // the most recent per-position analytics, for close + risk
   let capital = 10000;
   try { const c = parseFloat(localStorage.getItem('sd-capital')); if (c >= 500) capital = c; } catch {}
@@ -1139,8 +1147,8 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
   // The exit rulebook lives in exits.js and is shared with the Alerts tab, so
   // the verdict shown here and the notification sent there can never differ.
   function verdictFor(pos, analysis, currentPrice, currentRegime) {
-    const v = positionVerdict(pos, { price: currentPrice, analysis, regime: currentRegime, earnings: latestEarnings[pos.ticker] || null });
-    return { action: v.action, reason: v.reason, rule: v.rule, severity: v.severity };
+    // The full verdict object: action/reason/rule plus the arithmetic (stop, stop0, R, target, gainR, sessionsHeld) the card prints.
+    return positionVerdict(pos, { price: currentPrice, analysis, regime: currentRegime, earnings: latestEarnings[pos.ticker] || null });
   }
 
 
@@ -1160,6 +1168,8 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
       setLive('live', 'no positions to poll · add one above');
       return;
     }
+    if (pullInFlight) return;                 // a slow poll must not be overtaken by the next one
+    pullInFlight = true;
     try {
       const tickers = tickerList().join(',');
       // Option positions need their own per-contract quote — the underlying's
@@ -1198,13 +1208,15 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
       latestQuotes = quotes;
       vixPrice = quotes['^VIX']?.price ?? null;
       lastGoodAt = data.asOf || Date.now();
+      lastError = null;
       updateRunDate(lastGoodAt);
       render();
       applyPendingFlashes();
       updateLiveLabel();
     } catch (e) {
+      lastError = e.message;
       setLive('error', `feed unavailable · ${e.message}`);
-    }
+    } finally { pullInFlight = false; }
   }
   function applyPendingFlashes() {
     Object.entries(pendingFlashes).forEach(([t, dir]) => {
@@ -1258,18 +1270,13 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
         ? (latestCrypto.BTC ? cryptoRegime(latestCrypto.BTC) : null)
         : (vixPrice != null ? Object.assign(regime(vixPrice), { vix: vixPrice }) : null);
       const v = verdictFor(pos, (analysis && !analysis.insufficient ? analysis : null), price, rg);
-      const buy = pos.buyPrice;
-      const stop = defaultStop(pos, analysis && !analysis.insufficient ? analysis : null);   // plan stop if tracked from a card, else class default
-      const R = Math.max(0.01, buy - stop);
-      const gain = price - buy;
+      // Every number on the card comes from the same verdict object the Alerts tab
+      // uses: active stop, INITIAL stop (defines 1R), target, R-multiple, sessions held.
+      const buy = v.buy, stop = v.stop, R = v.R, gain = v.gain, gainR = v.gainR, gainPct = v.gainPct, daysHeld = v.daysHeld;
       // Options: 1 contract = 100 shares → multiply everything by multiplier (100).
-      // Stocks: multiplier defaults to 1 so behavior is unchanged.
       const mult = pos.multiplier || 1;
       const gainDollars = gain * pos.qty * mult;
-      const gainPct = (gain / buy) * 100;
-      const gainR = gain / R;
-      const daysHeld = Math.floor((Date.now() - Date.parse(pos.buyDate)) / (24 * 3600 * 1000));
-      return { pos, q, price, analysis, verdict: v, buy, stop, R, gain, gainDollars, gainPct, gainR, daysHeld, mult, optQ, optPremiumStale };
+      return { pos, q, price, analysis, verdict: v, buy, stop, stop0: v.stop0, target: v.target, R, gain, gainDollars, gainPct, gainR, daysHeld, sessionsHeld: v.sessionsHeld, mult, optQ, optPremiumStale };
     });
     lastRows = rows;
 
@@ -1295,7 +1302,7 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
     rows.sort((a, b) => order[a.verdict.action] - order[b.verdict.action]);
 
     positionsEl.innerHTML = rows.map(r => {
-      const target = r.buy + 2.5 * r.R;
+      const target = r.target;
       const distStop$ = r.price - r.stop;
       const distStopPct = (distStop$ / r.price) * 100;
       const distTgt$ = target - r.price;
@@ -1318,7 +1325,7 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
       const posSharePct = portValueForRow > 0 ? (r.price * r.pos.qty * r.mult / portValueForRow) * 100 : 0;
       const isOpt = !!r.pos.isOption;
       // Calendar days to expiry — same arithmetic as exits.js so the badge and the verdict agree
-      const dteOpt = isOpt && r.pos.expiration ? Math.round((Date.parse(r.pos.expiration + 'T00:00:00Z') - Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z')) / (24*3600*1000)) : null;
+      const dteOpt = isOpt && r.pos.expiration ? Math.round((Date.parse(r.pos.expiration + 'T00:00:00Z') - Date.parse(tradingDateISO() + 'T00:00:00Z')) / (24*3600*1000)) : null;
       const ret20 = r.analysis?.indicators?.ret20;
       const ret60 = r.analysis?.indicators?.ret60;
       const rsi = r.analysis?.indicators?.rsi14;
@@ -1337,20 +1344,20 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
             </div>
             <div class="pos-meta">
               ${isOpt
-                ? `Bought ${r.pos.buyDate} · premium $${r.buy.toFixed(2)} · ${r.daysHeld}d held${dteOpt != null ? ` · <span style="color: ${dteOpt < 7 ? 'var(--risk)' : dteOpt < 30 ? 'var(--caution)' : 'var(--ink-2)'};">${dteOpt}d to expiry</span>` : ''}`
-                : `Bought ${r.pos.buyDate} @ $${r.buy.toFixed(2)} · ${r.daysHeld}d held`
+                ? `Bought ${r.pos.buyDate} · premium ${px(r.buy)} · ${r.sessionsHeld} sessions held${dteOpt != null ? ` · <span style="color: ${dteOpt < 7 ? 'var(--risk)' : dteOpt < 30 ? 'var(--caution)' : 'var(--ink-2)'};">${dteOpt}d to expiry</span>` : ''}`
+                : `Bought ${r.pos.buyDate} @ ${px(r.buy)} · ${r.sessionsHeld} sessions held (${r.daysHeld}d)`
               }
             </div>
             <div class="pos-meta">
               ${isOpt
                 ? `Contract cost $${fmt(costBasis)} · exp ${r.pos.expiration}`
-                : `Stop $${r.stop.toFixed(2)}${r.pos.planStop ? ' (plan)' : r.pos.stop ? '' : ' (default)'} · Target $${target.toFixed(2)} (+2.5R)`
+                : `Stop ${px(r.stop)}${r.stop0 !== r.stop ? ` (trailed from ${px(r.stop0)})` : r.pos.planStop ? ' (plan)' : r.pos.stop ? '' : ' (default)'} · Target ${px(target)} (+${((target - r.buy) / r.R).toFixed(1)}R)`
               }
             </div>
             ${r.pos.notes ? `<div class="pos-notes">${escapeHtml(r.pos.notes)}</div>` : ''}
           </div>
           <div class="pos-price">
-            <div class="now" data-flash-ticker="${isOpt ? r.pos.ticker : r.pos.ticker}">$${r.price.toFixed(2)}</div>
+            <div class="now" data-flash-ticker="${r.pos.ticker}">${px(r.price)}</div>
             ${isOpt
               ? (r.optPremiumStale
                   ? `<div class="chg" style="color: var(--caution);">premium unavailable</div>`
@@ -1426,22 +1433,22 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
         <div class="pos-analytics">
           <div class="an-cell">
             <div class="an-label">Tomorrow · projected</div>
-            <div class="an-value">${dayHi != null ? `<span class="hi">$${dayHi.toFixed(2)}</span><span class="sep">/</span><span class="lo">$${dayLo.toFixed(2)}</span>` : '—'}</div>
+            <div class="an-value">${dayHi != null ? `<span class="hi">${px(dayHi)}</span><span class="sep">/</span><span class="lo">${px(dayLo)}</span>` : '—'}</div>
             <div class="an-sub">${atr != null ? '±0.5·ATR (~68% band)' : 'need history'}</div>
           </div>
           <div class="an-cell">
             <div class="an-label">Week ahead</div>
-            <div class="an-value">${wkHi != null ? `<span class="hi">$${wkHi.toFixed(2)}</span><span class="sep">/</span><span class="lo">$${wkLo.toFixed(2)}</span>` : '—'}</div>
+            <div class="an-value">${wkHi != null ? `<span class="hi">${px(wkHi)}</span><span class="sep">/</span><span class="lo">${px(wkLo)}</span>` : '—'}</div>
             <div class="an-sub">${atr != null ? '±ATR·√5' : ''}</div>
           </div>
           <div class="an-cell">
             <div class="an-label">To stop / target</div>
-            <div class="an-value"><span class="lo">−$${Math.abs(distStop$).toFixed(2)}</span><span class="sep">·</span><span class="hi">+$${distTgt$.toFixed(2)}</span></div>
+            <div class="an-value"><span class="lo">−${px(Math.abs(distStop$))}</span><span class="sep">·</span><span class="hi">+${px(distTgt$)}</span></div>
             <div class="an-sub">${distStopPct.toFixed(1)}% down · ${distTgtPct.toFixed(1)}% up</div>
           </div>
           <div class="an-cell">
             <div class="an-label">Support / resistance</div>
-            <div class="an-value">${sup != null ? `<span class="lo">$${sup.toFixed(2)}</span><span class="sep">/</span><span class="hi">$${res.toFixed(2)}</span>` : '—'}</div>
+            <div class="an-value">${sup != null ? `<span class="lo">${px(sup)}</span><span class="sep">/</span><span class="hi">${px(res)}</span>` : '—'}</div>
             <div class="an-sub">20-bar swing</div>
           </div>
           <div class="an-cell">
@@ -1463,6 +1470,7 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
     positionsEl.querySelectorAll('[data-close]').forEach(b => {
       b.addEventListener('click', () => {
         const id = b.dataset.close;
+        portfolio = load();                   // another tab may have added or removed positions since this render
         const pos = portfolio.find(p => p.id === id);
         if (!pos) return;
         const r = lastRows.find(x => x.pos.id === id);
@@ -1480,6 +1488,7 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
     positionsEl.querySelectorAll('[data-edit]').forEach(b => {
       b.addEventListener('click', () => {
         const id = b.dataset.edit;
+        portfolio = load();
         const pos = portfolio.find(p => p.id === id);
         if (!pos) return;
         const newStop = prompt(`Update stop for ${pos.ticker} (current: $${(pos.stop || 'auto').toString()}):`, pos.stop || '');
@@ -1639,23 +1648,21 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
       const dates = parts.slice(4).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x));
       const cls = parts.slice(4).map(x => x.toLowerCase()).find(x => ['stock', 'crypto', 'metal', 'option'].includes(x)) || 'stock';
       const stopTok = parts.slice(4).find(x => /^stop=/i.test(x));
-      const pos = { id: `${tk}-past-${Date.now()}`, ticker: tk, qty: q, buyPrice: bp, buyDate: dates[0] || new Date().toISOString().slice(0, 10), assetClass: cls, isOption: cls === 'option', multiplier: cls === 'option' ? 100 : 1 };
-      journal.push(closeTrade(pos, { exitPrice: xp, exitDate: dates[1] || dates[0] || new Date().toISOString().slice(0, 10), stop: stopTok ? +stopTok.split('=')[1] : null, rule: 'manual' }));
+      const pos = { id: `${tk}-past-${Date.now()}`, ticker: tk, qty: q, buyPrice: bp, buyDate: dates[0] || tradingDateISO(), assetClass: cls, isOption: cls === 'option', multiplier: cls === 'option' ? 100 : 1 };
+      journal.push(closeTrade(pos, { exitPrice: xp, exitDate: dates[1] || dates[0] || tradingDateISO(), stop: stopTok ? +stopTok.split('=')[1] : null, rule: 'manual' }));
       saveJournal(journal); renderJournal(); renderRisk(lastRows);
     });
     document.getElementById('jr-csv')?.addEventListener('click', () => {
       const cols = ['exitDate', 'ticker', 'label', 'cls', 'qty', 'buyPrice', 'buyDate', 'exitPrice', 'stop', 'target', 'pl', 'plPct', 'r', 'daysHeld', 'rule'];
       const csv = [cols.join(','), ...journal.map(t => cols.map(c => JSON.stringify(t[c] ?? '')).join(','))].join('\n');
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `signal-desk-journal-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `signal-desk-journal-${tradingDateISO()}.csv`; a.click();
     });
     document.getElementById('jr-json')?.addEventListener('click', () => {
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(journal, null, 2)], { type: 'application/json' })); a.download = `signal-desk-journal-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(journal, null, 2)], { type: 'application/json' })); a.download = `signal-desk-journal-${tradingDateISO()}.json`; a.click();
     });
   }
 
-  function fmt(n) {
-    return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
+  function fmt(n) { return num(n, 2); }   // US formatting on every page, whatever the browser locale
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   }
@@ -1715,7 +1722,7 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
     const needPrice = parsedList.filter(p => !p.error && p.price == null);
     const prices = await Promise.all(needPrice.map(async p => ({ ticker: p.ticker, live: await fetchLivePrice(p.ticker, p.assetClass) })));
     const priceMap = Object.fromEntries(prices.map(x => [x.ticker, x.live]));
-    const today = new Date().toISOString().slice(0, 10);
+    const today = tradingDateISO();
     const results = [];
     for (const p of parsedList) {
       if (p.error) { results.push({ ok: false, msg: p.error, raw: p.raw }); continue; }
@@ -1899,14 +1906,14 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
   // ---- Detailed form (progressive) ----
   const form = document.getElementById('add-form');
   const dateInput = document.getElementById('af-date');
-  dateInput.max = new Date().toISOString().slice(0, 10);
-  dateInput.value = new Date().toISOString().slice(0, 10);
+  dateInput.max = tradingDateISO();
+  dateInput.value = tradingDateISO();
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const ticker = document.getElementById('af-ticker').value.trim().toUpperCase();
     const qty = parseFloat(document.getElementById('af-qty').value);
     const buyRaw = document.getElementById('af-buy').value.trim();
-    const date = document.getElementById('af-date').value || new Date().toISOString().slice(0, 10);
+    const date = document.getElementById('af-date').value || tradingDateISO();
     const stopRaw = document.getElementById('af-stop').value.trim();
     if (!ticker || !qty) return;
     const parsed = {
@@ -1917,7 +1924,7 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
     };
     await commitPositions([parsed]);
     form.reset();
-    dateInput.value = new Date().toISOString().slice(0, 10);
+    dateInput.value = tradingDateISO();
   });
 
   // ---- Import / Export / Clear ----
@@ -1927,7 +1934,7 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `signal-desk-portfolio-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `signal-desk-portfolio-${tradingDateISO()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   });
@@ -1963,6 +1970,12 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
   pull();
   setInterval(pull, REFRESH_MS);
   setInterval(updateLiveLabel, 1000);
+  // Follow changes made in other tabs (Track on Today, a Close here, a capital edit there).
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY) { portfolio = load(); render(); pull(); }
+    else if (e.key === JOURNAL_KEY_NAME) { journal = loadJournal(); renderJournal(); renderRisk(lastRows); }
+    else if (e.key === 'sd-capital') { const c = parseFloat(e.newValue); if (c >= 500) { capital = c; renderRisk(lastRows); } }
+  });
 
   const refreshBtn = document.getElementById('refresh-now');
   if (refreshBtn) {

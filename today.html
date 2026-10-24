@@ -1125,7 +1125,10 @@ import { esc } from '/ui.js';
   // wording. Everything else on the desk exists to let you check its work.
   // ══════════════════════════════════════════════════════════════════════
   const RISK_PCT = 1.0;                        // % of capital risked per position
-  const REFRESH_MS = 60 * 1000;
+  const GATES_MS = 60 * 1000;                  // macro gate, volatility regime, risk engine: every minute
+  const FULL_MS = 10 * 60 * 1000;              // the 500-name scan, coins, options: every ten minutes (as the handbook states)
+  let inFlight = false;
+  const feedIssues = [];                       // per-source failures, shown instead of a falsely clean screen
   const OPTION_TICKERS = ['NVDA','PLTR','CRWD','HOOD','ASML','AMD','META','MSFT','GOOGL','TSLA',
     'AAPL','AMZN','NFLX','COIN','ORCL','AVGO','MU','MRVL','SNOW','NET',
     'PANW','PYPL','SQ','SHOP','SOFI','RIVN','SMCI','LLY','JPM','BAC'];
@@ -1437,6 +1440,24 @@ import { esc } from '/ui.js';
 
   // ═══ data ═══
   async function loadAll() {
+    if (inFlight) return;                      // a slow scan must not overlap the next one
+    inFlight = true;
+    feedIssues.length = 0;
+    try { await loadAllInner(); } finally { inFlight = false; }
+  }
+  // Light tick: the gates and the risk engine only (cheap), so the light and the
+  // risk box are never more than a minute old even though the scan runs every ten.
+  async function loadGates() {
+    if (inFlight) return;
+    try {
+      const [mc, q] = await Promise.allSettled([j('/api/intel?op=macro&hours=96'), j('/api/quotes?tickers=SPY,%5EVIX&range=3mo')]);
+      if (mc.status === 'fulfilled') macro = mc.value.macroRisk;
+      const vix = q.status === 'fulfilled' ? q.value.quotes?.['^VIX']?.price : null;
+      if (vix != null && stockRegime) stockRegime = Object.assign(regime(vix, stockRegime.breadth || null), { vix, breadth: stockRegime.breadth || null });
+      renderLight(); computeRisk(); renderRiskBox();
+    } catch {}
+  }
+  async function loadAllInner() {
     $('feed-label').textContent = 'reading all four markets…';
     const t0 = Date.now();
 
@@ -1466,8 +1487,8 @@ import { esc } from '/ui.js';
       const withMa = stocks.filter(r => r.a50 != null);
       if (withMa.length > 50) breadth = { pctAbove50: (withMa.filter(r => r.a50).length / withMa.length) * 100 };
       scanNote = `${stocks.length} S&P 500 names scanned`;
-    } catch (e) { scanNote = 'stock scan unavailable'; }
-    stockRegime = vix != null ? Object.assign(regime(vix, breadth), { vix }) : null;
+    } catch (e) { scanNote = 'stock scan unavailable'; feedIssues.push('stock scan failed — the stock list is stale or empty'); }
+    stockRegime = vix != null ? Object.assign(regime(vix, breadth), { vix, breadth }) : null;
 
     // 3. metals — same engine, same rulebook, gold and silver
     metals = [];
@@ -1505,7 +1526,7 @@ import { esc } from '/ui.js';
       const withMa = coins.filter(r => r.a50 != null);
       const cb = withMa.length ? { pctAbove50: (withMa.filter(r => r.a50).length / withMa.length) * 100 } : null;
       cryptoReg = cs.btc ? cryptoRegime(cs.btc, cb) : null;
-    } catch {}
+    } catch (e) { feedIssues.push('crypto feed failed — coins are missing from this list, not absent'); }
     renderLight(); renderPicks();
 
     // 5. options
@@ -1514,13 +1535,14 @@ import { esc } from '/ui.js';
       options = (od.recommendations || []).filter(o =>
         !(o.liquidity === 'thin' || o.spreadPct > 15 || o.dte < 7) && o.score >= 85 && o.liquidity === 'good'
       ).slice(0, 4);
-    } catch {}
+    } catch (e) { feedIssues.push('options feed failed — contracts are missing from this list, not absent'); }
     renderPicks();
 
     $('run-ts').textContent = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-    $('feed-dot').style.background = 'var(--signal)';
-    $('feed-label').textContent = `live · read in ${((Date.now() - t0) / 1000).toFixed(1)}s`;
-    $('scan-status').textContent = scanNote + (coins.length ? ` · ${coins.length} coins` : '') + (options.length ? ` · ${options.length} option contracts pass` : ' · no option contract passes right now') + ` · refreshes every minute`;
+    $('feed-dot').style.background = feedIssues.length ? 'var(--caution)' : 'var(--signal)';
+    $('feed-label').textContent = feedIssues.length ? `partial · ${feedIssues.length} source${feedIssues.length > 1 ? 's' : ''} down` : `live · read in ${((Date.now() - t0) / 1000).toFixed(1)}s`;
+    $('scan-status').innerHTML = esc(scanNote + (coins.length ? ` · ${coins.length} coins` : '') + (options.length ? ` · ${options.length} option contracts pass` : feedIssues.some(x => /options/.test(x)) ? '' : ' · no option contract passes right now') + ' · gates refresh every minute, the scan every ten')
+      + (feedIssues.length ? `<br/><span style="color:var(--caution);">⚠ ${feedIssues.map(esc).join(' · ')}</span>` : '');
 
     // 6. the measured "leave alone" facts — slow endpoints, never block the page
     renderAvoid();
@@ -1545,6 +1567,7 @@ import { esc } from '/ui.js';
   });
 
   loadAll().catch(e => { $('feed-label').textContent = `feed unavailable · ${e.message}`; $('feed-dot').style.background = 'var(--risk)'; });
-  setInterval(() => loadAll().catch(() => {}), REFRESH_MS);
+  setInterval(() => loadAll().catch(() => {}), FULL_MS);
+  setInterval(() => loadGates().catch(() => {}), GATES_MS);
 })();
 </script>

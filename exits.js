@@ -20,6 +20,8 @@
 // Verdicts: SELL (act now) · TRIM (take partial / move stop) · WATCH (decision
 // close) · HOLD. Every verdict carries the rule that produced it.
 
+import { tradingDateISO, weekdaysBetween } from './ui.js';
+
 const DAY = 86400000;
 
 export function classOf(pos) {
@@ -66,18 +68,23 @@ export function positionVerdict(pos, ctx = {}) {
   const gainR = gain / R;
   const gainPct = (gain / buy) * 100;
   const daysHeld = Math.max(0, Math.floor((Date.now() - Date.parse(pos.buyDate)) / DAY));
+  // The time stop counts TRADING sessions (weekdays), as the handbook says — 15 calendar
+  // days is only ~11 sessions and sold positions four sessions early.
+  const sessionsHeld = pos.buyDate ? weekdaysBetween(String(pos.buyDate).slice(0, 10)) : 0;
   const timeStop = pos.timeStopDays || 15;
   const target = pos.target > 0 ? pos.target : pos.planTarget > 0 ? pos.planTarget : buy + 2.5 * R;
   const a = ctx.analysis && !ctx.analysis.insufficient ? ctx.analysis : null;
   const rg = ctx.regime || null;
-  const base = { cls, buy, price, stop, stop0, R, gain, gainR, gainPct, daysHeld, target };
+  const base = { cls, buy, price, stop, stop0, R, gain, gainR, gainPct, daysHeld, sessionsHeld, target };
   const V = (action, severity, reason, rule) => ({ action, severity, reason, rule, ...base });
 
   // ── Options: the contract has its own clock ─────────────────────────────
   if (cls === 'option') {
     // Days to expiry by CALENDAR DATE, not hours: with hours, "6 days left"
     // read as 7 until after the close, so the 7-day sell fired a day late.
-    const dte = pos.expiration ? Math.round((Date.parse(pos.expiration + 'T00:00:00Z') - Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z')) / DAY) : null;
+    // …and by the NEW YORK calendar: after 8 pm Eastern the UTC date is already tomorrow,
+    // which used to mark a contract expired a session early.
+    const dte = pos.expiration ? Math.round((Date.parse(pos.expiration + 'T00:00:00Z') - Date.parse(tradingDateISO() + 'T00:00:00Z')) / DAY) : null;
     if (dte != null && dte <= 0) return V('SELL', 'high', `Expired ${pos.expiration}. Whatever is left is gone.`, 'option_expired');
     if (price <= stop) return V('SELL', 'high', `Premium $${price.toFixed(2)} is at or below the $${stop.toFixed(2)} stop (−${((1 - price / buy) * 100).toFixed(0)}%). That is half your money and it is the line — sell.`, 'option_stop');
     if (dte != null && dte < 7) return V('SELL', 'high', `${dte} day${dte === 1 ? '' : 's'} to expiry. Time decay accelerates from here; the rulebook never holds inside 7 days. Sell today.`, 'option_dte');
@@ -106,27 +113,27 @@ export function positionVerdict(pos, ctx = {}) {
   if (a?.setup === 'BROKEN' && gainR < 0.5) {
     // A fresh position that is not yet losing gets a warning, not a sell: the
     // stop decides. An established one, or one already underwater, is a sell.
-    if (daysHeld < 3 && gainR > -0.5) return V('WATCH', 'medium', `Setup is BROKEN (price below its key moving averages) — the rulebook would not have entered here. The stop at $${fmt(stop)} decides; do not move it down.`, 'broken_fresh');
+    if (sessionsHeld < 3 && gainR > -0.5) return V('WATCH', 'medium', `Setup is BROKEN (price below its key moving averages) — the rulebook would not have entered here. The stop at $${fmt(stop)} decides; do not move it down.`, 'broken_fresh');
     return V('SELL', 'high', `Setup turned BROKEN — price below its key moving averages, trend over. Take the loss before it compounds.`, 'broken');
   }
-  if (daysHeld >= timeStop && Math.abs(gainR) < 1) return V('SELL', 'medium', `Time stop: ${daysHeld} days held and the trade has gone nowhere (${gainR >= 0 ? '+' : ''}${gainR.toFixed(1)}R). Free the capital.`, 'time_stop');
+  if (sessionsHeld >= timeStop && Math.abs(gainR) < 1) return V('SELL', 'medium', `Time stop: ${sessionsHeld} trading days held and the trade has gone nowhere (${gainR >= 0 ? '+' : ''}${gainR.toFixed(1)}R). Free the capital.`, 'time_stop');
   if (price >= target) return V('TRIM', 'high', `Target reached ($${fmt(target)}, +${gainR.toFixed(1)}R). Sell half; trail the stop on the rest under the 20-day average.`, 'target');
   if (a?.indicators?.rsi14 > 78 && gainR >= 2) return V('TRIM', 'medium', `RSI ${a.indicators.rsi14.toFixed(0)} with +${gainR.toFixed(1)}R. Overextended — sell half, move the stop to +1R ($${fmt(buy + R)}).`, 'overbought_winner');
   if (a?.setup === 'EXTENDED' && gainR >= 2) return V('TRIM', 'medium', `EXTENDED with +${gainR.toFixed(1)}R. Take partial; wait for a pullback to re-add.`, 'extended_winner');
   if (a?.indicators?.ma20Slope != null && a.indicators.ma20Slope < -0.005 && gainR >= 1) return V('TRIM', 'medium', `20-day average rolling over (${(a.indicators.ma20Slope * 100).toFixed(1)}%/5d) on a +${gainR.toFixed(1)}R winner. Protect the gain.`, 'trend_fading');
   if (gainR >= 2 && stop < buy + R) return V('HOLD', 'medium', `+${gainR.toFixed(1)}R. Move your stop up to +1R = $${fmt(buy + R)} now; let it run toward $${fmt(target)}.`, 'trail_1r');
   if (gainR >= 1 && stop < buy) return V('HOLD', 'medium', `+${gainR.toFixed(1)}R. Move your stop to breakeven ($${fmt(buy)}) — the trade can no longer lose.`, 'trail_be');
-  if (daysHeld < 3) return V('HOLD', 'low', `Fresh position (day ${daysHeld}). Give it room; the stop is $${fmt(stop)}.`, 'fresh');
+  if (sessionsHeld < 3) return V('HOLD', 'low', `Fresh position (session ${sessionsHeld}). Give it room; the stop is $${fmt(stop)}.`, 'fresh');
   if (price < buy && price - stop < R * 0.3) return V('WATCH', 'medium', `$${fmt(price)} is ${(((price - stop) / stop) * 100).toFixed(1)}% above the stop ($${fmt(stop)}). Decision imminent — do not move the stop down.`, 'near_stop');
   if (price > buy && target - price < R * 0.5) return V('WATCH', 'low', `Approaching target ($${fmt(target)}). Be ready to sell half.`, 'near_target');
-  return V('HOLD', 'low', `Developing (${gainR >= 0 ? '+' : ''}${gainR.toFixed(1)}R, day ${daysHeld}${a ? `, setup ${a.setup}` : ''}). Stop $${fmt(stop)}, target $${fmt(target)}.`, 'hold');
+  return V('HOLD', 'low', `Developing (${gainR >= 0 ? '+' : ''}${gainR.toFixed(1)}R, session ${sessionsHeld}${a ? `, setup ${a.setup}` : ''}). Stop $${fmt(stop)}, target $${fmt(target)}.`, 'hold');
 }
 
 function fmt(x) { return x >= 1000 ? Math.round(x).toLocaleString('en-US') : x >= 1 ? x.toFixed(2) : Number(x).toPrecision(3); }
 
 /** Which verdicts are worth a notification, and how often. SELL/TRIM: once per rule per day. WATCH: once per rule. */
 export function alertKey(pos, v) {
-  const day = new Date().toISOString().slice(0, 10);
+  const day = tradingDateISO();
   if (v.action === 'SELL' || v.action === 'TRIM') return `${pos.id}:${v.rule}:${day}`;
   if (v.action === 'WATCH') return `${pos.id}:${v.rule}`;
   if (v.rule === 'trail_1r' || v.rule === 'trail_be') return `${pos.id}:${v.rule}`;   // "move your stop" is worth saying once
