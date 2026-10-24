@@ -1084,6 +1084,7 @@
 
 <script type="module">
 import { cryptoRegime } from '/analyze.js';
+import { esc, safeHref } from './ui.js';
 
 (() => {
   'use strict';
@@ -1347,9 +1348,9 @@ import { cryptoRegime } from '/analyze.js';
           <div class="sym">${r.t} <span style="color:var(--ink-3);font-size:12px;font-weight:400;">· ${fmtPrice(r.p)}</span>
             <span style="font-size:11px;font-weight:400;color:${r.c >= 0 ? 'var(--signal)' : 'var(--risk)'};">${pct(r.c)}</span>
           </div>
-          <div class="nm">${m ? m.name : r.t}${m && m.rank ? ` · rank #${m.rank}` : ''}</div>
+          <div class="nm">${esc(m ? m.name : r.t)}${m && m.rank ? ` · rank #${+m.rank}` : ''}</div>
           <span class="setup-chip setup-${r.su}">${r.su}</span>
-          <div class="why">${r.reason || ''}</div>
+          <div class="why">${esc(r.reason || '')}</div>
           <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:8px;letter-spacing:0.04em;">
             ${r.t === 'BTC' ? 'benchmark' : `RS vs BTC ${r.rs != null ? (r.rs >= 0 ? '+' : '') + r.rs + '%' : '—'}`}
             · ATR ${r.atr != null ? r.atr + '%' : '—'}
@@ -1627,7 +1628,7 @@ import { cryptoRegime } from '/analyze.js';
 
     rowsEl.innerHTML = pfData.tokens.slice(0, 25).map(t => `
       <tr>
-        <td class="sym"><a href="${t.url}" target="_blank" rel="noopener noreferrer" style="color:inherit;">${(t.symbol || '?').slice(0, 14)}</a></td>
+        <td class="sym"><a href="${safeHref(t.url)}" target="_blank" rel="noopener noreferrer" style="color:inherit;">${esc((t.symbol || '?').slice(0, 14))}</a></td>
         <td><span class="risk-pill risk-${t.band}">${t.risk} ${t.band}</span></td>
         <td>${t.priceUsd != null ? '$' + t.priceUsd.toPrecision(3) : '—'}</td>
         <td style="color:${(t.change24 ?? 0) >= 0 ? 'var(--signal)' : 'var(--risk)'};">${t.change24 != null ? (t.change24 >= 0 ? '+' : '') + t.change24 + '%' : '—'}</td>

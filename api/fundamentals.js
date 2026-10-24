@@ -114,7 +114,6 @@ export default async function handler(req, res) {
       // profile or summary must not be pinned at the edge for six hours.
       const complete = profile && summary && f && !f.error;
       res.setHeader('Cache-Control', complete ? 's-maxage=21600, stale-while-revalidate=86400' : 's-maxage=60, stale-while-revalidate=120');
-      res.setHeader('Access-Control-Allow-Origin', '*');
       res.status(200).json({ asOf: Date.now(), ticker: t, profile, summary, forensic: f });
     } catch (e) {
       res.status(200).json({ asOf: Date.now(), ticker: t, error: String(e.message || e) });
@@ -125,7 +124,7 @@ export default async function handler(req, res) {
   const tickers = String(raw)
     .split(',')
     .map((s) => s.trim().toUpperCase())
-    .filter(Boolean)
+    .filter((s) => /^[A-Z^][A-Z0-9.\-^=]{0,11}$/.test(s))        // strict symbol shape: no injection into upstream URLs or regexes
     .filter((t) => !t.startsWith('^') && !t.includes('='))
     .slice(0, 40);
 
@@ -147,6 +146,5 @@ export default async function handler(req, res) {
   }
 
   res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200'); // fundamentals move slowly
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({ asOf: Date.now(), fundamentals: out });
 }

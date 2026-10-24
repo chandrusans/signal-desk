@@ -1267,11 +1267,19 @@ import { classOf } from '/exits.js';
   const SYNC_KEY = 'sd-sync-key-v1';
   const syncKey = () => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch { return ''; } };
   let syncTimer = null;
-  async function syncToServer(extra = {}) {
+  async function syncToServer(extra = {}, { interactive = false } = {}) {
     const body = { syncKey: syncKey(), watch, settings, portfolio: portfolio(), ...extra };
     try {
-      const r = await fetch('/api/notify?op=sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const d = await r.json();
+      let r = await fetch('/api/notify?op=sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      let d = await r.json();
+      // Claiming an empty server store needs the owner's RUN_KEY once (so nobody else can
+      // claim it first). Only ask when the user pressed Save; background syncs stay quiet.
+      if (d.needsSetupKey && interactive) {
+        const setupKey = prompt('First sync: paste the RUN_KEY you set in Vercel (Settings → Environment Variables). It is used once to claim the server store and is not kept in the browser.');
+        if (!setupKey) return { ok: false, error: 'first sync needs the owner key' };
+        r = await fetch('/api/notify?op=sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, setupKey: setupKey.trim() }) });
+        d = await r.json();
+      }
       if (d.ok && d.syncKey) { try { localStorage.setItem(SYNC_KEY, d.syncKey); } catch {} }
       return d;
     } catch (e) { return { ok: false, error: e.message }; }
@@ -1284,6 +1292,7 @@ import { classOf } from '/exits.js';
       const d = await (await fetch(`/api/notify?op=status&syncKey=${encodeURIComponent(syncKey())}`)).json();
       if (d.storage === 'not-connected') { st.textContent = '✕ server storage not connected yet'; st.className = 'st no'; note.innerHTML = `<strong style="color:var(--risk)">One-time step in Vercel:</strong> Storage → Create → <strong>Blob</strong> → connect it to <em>signal-desk</em>. That adds the storage token and phone alerts start working. Nothing else changes.`; return; }
       if (d.ok === false && /mismatch/.test(d.error || '')) { st.textContent = '✕ another device owns the server config'; st.className = 'st no'; return; }
+      if (d.ok && d.synced === false) { st.textContent = '○ server store is empty — press Save & sync; the first sync asks for your RUN_KEY once'; st.className = 'st off'; }
       const wa = d.channels?.whatsapp; const any = wa || d.channels?.ntfy || d.channels?.telegram;
       const last = d.lastRun ? ` · last run ${Math.round((Date.now() - d.lastRun.at) / 60000)}m ago, ${d.lastRun.fired} fired` : ' · runner has not run yet';
       st.textContent = any ? `● ${d.channels?.telegram ? 'Telegram ' + d.channels.telegram.chatId + ' ' : ''}${wa ? 'WhatsApp ' + wa.phone + ' ' : ''}${d.channels?.ntfy ? 'ntfy ' : ''}· ${d.watch} tickers, ${d.positions} positions synced${last}` : `○ synced (${d.watch} tickers, ${d.positions} positions) — no phone channel yet`;
@@ -1299,7 +1308,7 @@ import { classOf } from '/exits.js';
     const topic = $('ntfy-topic').value.trim(); if (topic) channels.ntfy = { topic };
     const token = $('tg-token').value.trim(), chat = $('tg-chat').value.trim(); if (token || chat) { if (!/^\d{6,}:[\w-]{30,}$/.test(token)) { alert('That does not look like a BotFather token (digits:letters).'); return; } if (!/^-?\d{5,}$/.test(chat)) { alert('Chat id should be a number — message @userinfobot to get it.'); return; } channels.telegram = { token, chatId: chat }; }
     const b = $('phone-save'); b.disabled = true; b.textContent = 'Syncing…';
-    const d = await syncToServer({ channels });
+    const d = await syncToServer({ channels }, { interactive: true });
     b.disabled = false; b.textContent = 'Save & sync to server';
     if (!d.ok) alert(d.error || 'sync failed'); else { $('cb-key').value = ''; $('tg-token').value = ''; }
     refreshPhoneStatus();

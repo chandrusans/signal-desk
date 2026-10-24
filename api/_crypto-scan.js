@@ -63,7 +63,7 @@ export default async function handler(req, res) {
   const coins = String(q.coins || '')
     .split(',')
     .map((s) => s.trim().toUpperCase())
-    .filter(Boolean)
+    .filter((s) => /^[A-Z0-9]{2,10}$/.test(s))
     .slice(0, 40);                                   // batch ceiling per invocation
 
   if (!coins.length) {
@@ -130,7 +130,6 @@ export default async function handler(req, res) {
   const btcCloses = btcDaily ? btcDaily.slice(-260).map((b) => ({ t: b.t, c: roundPrice(b.c) })) : null;
 
   res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=180');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     asOf: Date.now(),
     requested: coins.length,

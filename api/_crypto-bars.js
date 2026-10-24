@@ -50,6 +50,5 @@ export default async function handler(req, res) {
   await Promise.all(Array.from({ length: Math.min(4, coins.length) }, run));
 
   res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({ asOf: Date.now(), coins: Object.keys(bars), bars });
 }

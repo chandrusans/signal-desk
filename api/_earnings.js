@@ -48,6 +48,5 @@ export default async function handler(req, res) {
   async function run() { while (i < tickers.length) { const t = tickers[i++]; const r = await one(t); if (r) out[t] = r; } }
   await Promise.all(Array.from({ length: Math.min(6, tickers.length) }, run));
   res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({ asOf: Date.now(), source: 'NASDAQ earnings-surprise', recentWindowDays: RECENT_DAYS, results: out });
 }

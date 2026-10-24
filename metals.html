@@ -895,6 +895,7 @@
 
 <script type="module">
 import { analyze, regime } from './analyze.js';
+import { esc, safeHref } from './ui.js';
 
 (function () {
   const root = document.documentElement;
@@ -1241,7 +1242,7 @@ import { analyze, regime } from './analyze.js';
           <span class="ts">${ago}</span>
           <span class="src-badge">${x.tk}</span>
           <span class="tk">${x.political ? '<span style="color: var(--caution);">POL</span>' : ''}</span>
-          <span class="hd"><a href="${x.link}" target="_blank" rel="noopener">${x.title}</a> <span style="color: var(--ink-3); font-size: 10px; font-family: var(--mono);">· ${x.publisher || host}</span></span>
+          <span class="hd"><a href="${safeHref(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a> <span style="color: var(--ink-3); font-size: 10px; font-family: var(--mono);">· ${esc(x.publisher || host)}</span></span>
           <span class="sent ${cls}">${s >= 0 ? '+' : ''}${s.toFixed(2)}</span>
         </li>
       `;

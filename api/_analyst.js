@@ -121,7 +121,6 @@ export default async function handler(req, res) {
   const out = {};
   for (const t of tickers) { const r = await one(t); if (r) out[t] = r; await sleep(150); }   // sequential — polite to the HTML source
   res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     asOf: Date.now(),
     source: 'consensus: NASDAQ analyst ratings + targetprice · events: stockanalysis.com ratings page',

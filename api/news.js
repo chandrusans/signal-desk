@@ -225,12 +225,12 @@ export default async function handler(req, res) {
   const sectorMap = {};
   for (const pair of String(sectorsRaw).split(',')) {
     const [t, s] = pair.split(':');
-    if (t && s) sectorMap[t.trim().toUpperCase()] = s.trim().toLowerCase();
+    if (t && s && /^[a-z-]{2,20}$/i.test(s.trim())) sectorMap[t.trim().toUpperCase()] = s.trim().toLowerCase();
   }
   const tickers = String(raw)
     .split(',')
     .map((s) => s.trim().toUpperCase())
-    .filter(Boolean)
+    .filter((s) => /^[A-Z^][A-Z0-9.\-^=]{0,11}$/.test(s))        // strict symbol shape: no injection into upstream URLs or regexes
     .filter((t) => !t.startsWith('^'))
     .slice(0, 20);
 
@@ -250,7 +250,6 @@ export default async function handler(req, res) {
   });
 
   res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     asOf: Date.now(),
     news: out,

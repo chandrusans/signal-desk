@@ -111,7 +111,6 @@ export default async function handler(req, res) {
   const days = Math.round(bars.length / 24);
 
   res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     coin,
     asOf: Date.now(),

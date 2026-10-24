@@ -92,7 +92,6 @@ export default async function handler(req, res) {
   const constituents = coins.slice(0, limit);
 
   res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     asOf: Date.now(),
     source,

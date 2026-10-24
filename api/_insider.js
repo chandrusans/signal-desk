@@ -92,7 +92,6 @@ export default async function handler(req, res) {
   }
 
   res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=43200');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     asOf: Date.now(),
     source: 'SEC EDGAR Form 4 (open-market P/S only)',

@@ -1,0 +1,9 @@
+# Only the pages, shared modules and api/ belong on the production host.
+db/
+tools/
+legal/
+docs/
+.github/
+*.md
+.claude/
+.env*

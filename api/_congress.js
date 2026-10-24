@@ -182,7 +182,6 @@ export default async function handler(req, res) {
   const medianLagDays = lags.length ? lags[Math.floor(lags.length / 2)] : null;
 
   res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=43200');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     asOf: Date.now(),
     source: `Clerk of the House — ${usedYear} financial disclosures (STOCK Act PTRs)`,

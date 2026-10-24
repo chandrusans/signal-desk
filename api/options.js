@@ -271,7 +271,8 @@ export default async function handler(req, res) {
   const dirMap = {};
   for (const p of String(dirRaw).split(',')) {
     const [t, d] = p.split(':');
-    if (t && d) dirMap[t.trim().toUpperCase()] = d.trim().toUpperCase();
+    const dd = (d || '').trim().toUpperCase();
+    if (t && (dd === 'CALL' || dd === 'PUT') && /^[A-Z][A-Z0-9.\-]{0,9}$/.test(t.trim().toUpperCase())) dirMap[t.trim().toUpperCase()] = dd;
   }
   // Query params: limit (max recs returned), perTicker (max recs per horizon per ticker)
   const limit = Math.max(1, Math.min(200, parseInt(req.query?.limit, 10) || 25));
@@ -279,7 +280,7 @@ export default async function handler(req, res) {
   const tickers = String(raw)
     .split(',')
     .map((s) => s.trim().toUpperCase())
-    .filter(Boolean)
+    .filter((s) => /^[A-Z][A-Z0-9.\-]{0,9}$/.test(s))
     .filter((t) => !t.startsWith('^') && !t.includes('='))
     .slice(0, 30);
 
@@ -299,7 +300,6 @@ export default async function handler(req, res) {
   const capped = recommendations.slice(0, limit);
 
   res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=300');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     asOf: Date.now(),
     feePerContract: FEE_PER_CONTRACT,

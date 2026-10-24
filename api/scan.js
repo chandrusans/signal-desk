@@ -55,7 +55,7 @@ export default async function handler(req, res) {
   const tickers = String(rawTickers)
     .split(',')
     .map((s) => s.trim().toUpperCase())
-    .filter(Boolean)
+    .filter((s) => /^[A-Z^][A-Z0-9.\-^=]{0,11}$/.test(s))        // strict symbol shape: no injection into upstream URLs or regexes
     .slice(0, 80);                                   // batch ceiling per invocation
 
   if (!tickers.length) {
@@ -63,11 +63,13 @@ export default async function handler(req, res) {
     return;
   }
 
+  const SECTOR_ETFS = new Set(['XLK', 'XLV', 'XLF', 'XLY', 'XLC', 'XLI', 'XLP', 'XLE', 'XLU', 'XLRE', 'XLB']);
   // Optional ticker -> sector-ETF map so we can compute sector-relative strength
   const sectorMap = {};
   for (const pair of String((req.query && req.query.sectors) || '').split(',')) {
     const [t, e] = pair.split(':');
-    if (t && e) sectorMap[t.trim().toUpperCase()] = e.trim().toUpperCase();
+    const et = (e || '').trim().toUpperCase();
+    if (t && SECTOR_ETFS.has(et)) sectorMap[t.trim().toUpperCase()] = et;   // only the eleven SPDR sector ETFs — no arbitrary upstream fan-out
   }
   const sectorEtfs = [...new Set(Object.values(sectorMap))].filter(Boolean);
 
@@ -143,7 +145,6 @@ export default async function handler(req, res) {
   );
 
   res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=180');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     asOf: Date.now(),
     requested: tickers.length,

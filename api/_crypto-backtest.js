@@ -169,7 +169,6 @@ export default async function handler(req, res) {
   }
 
   res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=43200');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   // Surfaced so a short fetch can never pass as a full-history result. A
   // window this strategy is judged on must be long enough to contain both a
   // crypto bull and bear leg; anything under ~3 years is not.

@@ -2265,10 +2265,10 @@
         <span class="buzz-src buzz-src-${b.src}">${b.src}</span>
         <div class="buzz-content">
           <div class="buzz-line1">
-            <span class="buzz-speaker">${b.speaker}</span>
-            <span class="buzz-tickers">${b.tickers.map(t => `<span class="buzz-ticker" data-tk="${t}">$${t}</span>`).join('')}</span>
+            <span class="buzz-speaker">${esc(b.speaker)}</span>
+            <span class="buzz-tickers">${b.tickers.map(t => `<span class="buzz-ticker" data-tk="${esc(t)}">$${esc(t)}</span>`).join('')}</span>
           </div>
-          <p class="buzz-snippet">${b.text}</p>
+          <p class="buzz-snippet">${esc(b.text)}</p>
           <div class="buzz-meta">
             <span class="buzz-sent ${b.sent === 'bull' ? 'bull' : b.sent === 'bear' ? 'bear' : 'neu'}">${b.sent === 'bull' ? '▲ bullish' : b.sent === 'bear' ? '▼ bearish' : '● neutral'}</span>
           </div>
@@ -2361,6 +2361,7 @@
 
 <script type="module">
 import { analyze, regime, computeBreadth } from './analyze.js';
+import { esc, safeHref } from './ui.js';
 import { runBacktest, walkForward } from './backtest.js';
 (function () {
   // ------- Theme toggle -------
@@ -2658,16 +2659,16 @@ import { runBacktest, walkForward } from './backtest.js';
         : '';
       const mentions = buzzMentionsFor(p.ticker);
       const mentionPill = mentions.length
-        ? ` <span class="mentioned-by" data-buzz-open="1" title="${mentions.slice(0,3).map(m => m.speaker).join(' · ')}"><span class="dot"></span>Mentioned by ${mentions.length}</span>`
+        ? ` <span class="mentioned-by" data-buzz-open="1" title="${esc(mentions.slice(0,3).map(m => m.speaker).join(' · '))}"><span class="dot"></span>Mentioned by ${mentions.length}</span>`
         : '';
       return `
       <div class="card ${p.ticker === activeTicker ? 'active' : ''}" data-ticker="${p.ticker}" tabindex="0" role="button" aria-pressed="${p.ticker === activeTicker}">
         <div class="rank">${String(i+1).padStart(2,'0')}</div>
         <div class="card-body">
           <div class="ticker">${p.ticker} <span data-flash-ticker="${p.ticker}" style="color: var(--ink-3); font-size: 12px; font-weight: 400; letter-spacing: 0; padding: 0 2px;">· ${p.price != null ? '$' + p.price.toFixed(2) : '—'}</span>${p.todayChangePct != null ? ` <span style="font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: 0.02em; color: ${p.todayChangePct >= 0 ? 'var(--signal)' : 'var(--risk)'};">${p.todayChangePct >= 0 ? '+' : ''}${p.todayChangePct.toFixed(2)}%</span>` : ''}${mentionPill}</div>
-          <div class="name">${p.name}</div>
+          <div class="name">${esc(p.name)}</div>
           ${setupChip}
-          <div class="thesis">${p.setup && p.setupReason ? p.setupReason : p.thesis}</div>
+          <div class="thesis">${esc(p.setup && p.setupReason ? p.setupReason : p.thesis)}</div>
           <div class="origin">
             <span class="label">Surfaced by</span>
             ${badges}${cgBadge}
@@ -2678,7 +2679,7 @@ import { runBacktest, walkForward } from './backtest.js';
           <div class="score-label" style="margin-top: 8px;">Composite</div>
           <div class="score">${p.score != null ? p.score : '—'}</div>
           ${sparkline(p.spark)}
-          <button class="track-btn" data-track="${p.ticker}|${p.price}|${p.name}" title="Add to Dashboard portfolio">+ Track</button>
+          <button class="track-btn" data-track="${esc(p.ticker)}|${p.price}|${esc(p.name)}" title="Add to Dashboard portfolio">+ Track</button>
         </div>
       </div>
     `;}).join('');
@@ -3226,7 +3227,7 @@ import { runBacktest, walkForward } from './backtest.js';
       tbody.innerHTML = rows.map(r => `
         <tr>
           <td>${r.ticker}</td>
-          <td class="name">${r.name}</td>
+          <td class="name">${esc(r.name)}</td>
           <td>${r.setup ? `<span class="setup-chip setup-${r.setup}" style="font-size: 9px;">${r.setup}</span>` : `<span style="color: var(--ink-3); font-size: 10px;">${r.sector}</span>`}</td>
           <td class="num">${fmtMcap(r.mcap)}</td>
           <td class="num">${r.pe}</td>
@@ -3962,7 +3963,7 @@ import { runBacktest, walkForward } from './backtest.js';
           <span class="ts">${ago}</span>
           <span class="src-badge src-news">NEWS${polTag}</span>
           <span class="tk">${x.tk}</span>
-          <span class="hd"><a href="${x.link}" target="_blank" rel="noopener">${x.title}</a> <span style="color: var(--ink-3); font-size: 10px; font-family: var(--mono);">· ${x.publisher || host}${x.political ? ` · political · sector ${latestNews[x.tk]?.sector || 'generic'}` : ''}</span></span>
+          <span class="hd"><a href="${safeHref(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a> <span style="color: var(--ink-3); font-size: 10px; font-family: var(--mono);">· ${esc(x.publisher || host)}${x.political ? ` · political · sector ${latestNews[x.tk]?.sector || 'generic'}` : ''}</span></span>
           <span class="sent ${cls}">${s >= 0 ? '+' : ''}${s.toFixed(2)}</span>
         </li>
       `;

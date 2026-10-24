@@ -1111,6 +1111,7 @@
 <script type="module">
 import { analyze, regime, cryptoRegime } from '/analyze.js';
 import { loadJournal, riskBudget } from '/risk.js';
+import { esc } from '/ui.js';
 
 (() => {
   'use strict';
@@ -1279,8 +1280,8 @@ import { loadJournal, riskBudget } from '/risk.js';
     return `
       <div class="pick">
         <div style="min-width:0;">
-          <div class="kind">${kind}</div>
-          <div class="name">${name} ${sub ? `<small>· ${sub}</small>` : ''}</div>
+          <div class="kind">${esc(kind)}</div>
+          <div class="name">${esc(name)} ${sub ? `<small>· ${esc(sub)}</small>` : ''}</div>
           <p class="plain">${why}</p>
           <div class="grid">
             <div class="cell"><div class="l">Buy near</div><div class="v">${entry}</div></div>

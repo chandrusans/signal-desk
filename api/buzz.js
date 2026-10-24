@@ -260,7 +260,7 @@ export default async function handler(req, res) {
   const tickers = String(raw)
     .split(',')
     .map((s) => s.trim().toUpperCase())
-    .filter(Boolean)
+    .filter((s) => /^[A-Z^][A-Z0-9.\-^=]{0,11}$/.test(s))        // strict symbol shape: no injection into upstream URLs or regexes
     .filter((t) => !t.startsWith('^') && !t.includes('='))
     .slice(0, 20);
 
@@ -289,7 +289,6 @@ export default async function handler(req, res) {
     .slice(0, 80);
 
   res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=180');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     asOf: Date.now(),
     counts: {

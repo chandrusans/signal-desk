@@ -52,7 +52,7 @@ export default async function handler(req, res) {
   const tickers = String(raw)
     .split(',')
     .map((s) => s.trim().toUpperCase())
-    .filter(Boolean)
+    .filter((s) => /^[A-Z^][A-Z0-9.\-^=]{0,11}$/.test(s))        // strict symbol shape: no injection into upstream URLs or regexes
     .slice(0, 60);
 
   if (tickers.length === 0) {
@@ -70,7 +70,6 @@ export default async function handler(req, res) {
   });
 
   res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     asOf: Date.now(),
     range: validRange,

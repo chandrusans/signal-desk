@@ -98,7 +98,7 @@ export default async function handler(req, res) {
   const symbols = String(raw)
     .split(',')
     .map((s) => s.trim().toUpperCase())
-    .filter(Boolean)
+    .filter((s) => /^[A-Z]{1,6}\d{6}[CP]\d{8}$/.test(s))        // OCC option symbol shape only
     .slice(0, 25);
 
   if (!symbols.length) {
@@ -133,7 +133,6 @@ export default async function handler(req, res) {
   }
 
   res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     asOf: Date.now(),
     quotes,

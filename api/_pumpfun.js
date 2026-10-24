@@ -157,7 +157,6 @@ export default async function handler(req, res) {
   const older = tokens.filter((t) => (t.ageDays ?? 0) >= 7);
 
   res.setHeader('Cache-Control', 's-maxage=180, stale-while-revalidate=600');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({
     asOf: Date.now(),
     source: 'DexScreener public API (pumpswap / pump.fun mints)',

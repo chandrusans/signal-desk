@@ -4,9 +4,11 @@ name: Signal Desk alert runner
 # Each tick asks the deployed app to run the alert engine once; the app holds
 # all state and dedup, so a missed or duplicated tick is harmless.
 #
-# Secrets/variables on the repo:
-#   RUN_KEY   (secret)   must equal the RUN_KEY env var on Vercel
-#   APP_URL   (variable) https://signal-desk-virid.vercel.app
+# Secret on the repo:
+#   RUN_KEY   must equal the RUN_KEY env var on Vercel (sent as a bearer header,
+#             never in the URL). The app URL is fixed here on purpose: a repo
+#             variable could be pointed at another host to capture the key.
+# This log is PUBLIC (public repo): only counts are printed, never alert text.
 
 on:
   schedule:
@@ -27,12 +29,13 @@ jobs:
     steps:
       - name: Ask the app to run the alert engine
         env:
-          APP_URL: ${{ vars.APP_URL }}
+          APP_URL: https://signal-desk-virid.vercel.app
           RUN_KEY: ${{ secrets.RUN_KEY }}
         run: |
           set -e
-          if [ -z "$RUN_KEY" ] || [ -z "$APP_URL" ]; then echo "RUN_KEY secret or APP_URL variable missing"; exit 1; fi
-          out=$(curl -sS --max-time 90 "$APP_URL/api/notify?op=run&key=$RUN_KEY")
-          echo "$out" | head -c 2000; echo
+          if [ -z "$RUN_KEY" ]; then echo "RUN_KEY secret missing"; exit 1; fi
+          out=$(curl -sS --max-time 90 -H "Authorization: Bearer $RUN_KEY" "$APP_URL/api/notify?op=run")
+          # Print counts only — this log is world-readable.
+          echo "$out" | jq -c '{ok, fired, delivered, sourcesDown, error}' 2>/dev/null || echo "runner returned non-JSON"
           # "nothing synced yet" is a valid state before the user's first sync, not a failure
           echo "$out" | grep -Eq '"ok":true|nothing synced yet' || { echo "runner did not report ok"; exit 1; }

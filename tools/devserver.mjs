@@ -67,7 +67,12 @@ createServer(async (req, res) => {
     return;
   }
 
-  const file = PAGES[path] || path.replace(/^\//, '');
+  // Serve only the pages and the shared front-end modules — never dotfiles,
+  // the env file, tools/, db/ or anything else in the repository.
+  const rel = path.replace(/^\//, '');
+  const allowed = PAGES[path] || (/^[A-Za-z0-9_-]+\.(js|svg|png|ico|webmanifest|json)$/.test(rel) && !rel.startsWith('package') ? rel : null);
+  if (!allowed) { res.statusCode = 404; res.end('not found'); return; }
+  const file = allowed;
   try {
     const buf = await readFile(join(ROOT, file));
     res.setHeader('Content-Type', TYPES[extname(file)] || 'application/octet-stream');
@@ -76,4 +81,4 @@ createServer(async (req, res) => {
     res.statusCode = 404;
     res.end('not found');
   }
-}).listen(PORT, () => console.log(`dev server on http://localhost:${PORT}`));
+}).listen(PORT, '127.0.0.1', () => console.log(`dev server on http://localhost:${PORT} (loopback only)`));
