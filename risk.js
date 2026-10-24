@@ -89,6 +89,20 @@ export function journalStats(trades) {
   };
 }
 
+/** The question every Track button asks before adding a position: can the book take it?
+ *  Returns null when it can; otherwise the text to show the user. Reads the same keys the
+ *  Dashboard and Today use, so no page can bypass the gate. */
+export function trackGate(store) {
+  const s = store || (typeof localStorage !== 'undefined' ? localStorage : null);
+  if (!s) return null;
+  let capital = 10000, positions = [];
+  try { const c = parseFloat(s.getItem('sd-capital')); if (c >= 500) capital = c; } catch {}
+  try { positions = JSON.parse(s.getItem('sd-portfolio-v1') || '[]'); if (!Array.isArray(positions)) positions = []; } catch {}
+  const b = riskBudget({ capital, positions, journal: loadJournal(s) });
+  if (b.gate !== 'BLOCKED') return null;
+  return `The risk engine is BLOCKED:\n${b.breaches.map((x) => x.text).join('\n')}\n\nTrack it anyway (against the rules)?`;
+}
+
 /** Risk the book is carrying now, and whether it can take one more trade. */
 export function riskBudget({ capital, positions = [], prices = {}, stops = {}, journal = [], today = todayISO(), limits = LIMITS }) {
   if (!(capital > 0)) return { gate: 'BLOCKED', breaches: [{ rule: 'capital', text: 'Set your trading capital first — every limit is a percentage of it.' }], warnings: [], rows: [], limits, openCount: positions.length, slots: 0, openRisk: 0, openRiskPct: 0, notional: 0, exposurePct: 0, largest: null, realizedToday: 0, realizedTodayPct: 0, roomRiskPct: 0, roomRiskDollars: 0, sizeMult: 0 };

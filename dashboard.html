@@ -1301,7 +1301,8 @@ import { px, num, tradingDateISO } from './ui.js';
     const order = { SELL: 0, TRIM: 1, WATCH: 2, HOLD: 3 };
     rows.sort((a, b) => order[a.verdict.action] - order[b.verdict.action]);
 
-    positionsEl.innerHTML = rows.map(r => {
+    positionsEl.innerHTML = rows.map(r => { try { return renderCard(r); } catch (e) { return `<div class="pos-card"><div class="pos-head"><div class="pos-id"><div class="ticker">${escapeHtml(r.pos.ticker)}</div></div></div><div class="pos-meta" style="color:var(--risk)">This position could not be rendered (${escapeHtml(e.message)}). Edit or close it; the others are unaffected.</div><button class="close-btn" data-close="${escapeHtml(r.pos.id)}">Close</button></div>`; } }).join('');
+    function renderCard(r) {
       const target = r.target;
       const distStop$ = r.price - r.stop;
       const distStopPct = (distStop$ / r.price) * 100;
@@ -1464,7 +1465,7 @@ import { px, num, tradingDateISO } from './ui.js';
         </div>
         `}
       </div>
-    `;}).join('');
+    `;}
 
     // Wire close + edit buttons
     positionsEl.querySelectorAll('[data-close]').forEach(b => {
@@ -1688,14 +1689,21 @@ import { px, num, tradingDateISO } from './ui.js';
       const p = parts[i];
       // optional class token: "BTC 0.5 crypto", "GC=F 2 metal"
       if (/^(crypto|metal|stock)$/i.test(p)) { assetClass = p.toLowerCase(); continue; }
-      // ISO date match
-      if (/^\d{4}-\d{2}-\d{2}$/.test(p)) { date = p; continue; }
+      // ISO date match — and it must be a real, non-future date
+      if (/^\d{4}-\d{2}-\d{2}$/.test(p)) {
+        const t = Date.parse(p + 'T12:00:00Z');
+        if (isNaN(t) || new Date(t).toISOString().slice(0, 10) !== p) return { error: `"${p}" is not a real date` };
+        if (p > tradingDateISO()) return { error: `"${p}" is in the future` };
+        date = p; continue;
+      }
       const n = parseFloat(p);
       if (!isNaN(n) && n > 0) {
         if (price == null) price = n;
         else if (stop == null) stop = n;
-      }
+        else return { error: `too many numbers — "${p}" has no meaning here (price, then stop)` };
+      } else return { error: `cannot read "${p}"` };
     }
+    if (stop != null && price != null && stop >= price) return { error: `stop $${stop} must be below the entry $${price}` };
     if (!assetClass) assetClass = ticker === 'GC=F' || ticker === 'SI=F' ? 'metal' : /^(BTC|ETH|SOL|XRP|ADA|DOGE|AVAX|LINK|DOT|LTC|BCH|UNI|ATOM|XLM|HBAR|SUI|NEAR|AAVE|ICP|ALGO|SHIB|PEPE|TAO|ONDO)$/.test(ticker) ? 'crypto' : 'stock';
     return { ticker, qty, price, date, stop, assetClass };
   }
@@ -1740,7 +1748,11 @@ import { px, num, tradingDateISO } from './ui.js';
         buyDate: p.date || today,
         assetClass: p.assetClass || 'stock',
       };
-      if (p.stop != null && p.stop > 0 && p.stop < buyPrice) pos.stop = p.stop;
+      if (p.stop != null && p.stop > 0) {
+        if (p.stop >= buyPrice) { results.push({ ok: false, msg: `${p.ticker}: stop $${p.stop} is not below the live price $${buyPrice.toFixed(2)}`, raw: p.raw }); continue; }
+        pos.stop = p.stop; pos.initialStop = p.stop;
+      }
+      portfolio = load();                          // merge with anything another tab added meanwhile
       portfolio.push(pos);
       results.push({ ok: true, msg: `${p.ticker} ${p.qty} @ $${buyPrice.toFixed(2)} · ${pos.buyDate}${pos.stop ? ` · stop $${pos.stop.toFixed(2)}` : ''}` });
     }
@@ -1764,8 +1776,9 @@ import { px, num, tradingDateISO } from './ui.js';
     clearTimeout(qaDebounce);
     const parsed = parsePositionLine(qaInput.value);
     if (parsed.error || !parsed.ticker) {
-      qaChip.textContent = '';
-      qaChip.className = 'qa-chip';
+      // Say what is wrong while typing, not only after Add.
+      qaChip.textContent = parsed.error && parsed.error !== 'empty' && qaInput.value.trim().split(/\s+/).length > 1 ? parsed.error : '';
+      qaChip.className = 'qa-chip' + (qaChip.textContent ? ' bad' : '');
       qaLastTicker = null;
       return;
     }
@@ -1773,7 +1786,7 @@ import { px, num, tradingDateISO } from './ui.js';
     qaChip.textContent = 'checking…';
     qaChip.className = 'qa-chip';
     qaDebounce = setTimeout(async () => {
-      const live = await fetchLivePrice(parsed.ticker);
+      const live = await fetchLivePrice(parsed.ticker, parsed.assetClass);
       qaLastTicker = parsed.ticker;
       if (!live) {
         qaChip.textContent = `${parsed.ticker} · not found`;
@@ -1948,8 +1961,12 @@ import { px, num, tradingDateISO } from './ui.js';
       const text = await file.text();
       const data = JSON.parse(text);
       if (Array.isArray(data.portfolio)) {
-        if (portfolio.length && !confirm(`Replace current ${portfolio.length} position(s) with ${data.portfolio.length} imported position(s)?`)) return;
-        portfolio = data.portfolio;
+        const okRow = (p) => p && typeof p === 'object' && typeof p.ticker === 'string' && p.qty > 0 && p.buyPrice > 0 && /^\d{4}-\d{2}-\d{2}$/.test(String(p.buyDate || '')) && (!p.isOption || (p.underlying && p.strike > 0 && /^\d{4}-\d{2}-\d{2}$/.test(String(p.expiration || ''))));
+        const good = data.portfolio.filter(okRow), bad = data.portfolio.length - good.length;
+        if (bad) alert(`${bad} row${bad > 1 ? 's' : ''} skipped: each position needs ticker, qty, buyPrice, buyDate (and strike/expiration/underlying for options).`);
+        if (!good.length) return;
+        if (portfolio.length && !confirm(`Replace current ${portfolio.length} position(s) with ${good.length} imported position(s)?`)) return;
+        portfolio = good.map((p) => ({ ...p, id: p.id || `${p.ticker}-${Date.now()}-${Math.floor(Math.random() * 1e4)}` }));
         save(); render();
         pull();
       }

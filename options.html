@@ -516,6 +516,7 @@
 
 <script type="module">
 import { analyze } from './analyze.js';
+import { trackGate } from './risk.js';
 
 (function () {
   const root = document.documentElement;
@@ -703,7 +704,7 @@ import { analyze } from './analyze.js';
               <button class="copy-btn" data-copy="${r.occSymbol}" title="Copy OCC symbol for Robinhood/Schwab lookup">
                 ⧉ ${r.occSymbol}
               </button>
-              <button class="track-btn" data-track="${r.occSymbol}|${r.underlying}|${r.direction}|${r.strike}|${r.expiration}|${r.mid}" title="Track in Dashboard">+ Track</button>
+              <button class="track-btn" data-track="${r.occSymbol}|${r.underlying}|${r.direction}|${r.strike}|${r.expiration}|${r.mid}|${r.stopPremium ?? ''}|${(r.exitTargets || [])[0]?.premium ?? ''}" title="Track in Dashboard">+ Track</button>
             </div>
           </div>
 
@@ -761,11 +762,12 @@ import { analyze } from './analyze.js';
     // Wire track buttons — writes to dashboard portfolio in localStorage
     picksEl.querySelectorAll('.track-btn').forEach(b => {
       b.addEventListener('click', () => {
-        const [occ, und, dir, strike, exp, mid] = b.dataset.track.split('|');
+        const [occ, und, dir, strike, exp, mid, stopP, tgtP] = b.dataset.track.split('|');
+        const gate = trackGate(); if (gate && !confirm(gate)) return;
         try {
           const key = 'sd-portfolio-v1';
           const cur = JSON.parse(localStorage.getItem(key) || '[]');
-          const qtyStr = prompt(`Track ${occ}\n\nHow many contracts?`, '1');
+          const qtyStr = prompt(`Track ${occ}\n\nHow many contracts?${stopP ? `\nPremium stop $${(+stopP).toFixed(2)}${tgtP ? ` and first target $${(+tgtP).toFixed(2)}` : ''} from the card will be stored.` : ''}`, '1');
           const qty = parseFloat(qtyStr);
           if (!qty || qty <= 0) return;
           const pos = {
@@ -780,6 +782,9 @@ import { analyze } from './analyze.js';
             buyDate: new Date().toISOString().slice(0, 10),
             isOption: true,
             multiplier: 100,
+            assetClass: 'option',
+            ...(stopP ? { stop: +stopP, planStop: +stopP } : {}),
+            ...(tgtP ? { target: +tgtP, planTarget: +tgtP } : {}),
           };
           cur.push(pos);
           localStorage.setItem(key, JSON.stringify(cur));

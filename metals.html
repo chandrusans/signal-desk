@@ -895,6 +895,7 @@
 
 <script type="module">
 import { analyze, regime } from './analyze.js';
+import { trackGate } from './risk.js';
 import { esc, safeHref } from './ui.js';
 
 (function () {
@@ -1263,6 +1264,7 @@ import { esc, safeHref } from './ui.js';
     const b = e.target.closest('.track-btn'); if (!b) return;
     const [sym, p, stop, tgt, label] = b.dataset.track.split('|');
     const price = parseFloat(p);
+    const gate = trackGate(); if (gate && !confirm(gate)) return;
     const q = parseFloat(prompt(`Track ${label} in Dashboard\n\nHow many units (1 unit = 1 troy oz equivalent, fractions fine)?\nStop $${(+stop).toFixed(2)} and target $${(+tgt).toFixed(2)} from the plan will be stored.`, '1'));
     if (!(q > 0)) return;
     try {

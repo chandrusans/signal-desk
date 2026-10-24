@@ -609,13 +609,13 @@
       <p>Top to bottom on the main page:</p>
       <ol>
         <li><strong>Masthead + pulse strip</strong> — page-wide status. Feed health (live / stale / error), last update time, S&amp;P/Nasdaq/DXY/rates, and — most importantly — the <strong>regime cell</strong> showing the current VIX level and what it allows.</li>
-        <li><strong>Top candidates</strong> — up to 5 pinned tickers, reordered every poll so the highest-scoring pick sits at rank 01. Each card shows current price, intraday change, computed setup state, the composite score, and a 14-day sparkline.</li>
+        <li><strong>Top candidates</strong> — the ten highest-scoring names from the full S&amp;P 500 scan plus the live watch set, reordered every poll so the highest-scoring pick sits at rank 01. Each card shows current price, intraday change, computed setup state, the composite score, and a 14-day sparkline.</li>
         <li><strong>Detail panel</strong> — click any card to expand. Shows the setup and regime callout, transparent score breakdown, live indicators (SMAs, RSI, ATR, returns), an ATR-derived trade plan, and a full exit checklist.</li>
         <li><strong>Strategy rulebook</strong> — the six mechanical rules the framework operates by (universe, entry, stop, target, sizing, regime).</li>
         <li><strong>Political calendar</strong> — curated market-moving events (FOMC, elections, tariff reviews) with days-until countdown.</li>
         <li><strong>Market intelligence</strong> — live news feed pulled from Yahoo Finance, with sentiment scores per headline and a POL badge on political ones.</li>
         <li><strong>Backtest harness</strong> — pick a strategy variant + universe + window; see equity curve and stats.</li>
-        <li><strong>Screener</strong> — filter a 20-ticker universe by score, market cap, P/E, momentum, sentiment, and setup state.</li>
+        <li><strong>Screener</strong> — filter the full S&amp;P 500 by score, market cap, P/E, momentum, sentiment, and setup state.</li>
         <li><strong>Data source architecture</strong> — what feeds are live vs still mock.</li>
         <li><strong>Disclosure</strong> — the not-investment-advice paragraph. Read it.</li>
       </ol>
@@ -738,7 +738,7 @@
         <li>Price hits +2R → trail stop to +1R.</li>
         <li>Target hit → scale half, trail remainder under MA20.</li>
         <li>Flat after 15 trading days → close (opportunity cost).</li>
-        <li>SPY closes below its 50-day MA → exit entire momentum book.</li>
+        <li>SPY closes below its 50-day MA → stop opening new positions (this is advice to you; the Dashboard verdicts react to the VIX regime, not to SPY's moving average).</li>
       </ol>
       <div class="callout">
         <span class="callout-label">Position sizing</span>
@@ -808,7 +808,7 @@
       <ul>
         <li><strong>Sector</strong> — GICS-style sector filter (Semiconductors, Software, Cybersecurity, etc.)</li>
         <li><strong>Min composite score</strong> — drop everything below your threshold</li>
-        <li><strong>Min market cap</strong> — currently static; live cap requires a fundamentals API (see data sources)</li>
+        <li><strong>Min market cap</strong> — live, from NASDAQ via <code>/api/fundamentals</code></li>
         <li><strong>Max P/E</strong> — currently static</li>
         <li><strong>Min momentum (20d)</strong> — live, computed from real bars</li>
         <li><strong>Min sentiment</strong> — currently static</li>
@@ -844,7 +844,7 @@
       </ul>
       <h3>Still mock or static</h3>
       <ul>
-        <li><strong>Market cap and P/E</strong> in the lower screener table — would need Finnhub free tier or SEC filings.</li>
+        <li><strong>Market cap and P/E</strong> in the screener table — live from NASDAQ (<code>/api/fundamentals</code>); P/E is GAAP trailing.</li>
         <li><strong>Insider / options-flow narratives</strong> in the older intel section — placeholder data.</li>
         <li><strong>Political calendar</strong> — curated list, not scraped. Update by editing the array in <code>index.html</code>.</li>
         <li><strong>Reddit mention counts</strong> — blocked without OAuth (see README for setup).</li>
@@ -879,7 +879,7 @@
       <h3>The verdict system</h3>
       <p>Every position gets one of four verdicts, refreshed on each poll (15s). Verdicts are colour-coded on the card's left rail and sorted so the ones needing attention float to the top:</p>
       <ul>
-        <li><span class="setup-chip" style="color: var(--risk); border-color: var(--risk);">SELL</span> Exit the whole position. Reasons that trigger it: hard stop hit, setup broken with a loss, regime turned CRISIS (VIX ≥ 35) — or STRESS (25–35) while the position is losing, time stop with no follow-through after 15 days. In STRESS a winner gets WATCH: move the stop to breakeven and let it decide. Metals are exempt from the regime rule; gold is the hedge that stress is supposed to pay for.</li>
+        <li><span class="setup-chip" style="color: var(--risk); border-color: var(--risk);">SELL</span> Exit the whole position. Reasons that trigger it: hard stop hit, setup BROKEN while the trade is below +0.5R (a fresh one still above −0.5R gets WATCH instead), regime turned CRISIS (VIX ≥ 35) — or STRESS (25–35) while the position is losing, time stop with no follow-through after 15 days. In STRESS a winner gets WATCH: move the stop to breakeven and let it decide. Metals are exempt from the regime rule; gold is the hedge that stress is supposed to pay for.</li>
         <li><span class="setup-chip" style="color: var(--caution); border-color: var(--caution);">TRIM</span> Take partial profit. Reasons: RSI overbought (&gt;78) on a &gt;2R winner, setup went EXTENDED on a winner, MA20 slope negative on a winner.</li>
         <li><span class="setup-chip" style="color: var(--signal); border-color: var(--signal);">HOLD</span> Do nothing yet. Fresh positions, or profitable positions with trend intact. The reason line will tell you where to trail your stop.</li>
         <li><span class="setup-chip" style="color: var(--accent); border-color: var(--accent);">WATCH</span> Decision imminent. Price is within a fraction of R of your stop or target — be at your screen.</li>
@@ -889,7 +889,7 @@
       <p>The verdict function checks rules in priority order and returns the first match:</p>
       <ol>
         <li><strong>Hard stop hit</strong> — no exceptions, no averaging down.</li>
-        <li><strong>Regime turned</strong> (VIX &gt; 25) — protect the whole book.</li>
+        <li><strong>Regime turned</strong> — CRISIS (VIX ≥ 35) sells the book; STRESS (25–35) sells losers and moves winners' stops to breakeven.</li>
         <li><strong>Setup broken with loss</strong> — trend dead, cut before it compounds.</li>
         <li><strong>Time stop</strong> — 15 trading days with less than 1R gain means the thesis didn't materialize. Free the capital for a better setup.</li>
         <li><strong>Overextended winner</strong> — RSI &gt; 78 with a &gt;2R gain, or setup gone EXTENDED. Scale half, move stop up.</li>

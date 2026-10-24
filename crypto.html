@@ -1084,6 +1084,7 @@
 
 <script type="module">
 import { cryptoRegime } from '/analyze.js';
+import { trackGate } from './risk.js';
 import { esc, safeHref } from './ui.js';
 
 (() => {
@@ -1374,6 +1375,7 @@ import { esc, safeHref } from './ui.js';
           e.stopPropagation();
           const [t, p, stop, tgt, name] = card.querySelector('.track-btn').dataset.track.split('|');
           const price = parseFloat(p);
+          const gate = trackGate(); if (gate && !confirm(gate)) return;
           const q = parseFloat(prompt(`Track ${t} in Dashboard\n\nHow many ${t}? (fractions are fine)${stop ? `\nStop $${(+stop).toPrecision(5)} and target $${(+tgt).toPrecision(5)} from the plan will be stored.` : ''}`, '0.1'));
           if (!(q > 0)) return;
           try {

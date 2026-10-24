@@ -2361,6 +2361,7 @@
 
 <script type="module">
 import { analyze, regime, computeBreadth } from './analyze.js';
+import { trackGate } from './risk.js';
 import { esc, safeHref } from './ui.js';
 import { runBacktest, walkForward } from './backtest.js';
 (function () {
@@ -2697,6 +2698,7 @@ import { runBacktest, walkForward } from './backtest.js';
           const btn = e.target.closest('.track-btn');
           const [ticker, priceStr] = btn.dataset.track.split('|');
           const price = parseFloat(priceStr);
+          const gate = trackGate(); if (gate && !confirm(gate)) return;
           const pk = picks.find(x => x.ticker === ticker);
           // The stop and target on the card are what the Dashboard and Alerts
           // must enforce — otherwise the card says "sell at $124" and the

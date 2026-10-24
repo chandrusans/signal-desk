@@ -103,10 +103,10 @@ export function evaluate(tickers, data, settings = getSettings()) {
   seen.__init = seen.__init || now;
   const out = [];
   const fire = (type, ticker, id, title, body, meta = {}) => {
-    if (!settings.enabled[type]) return;
     const key = `${type}:${ticker}:${id}`;
     if (seen[key]) return;
-    seen[key] = now;
+    seen[key] = now;                      // recorded even when the type is switched off, so re-enabling never floods old items
+    if (!settings.enabled[type]) return;
     if (baseline && type !== 'big_move' && type !== 'earnings') return;   // recorded, not raised
     out.push({ id: key, type, ticker, title, body, ts: now, ...meta });
   };

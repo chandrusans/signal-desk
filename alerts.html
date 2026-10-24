@@ -1403,7 +1403,13 @@ import { classOf } from '/exits.js';
     const n = await notify([{ id: 'test-' + Date.now(), type: 'big_move', title: 'Test alert from Signal Desk', body: 'If you can read this, notifications work in this browser.', severity: 'low' }]);
     if (!n) alert('The browser refused to show a notification. Check site permissions.');
   });
-  $('watch-add-btn').addEventListener('click', () => { const v = $('watch-add').value.trim().toUpperCase(); if (/^[A-Z0-9.\-]{1,6}$/.test(v) && !watch.includes(v)) { watch.push(v); setWatch(watch); renderWatch(); check(); scheduleSync(); } $('watch-add').value = ''; });
+  $('watch-add-btn').addEventListener('click', () => {
+    const v = $('watch-add').value.trim().toUpperCase();
+    if (!/^[A-Z0-9.\-]{1,6}$/.test(v) || watch.includes(v)) { $('watch-add').value = ''; return; }
+    // The engine reads the first 30 names (phone runner too); say so instead of silently dropping the 31st.
+    if (watch.length >= 30) { alert('The watchlist is capped at 30 names — the engine and the phone runner check the first 30. Remove one first.'); return; }
+    watch.push(v); setWatch(watch); renderWatch(); check(); scheduleSync(); $('watch-add').value = '';
+  });
   $('watch-add').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('watch-add-btn').click(); });
   $('watch-reset').addEventListener('click', async () => { watch = await defaultWatch(); setWatch(watch); renderWatch(); check(); scheduleSync(); });
   $('hist-clear').addEventListener('click', () => { if (confirm('Clear all alert history on this device?')) { clearHistory(); renderFeed(); } });
