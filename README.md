@@ -188,7 +188,8 @@ npm run validate:risk
 
 Pure arithmetic, no network: the risk engine (`risk.js`) — per-trade risk,
 portfolio heat, daily loss limit, position cap, concentration warning — and the
-journal's R-multiples, win rate, expectancy and profit factor. 20 checks.
+journal's R-multiples, win rate, expectancy and profit factor, plus the exit
+rulebook's initial-stop and regime behaviour. 28 checks.
 
 ```bash
 npm run validate:research
@@ -198,7 +199,8 @@ The forensic module (`api/_forensic.js`) against real filers: Apple's FY2025
 net income and operating cash flow match the 10-K to the dollar, Nvidia's
 share count is split-adjusted, JPMorgan degrades to "not meaningful" for a
 bank, historical multiples are sane, the implied-growth solver reproduces
-the market cap, and the research endpoint shape is stable.
+the market cap, and the research endpoint shape is stable, debt is not double-counted, EV nets
+long-term investments, and a bank gets P/E only. 36 checks.
 
 ### Checks before committing
 

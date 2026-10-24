@@ -1,4 +1,5 @@
 // Momentum-swing analytics — pure functions over OHLC bars.
+import { LIMITS } from './risk.js';   // one source for per-trade risk and portfolio heat
 // Modeled on how a long-only momentum book screens: trend alignment,
 // pullback/breakout setups, ATR-based stops, R-multiple targets, VIX regime filter.
 // All numbers computed from real OHLC. No fabricated signal weights.
@@ -399,9 +400,9 @@ function tradePlan({ price, atr14, atrPct, setup, ma10, ma20, assetClass = 'equi
   const targetPct = ((target - entry) / entry) * 100;
   const rr = 2.5;
 
-  // Position size using risk-parity: risk 0.75% of capital per trade
-  // shares per $10k capital = (10000 * 0.0075) / stopDist
-  const shares10k = Math.floor((10000 * 0.0075) / stopDist);
+  // Position size: risk LIMITS.riskPerTradePct of capital per trade (the risk engine's number)
+  // shares per $10k capital = (10000 * risk%) / stopDist
+  const shares10k = Math.floor((10000 * (LIMITS.riskPerTradePct / 100)) / stopDist);
   const sizeNotional = ((shares10k * entry) / 10000) * 100; // % of $10k capital deployed
 
   return {
@@ -413,7 +414,7 @@ function tradePlan({ price, atr14, atrPct, setup, ma10, ma20, assetClass = 'equi
     timeStopDays: 15,
     shares10k,
     sizePct: Math.min(20, +sizeNotional.toFixed(1)),
-    riskPct: 0.75, // % of capital risked per trade
+    riskPct: LIMITS.riskPerTradePct, // % of capital risked per trade — same number the risk engine enforces
   };
 }
 
@@ -569,11 +570,11 @@ export function portfolioHeat(positions, equity) {
     heatPct,
     heatR: heatPct,                  // with 1% risk per trade, 1R ≈ 1% of equity
     perPosition,
-    status: heatPct > 6 ? 'over' : heatPct > 4 ? 'warm' : 'ok',
-    note: heatPct > 6
-      ? `Portfolio heat ${heatPct.toFixed(1)}% — over the 6% ceiling. Close or tighten something before adding.`
-      : heatPct > 4
-        ? `Portfolio heat ${heatPct.toFixed(1)}% — approaching the 6% ceiling. One more full-size entry maximum.`
+    status: heatPct > LIMITS.maxOpenRiskPct ? 'over' : heatPct > LIMITS.maxOpenRiskPct - LIMITS.riskPerTradePct ? 'warm' : 'ok',
+    note: heatPct > LIMITS.maxOpenRiskPct
+      ? `Portfolio heat ${heatPct.toFixed(1)}% — over the ${LIMITS.maxOpenRiskPct}% ceiling. Close or tighten something before adding.`
+      : heatPct > LIMITS.maxOpenRiskPct - LIMITS.riskPerTradePct
+        ? `Portfolio heat ${heatPct.toFixed(1)}% — approaching the ${LIMITS.maxOpenRiskPct}% ceiling. One more full-size entry maximum.`
         : `Portfolio heat ${heatPct.toFixed(1)}% — room to add.`,
   };
 }

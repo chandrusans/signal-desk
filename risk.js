@@ -15,12 +15,14 @@
 // Nothing here is advice; these are the limits most systematic desks run and
 // the handbook explains each one. Change them in one place.
 
-import { classOf, defaultStop } from './exits.js';
+import { classOf, defaultStop, initialStop } from './exits.js';
 
 export const LIMITS = { riskPerTradePct: 1, dailyLossPct: 3, maxOpenRiskPct: 5, maxPositions: 6, maxSingleNamePct: 25 };
 export const JOURNAL_KEY = 'sd-journal-v1';
 const DAY = 86400000;
-const todayISO = () => new Date().toISOString().slice(0, 10);
+// "Today" is the US trading day (New York), not UTC: at 20:00 ET the UTC date rolls
+// over and a UTC key would reset the daily loss limit before the evening is out.
+export const todayISO = () => { try { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); } catch { return new Date().toISOString().slice(0, 10); } };
 
 // ── Journal storage (localStorage by default; any {getItem,setItem} works) ──
 export function loadJournal(store) {
@@ -38,14 +40,15 @@ export function saveJournal(trades, store) {
 export function closeTrade(pos, { exitPrice, exitDate = todayISO(), stop = null, rule = null, note = null } = {}) {
   const cls = classOf(pos);
   const mult = pos.multiplier || 1;
-  const initialStop = stop > 0 ? stop : (pos.planStop > 0 ? pos.planStop : defaultStop(pos, null));
-  const R = Math.max(1e-9, pos.buyPrice - initialStop);
+  // R is defined by the INITIAL stop, never by a stop that was later trailed up.
+  const stop0 = stop > 0 && stop < pos.buyPrice * 0.995 ? stop : initialStop(pos, null);
+  const R = Math.max(pos.buyPrice * 0.005, pos.buyPrice - stop0);
   const pl = (exitPrice - pos.buyPrice) * pos.qty * mult;
   return {
     id: `${pos.id || pos.ticker}-x${Date.now()}`,
     ticker: pos.ticker, label: pos.label || pos.underlying || pos.ticker, cls,
     qty: pos.qty, mult, buyPrice: pos.buyPrice, buyDate: pos.buyDate, exitPrice, exitDate,
-    stop: +initialStop.toFixed(4), target: pos.target > 0 ? pos.target : pos.planTarget > 0 ? pos.planTarget : null,
+    stop: +stop0.toFixed(4), target: pos.target > 0 ? pos.target : pos.planTarget > 0 ? pos.planTarget : null,
     pl: +pl.toFixed(2), plPct: +(((exitPrice - pos.buyPrice) / pos.buyPrice) * 100).toFixed(2),
     r: +((exitPrice - pos.buyPrice) / R).toFixed(2),
     daysHeld: Math.max(0, Math.round((Date.parse(exitDate) - Date.parse(pos.buyDate)) / DAY)),
@@ -59,7 +62,8 @@ export function journalStats(trades) {
   const n = t.length;
   const wins = t.filter((x) => x.r > 0.05), losses = t.filter((x) => x.r < -0.05);
   const avg = (a, k) => (a.length ? a.reduce((s, x) => s + x[k], 0) / a.length : null);
-  const grossWin = wins.reduce((s, x) => s + Math.max(0, x.pl), 0), grossLoss = losses.reduce((s, x) => s + Math.max(0, -x.pl), 0);
+  // Profit factor by P&L sign over ALL trades (scratches included), as convention.
+  const grossWin = t.reduce((s, x) => s + Math.max(0, x.pl), 0), grossLoss = t.reduce((s, x) => s + Math.max(0, -x.pl), 0);
   const expectancyR = n ? t.reduce((s, x) => s + x.r, 0) / n : null;
   const byKey = (key) => {
     const m = {};
@@ -87,7 +91,8 @@ export function journalStats(trades) {
 
 /** Risk the book is carrying now, and whether it can take one more trade. */
 export function riskBudget({ capital, positions = [], prices = {}, stops = {}, journal = [], today = todayISO(), limits = LIMITS }) {
-  const cap = capital > 0 ? capital : 1;
+  if (!(capital > 0)) return { gate: 'BLOCKED', breaches: [{ rule: 'capital', text: 'Set your trading capital first — every limit is a percentage of it.' }], warnings: [], rows: [], limits, openCount: positions.length, slots: 0, openRisk: 0, openRiskPct: 0, notional: 0, exposurePct: 0, largest: null, realizedToday: 0, realizedTodayPct: 0, roomRiskPct: 0, roomRiskDollars: 0, sizeMult: 0 };
+  const cap = capital;
   const rows = positions.map((pos) => {
     const mult = pos.multiplier || 1;
     const price = prices[pos.ticker] ?? prices[pos.id] ?? pos.buyPrice;

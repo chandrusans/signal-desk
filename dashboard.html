@@ -1485,7 +1485,12 @@ import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget 
         const newStop = prompt(`Update stop for ${pos.ticker} (current: $${(pos.stop || 'auto').toString()}):`, pos.stop || '');
         if (newStop == null) return;
         const s = parseFloat(newStop);
-        if (!isNaN(s) && s > 0) { pos.stop = s; save(); render(); }
+        if (!isNaN(s) && s > 0) {
+          // The first time a stop is moved, freeze what it was as the INITIAL stop so
+          // R-multiples, the 2.5R target and the time stop keep their meaning.
+          if (!(pos.initialStop > 0)) pos.initialStop = pos.planStop > 0 ? pos.planStop : (pos.stop > 0 && pos.stop < pos.buyPrice ? pos.stop : defaultStop({ ...pos, stop: undefined }, null));
+          pos.stop = s; save(); render();
+        }
         else if (newStop === '') { delete pos.stop; save(); render(); }
       });
     });

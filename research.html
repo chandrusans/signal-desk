@@ -1187,6 +1187,7 @@ import { regime } from '/analyze.js';
     const sections = [];
     const err = res?.error || res?.forensic?.error;
     if (err) sections.push(`<div class="sec"><h4>Filings</h4><p class="na">${esc(err)}. The sections below use whatever the other sources returned.</p></div>`);
+    if (f?.predecessor) sections.push(`<div class="sec"><h4>Filings</h4><p class="na">${esc(f.predecessor.note)}</p></div>`);
 
     // ── 1 · The business ──
     const netM = last.revenue > 0 && last.netIncome != null ? (last.netIncome / last.revenue) * 100 : null;
@@ -1213,7 +1214,7 @@ import { regime } from '/analyze.js';
       </div>
       <h4>Key risks (from the numbers)</h4>${risks.length ? `<ul>${risks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="na">No filings-based risks could be computed.</p>'}
       <h4>Competitive advantage</h4>
-      ${f?.moat ? `<span class="verdict ${vcls(f.moat.verdict)}">moat ${esc(f.moat.verdict)}${f.moat.score != null ? ` · ${f.moat.score}/10` : ''}</span><p>${esc(f.moat.note)}</p>${f.moat.factors.length ? `<ul>${f.moat.factors.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}` : '<p class="na">—</p>'}
+      ${f?.moat ? `<span class="verdict ${vcls(f.moat.verdict)}">moat ${esc(f.moat.verdict)}${f.moat.score != null ? ` · ${f.moat.score}/10` : ''}</span><p>${esc(f.moat.note)}</p>${f.moat.factors.length ? `<ul>${f.moat.factors.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}${f.moat.roicNote ? `<p class="na">${esc(f.moat.roicNote)}</p>` : ''}` : '<p class="na">—</p>'}
       <h4>Market sentiment</h4>
       <div class="kv">
         <div class="c"><div class="l">Analysts</div><div class="v">${an ? esc(an.consensus || an.meanRating || '—') : '—'}</div><div class="s">${an ? `${an.buy ?? 0} buy · ${an.hold ?? 0} hold · ${an.sell ?? 0} sell · ${an.analysts ?? '?'} analysts` : 'no consensus data'}</div></div>
@@ -1263,15 +1264,18 @@ import { regime } from '/analyze.js';
       ${V ? `<span class="verdict ${vcls(V.verdict)}">${esc(V.verdict)}</span>${peerPE.length && curPE ? `<span class="verdict ${pctl(peerPE, curPE) >= 75 ? 'v-bad' : pctl(peerPE, curPE) <= 25 ? 'v-good' : 'v-warn'}">${pctl(peerPE, curPE)}th pctile of sector P/E</span>` : ''}
       <p class="plain">${esc(V.note)}</p>
       <div class="kv">
-        <div class="c"><div class="l">P/E</div><div class="v">${mult(curPE)}</div><div class="s">own 5-yr median ${mult(V.median5y.pe)}${peerPE.length ? ` · sector median ${mult(med(peerPE))} (n=${peerPE.length})` : ''}</div></div>
+        <div class="c"><div class="l">P/E (GAAP)</div><div class="v">${mult(curPE)}</div><div class="s">own 5-yr median ${mult(V.median5y.pe)}${peerPE.length ? ` · sector median ${mult(med(peerPE))} (n=${peerPE.length})` : ''}</div></div>
         <div class="c"><div class="l">Forward P/E</div><div class="v">${mult(V.forwardPE ?? S?.forwardPE)}</div><div class="s">${peerFwd.length ? `sector median ${mult(med(peerFwd))}` : ''}</div></div>
         <div class="c"><div class="l">EV / EBITDA</div><div class="v">${mult(V.current.evEbitda)}</div><div class="s">own median ${mult(V.median5y.evEbitda)}</div></div>
         <div class="c"><div class="l">P / FCF</div><div class="v">${mult(V.current.pfcf)}</div><div class="s">own median ${mult(V.median5y.pfcf)} · FCF yield ${pct(V.current.fcfYieldPct, 2, false)}</div></div>
         <div class="c"><div class="l">Growth priced in</div><div class="v">${pct(V.impliedFcfGrowth, 1, false)}/yr</div><div class="s">FCF for 10 yrs · actual rev ${pct(V.revenueCagr, 1, false)} · EPS ${pct(V.epsCagr, 1, false)}</div></div>
       </div>
-      <div class="tbl-wrap"><table class="r"><thead><tr><th>FY</th><th>Price</th><th>EPS</th><th>P/E</th><th>EV/EBITDA</th><th>P/FCF</th></tr></thead><tbody>${V.years.map((y) => `<tr><td>${y.fy}</td><td>${money(y.price)}</td><td>${y.eps != null ? money(y.eps) : '—'}</td><td>${mult(y.pe)}</td><td>${mult(y.evEbitda)}</td><td>${mult(y.pfcf)}</td></tr>`).join('')}<tr><td><strong>now</strong></td><td>${money(price)}</td><td>${V.ttmEps != null ? money(V.ttmEps) : '—'}</td><td><strong>${mult(curPE)}</strong></td><td><strong>${mult(V.current.evEbitda)}</strong></td><td><strong>${mult(V.current.pfcf)}</strong></td></tr></tbody></table></div>
+      <div class="tbl-wrap"><table class="r"><thead><tr><th>FY</th><th>Price at FYE</th><th>GAAP EPS</th><th>P/E</th><th>EV/EBITDA</th><th>P/FCF</th></tr></thead><tbody>${V.years.map((y) => `<tr><td>${y.fy}</td><td>${money(y.price)}</td><td>${y.eps != null ? money(y.eps) : '—'}</td><td>${mult(y.pe)}</td><td>${mult(y.evEbitda)}</td><td>${mult(y.pfcf)}</td></tr>`).join('')}<tr><td><strong>now</strong></td><td>${money(price)}</td><td>${V.ttmEps != null ? money(V.ttmEps) : '—'}</td><td><strong>${mult(curPE)}</strong></td><td><strong>${mult(V.current.evEbitda)}</strong></td><td><strong>${mult(V.current.pfcf)}</strong></td></tr></tbody></table></div>
       ${V.fairValue ? `<h4>Fair value range (own-history multiples)</h4><p class="plain"><strong>${money(V.fairValue.low)} – ${money(V.fairValue.high)}</strong> vs price ${money(price)} — ${price < V.fairValue.low ? 'below the range' : price > V.fairValue.high ? 'above the range' : 'inside the range'}.</p><ul>${V.fairValue.anchors.map((a) => `<li>${esc(a.basis)} = ${money(a.value)}</li>`).join('')}</ul><p class="na">${esc(V.fairValue.assumption)} ${esc(V.dcfAssumptions)}</p>` : ''}
-      ${f.splitsAdjusted?.length ? `<p class="na">Older years split-adjusted: ${esc(f.splitsAdjusted.join(', '))}.</p>` : ''}` : '<p class="na">No valuation history without filings.</p>'}</div>`);
+      ${f.splitsAdjusted?.length ? `<p class="na">Older years split-adjusted: ${esc(f.splitsAdjusted.join(', '))}.</p>` : ''}
+      ${V.fcfCaveat ? `<p class="na">${esc(V.fcfCaveat)}</p>` : ''}
+      ${f.isFinancial ? '<p class="na">Financials: only P/E is compared — operating cash flow and EBITDA are not meaningful for a balance-sheet business.</p>' : ''}
+      <p class="na">Conventions: ${esc(f.conventions)}</p>` : '<p class="na">No valuation history without filings.</p>'}</div>`);
 
     // ── 7 · Macro & sector ──
     const spy = qt.SPY?.bars, tnx = qt['^TNX']?.bars, vix = qt['^VIX']?.price ?? (qt['^VIX']?.bars?.slice(-1)[0]?.c), dxy = qt['DX-Y.NYB']?.bars;

@@ -46,5 +46,23 @@ check('Price below stop → that position carries 0 risk (it should already be s
 check('Yesterday\'s loss does not count toward today', riskBudget({ capital: 10000, positions: [], journal: [{ exitDate: '2026-01-01', pl: -900 }] }).gate === 'OPEN');
 check('LIMITS exported and sane', LIMITS.riskPerTradePct === 1 && LIMITS.dailyLossPct === 3 && LIMITS.maxOpenRiskPct === 5 && LIMITS.maxPositions === 6);
 
+// ── The initial stop defines R even after the stop is trailed (the critical review finding) ──
+{
+  const { positionVerdict } = await import('../exits.js');
+  const pos = { id: 't', ticker: 'NVDA', qty: 10, buyPrice: 100, buyDate: '2026-10-01', planStop: 95, stop: 100 };   // trailed to breakeven
+  const v = positionVerdict(pos, { price: 104 });
+  check('Trailed-to-breakeven stop: R still 5 (from the initial stop), target still 112.5', near(v.R, 5, 0.01) && near(v.target, 112.5, 0.01) && v.action !== 'TRIM', `R=${v.R} target=${v.target} ${v.action}`);
+  const tj = closeTrade(pos, { exitPrice: 104, exitDate: today });
+  check('Journal R after trailing = +0.8R, not +∞', near(tj.r, 0.8, 0.01), `r=${tj.r}`);
+  const v2 = positionVerdict({ ...pos, stop: 99 }, { price: 98 });
+  check('Active (trailed) stop still triggers the SELL', v2.action === 'SELL' && v2.rule === 'stop');
+  const stress = { level: 'stress', vix: 28 };
+  check('STRESS regime: losing position → SELL', positionVerdict({ ...pos, stop: 95 }, { price: 97, regime: stress }).rule === 'regime');
+  check('STRESS regime: winning position → WATCH, move stop to breakeven', positionVerdict({ ...pos, stop: 95 }, { price: 103, regime: stress }).rule === 'regime_stress');
+  check('CRISIS regime → SELL regardless', positionVerdict({ ...pos, stop: 95 }, { price: 103, regime: { level: 'crisis', vix: 40 } }).rule === 'regime');
+  check('Metals exempt from the regime rule', positionVerdict({ ...pos, ticker: 'GC=F', assetClass: 'metal', stop: 98 }, { price: 103, regime: { level: 'crisis', vix: 40 } }).rule !== 'regime');
+  check('No capital set → BLOCKED with a reason, not an explosion', riskBudget({ capital: 0, positions: [], journal: [] }).breaches[0]?.rule === 'capital');
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

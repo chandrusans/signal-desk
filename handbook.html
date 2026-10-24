@@ -481,7 +481,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.15</div>
+      <div class="kicker">Signal Desk · Handbook · v3.16</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -742,7 +742,7 @@
       </ol>
       <div class="callout">
         <span class="callout-label">Position sizing</span>
-        <p>The framework uses risk-parity: <strong>risk 0.75% of capital per trade</strong>. Shares = <code>(capital × 0.0075) / stop distance</code>. Wider ATR → smaller position. Every trade risks the same dollar amount regardless of how volatile the stock is.</p>
+        <p>The framework uses risk-parity: <strong>risk 1% of capital per trade</strong> — the same number the risk engine (Chapter 22) enforces, read from one place. Shares = <code>(capital × 0.01) / stop distance</code>. Wider ATR → smaller position. Every trade risks the same dollar amount regardless of how volatile the stock is.</p>
       </div>
     </section>
 
@@ -879,7 +879,7 @@
       <h3>The verdict system</h3>
       <p>Every position gets one of four verdicts, refreshed on each poll (15s). Verdicts are colour-coded on the card's left rail and sorted so the ones needing attention float to the top:</p>
       <ul>
-        <li><span class="setup-chip" style="color: var(--risk); border-color: var(--risk);">SELL</span> Exit the whole position. Reasons that trigger it: hard stop hit, setup broken with a loss, regime turned stress/crisis, time stop with no follow-through after 15 days.</li>
+        <li><span class="setup-chip" style="color: var(--risk); border-color: var(--risk);">SELL</span> Exit the whole position. Reasons that trigger it: hard stop hit, setup broken with a loss, regime turned CRISIS (VIX ≥ 35) — or STRESS (25–35) while the position is losing, time stop with no follow-through after 15 days. In STRESS a winner gets WATCH: move the stop to breakeven and let it decide. Metals are exempt from the regime rule; gold is the hedge that stress is supposed to pay for.</li>
         <li><span class="setup-chip" style="color: var(--caution); border-color: var(--caution);">TRIM</span> Take partial profit. Reasons: RSI overbought (&gt;78) on a &gt;2R winner, setup went EXTENDED on a winner, MA20 slope negative on a winner.</li>
         <li><span class="setup-chip" style="color: var(--signal); border-color: var(--signal);">HOLD</span> Do nothing yet. Fresh positions, or profitable positions with trend intact. The reason line will tell you where to trail your stop.</li>
         <li><span class="setup-chip" style="color: var(--accent); border-color: var(--accent);">WATCH</span> Decision imminent. Price is within a fraction of R of your stop or target — be at your screen.</li>
@@ -1273,7 +1273,7 @@
       <table class="cadence">
         <thead><tr><th>Verdict</th><th>Stocks · metals · crypto</th><th>Options</th></tr></thead>
         <tbody>
-          <tr><td><strong>SELL</strong></td><td>Stop hit · regime turns STRESS/CRISIS · setup BROKEN while losing · time-stop (15 days flat)</td><td>Premium at or below the stop (half your money) · under 7 days to expiry · expired</td></tr>
+          <tr><td><strong>SELL</strong></td><td>Stop hit · regime CRISIS, or STRESS while losing · setup BROKEN while losing · time-stop (15 days flat)</td><td>Premium at or below the stop (half your money) · under 7 days to expiry · expired</td></tr>
           <tr><td><strong>TRIM</strong></td><td>Target (+2.5R) reached — sell half, trail the rest · overbought or EXTENDED on a +2R winner · 20-day average rolling over on a winner · earnings inside 5 days on a winner</td><td>+50% on the premium — sell half · +100% — sell the rest</td></tr>
           <tr><td><strong>WATCH</strong></td><td>Within 0.3R of the stop · near the target · earnings inside 5 days · bought into a BROKEN setup (fresh, not yet losing)</td><td>Under 10 days to expiry · near the stop</td></tr>
           <tr><td><strong>HOLD</strong></td><td>At +1R: move the stop to breakeven. At +2R: move it to +1R. Otherwise let it work.</td><td>Hold; sell half at +50%</td></tr>
@@ -1327,7 +1327,7 @@
       <p>The stamp reads <strong>OPEN</strong> (full 1% per new trade), <strong>REDUCED</strong> (the heat or daily limit leaves less than 1% — every pick on Today is scaled to exactly what is left) or <strong>BLOCKED</strong>. The reason is always printed next to the stamp. Track still works when blocked, after a confirmation that says you are acting against the rules — the desk does not stop you, it makes you say so.</p>
       <p>The limits live in one place, <code>risk.js</code>, and are shared by both tabs. They are the values most systematic desks run; the handbook states them so you can disagree with them knowingly.</p>
       <h3>The journal — your own expectancy, not the backtest's</h3>
-      <p>Press <strong>Close</strong> on a Dashboard position and enter the price you sold at. The trade lands in the journal with its <strong>R-multiple</strong>: profit divided by the risk you took at entry (entry minus the initial stop). +2R means you made twice what you were prepared to lose; −1R is a clean stop-out. The journal then shows what the Simulate tab shows for the backtest, measured on <em>you</em>:</p>
+      <p>Press <strong>Close</strong> on a Dashboard position and enter the price you sold at. The trade lands in the journal with its <strong>R-multiple</strong>: profit divided by the risk you took at entry (entry minus the <em>initial</em> stop). The initial stop is frozen the first time you move a stop, so trailing to breakeven — which the rulebook tells you to do — never changes what 1R means, the 2.5R target, or the time stop. The active stop still decides when you are out. +2R means you made twice what you were prepared to lose; −1R is a clean stop-out. The journal then shows what the Simulate tab shows for the backtest, measured on <em>you</em>:</p>
       <ul>
         <li><strong>Win rate</strong>, average win and average loss in R, and <strong>expectancy</strong> — average R per trade. Positive and you are being paid to follow the rules; negative and either the rules or the following is broken.</li>
         <li><strong>Profit factor</strong> (gross wins ÷ gross losses) and realized P&amp;L in dollars.</li>
@@ -1336,7 +1336,7 @@
       </ul>
       <p>Trades you made outside the app can be added by hand (<strong>+ Add a past trade</strong>). Export CSV or JSON any time — the journal is stored only in this browser, and is not sent to the phone-alert server.</p>
       <div class="callout">
-        <span class="callout-label">Why "closed today" uses realized losses only</span>
+        <span class="callout-label">Why "closed today" uses realized losses only, on New York time</span>
         <p>Open losses are already counted in the heat limit. Counting them twice would close the desk every time a position wobbled. The daily limit is for losses you have taken; the heat limit is for losses you could take.</p>
       </div>
     </section>
@@ -1366,6 +1366,15 @@
         <li><strong>Executive pay</strong> as % of net income (SEC pay-versus-performance tag) — the US stand-in for "promoter salary"; promoter pledging has no US equivalent, and related-party loans are 10-K prose.</li>
         <li><strong>Multibagger criteria</strong>, honestly adapted: revenue compounding ≥10%, ROIC ≥15% and holding, core reinvestment vs acquisitions. "Fewer than 5 analysts" fails for every S&P 500 name by construction, and insider ownership is not in free structured data — both are marked as such instead of scored.</li>
       </ul>
+      <h3>Conventions, so an analyst can check the arithmetic</h3>
+      <ul>
+        <li>ROCE = EBIT ÷ average (total assets − current liabilities). ROIC = EBIT × (1 − effective tax rate) ÷ average (equity + debt − cash and marketable securities), undefined when book equity has been run down by buybacks below 10% of assets. Accruals = (net income − operating cash flow) ÷ average assets.</li>
+        <li>Cash-flow quality uses ΣCFO ÷ Σnet income over the window (not a mean of yearly ratios), needs three profitable years, and only treats profit <em>above</em> cash as a concern — cash above profit is depreciation and stock compensation, not a flag.</li>
+        <li>FCF = CFO − capex (property, plant and equipment, plus capitalised software and intangibles where tagged). EV = market cap + debt − all marketable securities, current and noncurrent; leases excluded. Filers without an operating-income line get EBIT = pre-tax income + interest.</li>
+        <li>Multiples are priced at the fiscal-year-end month close against that year's GAAP figures; years above 100× are excluded from medians, and a median needs three years. Fair-value anchors use TTM GAAP EPS, and 3-year average FCF and EBITDA to smooth one-offs. For financials only P/E is used.</li>
+        <li>Payables, receivables, inventory, debt and equity never mix tag definitions across years; where the only tag is "payables and accrued liabilities", creditor days are overstated and the page says so. Splits are taken from the company's filed split ratio, with a size-jump heuristic as fallback.</li>
+        <li>Credibility: a beat is a beat, but an average surprise above 15% is guidance management and caps the score at 7.</li>
+      </ul>
       <h3>Three things to know</h3>
       <ul>
         <li><strong>Banks and insurers</strong> get N/A on cash flow, working capital, moat and allocation — those measures are meaningless for a balance-sheet business — and a question about credit quality instead.</li>
@@ -1378,6 +1387,21 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 24</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.16<br/>2026-10-24</div>
+        <div class="what">
+          <h4>Analyst review of every calculation — defects fixed</h4>
+          <ul>
+            <li><strong>Exit rulebook and journal: R was measured from the current stop.</strong> Once a stop was trailed to breakeven, as the rules instruct, R became infinite, the 2.5R target fired on any uptick, the time stop could never fire and the journal's expectancy was destroyed. R now comes from the frozen initial stop; the active stop only decides the exit. Found by an independent code review.</li>
+            <li><strong>Regime rule softened and scoped.</strong> STRESS (VIX 25–35) used to sell every position; it now sells only losers and puts winners on breakeven watch. CRISIS still cuts the book. Metals exempt.</li>
+            <li><strong>One risk number.</strong> The Stocks tab's plan sized at 0.75% per trade with a 6% heat ceiling while the risk engine enforced 1% and 5%; both now read the risk engine's limits.</li>
+            <li><strong>Daily loss limit on New York time</strong>, not UTC, so it cannot reset at 8 pm Eastern. Profit factor now by P&amp;L sign over all trades.</li>
+            <li><strong>Forensic module</strong>: cash-flow quality uses ΣCFO ÷ ΣNI and no longer flags cash-rich filers (Broadcom, AT&amp;T) or verdicts on a single profitable year (Boeing); definition-sensitive tags (payables, debt, equity) are never mixed across years and the current portion of debt is no longer double-counted; EV nets noncurrent marketable securities; ROCE/ROIC on average capital with a floor for buyback-depleted equity; multiples priced at the fiscal-year-end month, years above 100× excluded, medians need three years, anchors on 3-year average FCF/EBITDA; financials compared on P/E only; splits read from the filed split ratio (Broadcom's 2020 was missed by the heuristic); EBIT derived for filers without an operating-income line (Exxon); tickers that map to a new holding company fall back to the predecessor's history; an absolute FCF-yield check so a 345× P/E is never called "fair"; sandbagging cap on credibility. Every convention is now printed on the page and in Chapter 23.</li>
+            <li>Tests: <code>validate:risk</code> 28 checks, <code>validate:research</code> 36 checks.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.15<br/>2026-10-23</div>

@@ -27,10 +27,8 @@ export function classOf(pos) {
   return pos.isOption ? 'option' : 'stock';
 }
 
-/** Default stop when the position carries none: the plan stop if stored, else class defaults. */
-export function defaultStop(pos, analysis) {
-  if (pos.stop > 0) return pos.stop;
-  if (pos.planStop > 0) return pos.planStop;
+/** Class-default stop distance, used when nothing was stored at entry. */
+function classDefaultStop(pos, analysis) {
   const cls = classOf(pos);
   if (cls === 'option') return pos.buyPrice * 0.5;                       // -50% of premium
   if (analysis?.plan?.stop > 0 && analysis.plan.entry > 0) {
@@ -40,21 +38,39 @@ export function defaultStop(pos, analysis) {
   return pos.buyPrice * (cls === 'crypto' ? 0.93 : cls === 'metal' ? 0.98 : 0.95);
 }
 
+/** The ACTIVE stop — where a sell is triggered now. The user may have trailed it. */
+export function defaultStop(pos, analysis) {
+  if (pos.stop > 0) return pos.stop;
+  if (pos.planStop > 0) return pos.planStop;
+  return classDefaultStop(pos, analysis);
+}
+
+/** The INITIAL stop — what defined 1R at entry. Never moves, so R-multiples, the 2.5R
+ *  target and the time stop stay meaningful after the stop is trailed to breakeven. */
+export function initialStop(pos, analysis) {
+  if (pos.initialStop > 0) return pos.initialStop;
+  if (pos.planStop > 0) return pos.planStop;
+  const s = pos.stop > 0 ? pos.stop : classDefaultStop(pos, analysis);
+  // A stored stop at or above entry was trailed, not initial: fall back to the class default.
+  return s < pos.buyPrice * 0.995 ? s : classDefaultStop(pos, analysis);
+}
+
 export function positionVerdict(pos, ctx = {}) {
   const cls = classOf(pos);
   const buy = pos.buyPrice;
   const price = ctx.price ?? buy;
-  const stop = defaultStop(pos, ctx.analysis);
-  const R = Math.max(1e-9, buy - stop);
+  const stop = defaultStop(pos, ctx.analysis);                 // active stop: triggers the sell
+  const stop0 = initialStop(pos, ctx.analysis);                // initial stop: defines 1R
+  const R = Math.max(buy * 0.005, buy - stop0);                // never less than 0.5% of entry
   const gain = price - buy;
   const gainR = gain / R;
   const gainPct = (gain / buy) * 100;
   const daysHeld = Math.max(0, Math.floor((Date.now() - Date.parse(pos.buyDate)) / DAY));
   const timeStop = pos.timeStopDays || 15;
-  const target = pos.target > 0 ? pos.target : buy + 2.5 * R;
+  const target = pos.target > 0 ? pos.target : pos.planTarget > 0 ? pos.planTarget : buy + 2.5 * R;
   const a = ctx.analysis && !ctx.analysis.insufficient ? ctx.analysis : null;
   const rg = ctx.regime || null;
-  const base = { cls, buy, price, stop, R, gain, gainR, gainPct, daysHeld, target };
+  const base = { cls, buy, price, stop, stop0, R, gain, gainR, gainPct, daysHeld, target };
   const V = (action, severity, reason, rule) => ({ action, severity, reason, rule, ...base });
 
   // ── Options: the contract has its own clock ─────────────────────────────
@@ -78,7 +94,12 @@ export function positionVerdict(pos, ctx = {}) {
 
   // ── Stocks, metals, crypto: the swing rulebook ──────────────────────────
   if (price <= stop) return V('SELL', 'high', `Hard stop hit ($${fmt(stop)}). Exit the full position — no averaging down.`, 'stop');
-  if (rg && (rg.level === 'stress' || rg.level === 'crisis')) return V('SELL', 'high', `Regime is ${rg.level.toUpperCase()}${rg.vix != null ? ` (VIX ${rg.vix.toFixed(1)})` : ''}. The rulebook cuts the momentum book here regardless of the chart.`, 'regime');
+  // Regime: CRISIS (VIX ≥ 35) cuts the book. STRESS (25–35) happens several times a
+  // year and often marks short-term lows, so it only cuts LOSING positions and tightens
+  // the rest. Metals are exempt — gold is the hedge that stress is supposed to pay for.
+  if (rg && cls !== 'metal' && rg.level === 'crisis') return V('SELL', 'high', `Regime is CRISIS${rg.vix != null ? ` (VIX ${rg.vix.toFixed(1)})` : ''}. The rulebook cuts the momentum book here regardless of the chart.`, 'regime');
+  if (rg && cls !== 'metal' && rg.level === 'stress' && gainR < 0) return V('SELL', 'high', `Regime is STRESS${rg.vix != null ? ` (VIX ${rg.vix.toFixed(1)})` : ''} and this position is already losing (${gainR.toFixed(1)}R). Momentum losers in a stress tape get worse; cut it.`, 'regime');
+  if (rg && cls !== 'metal' && rg.level === 'stress' && stop < buy) return V('WATCH', 'high', `Regime is STRESS${rg.vix != null ? ` (VIX ${rg.vix.toFixed(1)})` : ''}. Winners survive stress; losers do not — move the stop to breakeven ($${fmt(buy)}) now and let the stop decide.`, 'regime_stress');
   if (cls === 'stock' && ctx.earnings?.daysAway != null && ctx.earnings.daysAway >= 0 && ctx.earnings.daysAway <= 5) {
     return V(gainR >= 1 ? 'TRIM' : 'WATCH', 'high', `Earnings in ${ctx.earnings.daysAway} day${ctx.earnings.daysAway === 1 ? '' : 's'} (${ctx.earnings.date}). A gap fills through your stop, not at it — ${gainR >= 1 ? 'take at least half off before the print' : 'decide now whether you are holding through it, and size for a 10% gap if so'}.`, 'earnings_soon');
   }

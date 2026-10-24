@@ -28,6 +28,7 @@ const TAGS = {
   netIncome:   ['NetIncomeLoss', 'ProfitLoss', 'NetIncomeLossAvailableToCommonStockholdersBasic'],
   cfo:         ['NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations'],
   capex:       ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets', 'PaymentsForCapitalImprovements'],
+  capexIntang: ['PaymentsToAcquireIntangibleAssets', 'PaymentsToDevelopSoftware'],
   cogs:        ['CostOfRevenue', 'CostOfGoodsAndServicesSold', 'CostOfGoodsSold', 'CostOfServices'],
   grossProfit: ['GrossProfit'],
   opIncome:    ['OperatingIncomeLoss'],
@@ -50,12 +51,13 @@ const TAGS = {
   debtST:      ['DebtCurrent', 'LongTermDebtCurrent', 'ShortTermBorrowings', 'CommercialPaper'],
   cash:        ['CashAndCashEquivalentsAtCarryingValue', 'CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents', 'Cash'],
   stInvest:    ['ShortTermInvestments', 'MarketableSecuritiesCurrent', 'AvailableForSaleSecuritiesDebtSecuritiesCurrent'],
+  ltInvest:    ['MarketableSecuritiesNoncurrent', 'AvailableForSaleSecuritiesDebtSecuritiesNoncurrent', 'LongTermInvestments'],
   assets:      ['Assets'],
   curLiab:     ['LiabilitiesCurrent'],
   equity:      ['StockholdersEquity', 'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest'],
   goodwill:    ['Goodwill'],
 };
-const INSTANT = new Set(['ar', 'inventory', 'ap', 'debtLT', 'debtST', 'cash', 'stInvest', 'assets', 'curLiab', 'equity', 'goodwill']);
+const INSTANT = new Set(['ar', 'inventory', 'ap', 'debtLT', 'debtST', 'cash', 'stInvest', 'ltInvest', 'assets', 'curLiab', 'equity', 'goodwill']);
 const ANNUAL_FORMS = new Set(['10-K', '10-K/A', '10-KT', '20-F', '40-F']);
 
 let cikCache = null, cikAt = 0;
@@ -75,7 +77,21 @@ async function cikFor(ticker) {
  *  switch tags between years — Nvidia moved from RevenueFromContract… to Revenues in
  *  2022), and for each year the latest-filed value wins, so restatements and
  *  split-adjusted comparatives replace the originals. */
-function series(facts, tags, instant, forms = ANNUAL_FORMS) {
+function series(facts, tags, instant, forms = ANNUAL_FORMS, merge = true) {
+  if (!merge) {
+    // Definition-sensitive concepts (payables vs payables+accruals, noncurrent debt vs
+    // total debt, equity with vs without minority interest). Companies switch tags over
+    // the years (Coca-Cola moved to LongTermDebtAndCapitalLeaseObligations in 2024), so
+    // a single tag cannot cover the window — but the PREFERRED tag must win for every
+    // year it has, and each value remembers which tag it came from so the caller can
+    // avoid double counting and can caveat the years that used a looser definition.
+    const byEnd = new Map();
+    for (const tag of tags) {
+      const one = series(facts, [tag], instant, forms, true); if (!one) continue;
+      for (const [end, r] of one.map) if (!byEnd.has(end)) byEnd.set(end, { ...r, tag });
+    }
+    return byEnd.size >= 2 ? { tag: [...new Set([...byEnd.values()].map((r) => r.tag))].join('+'), map: byEnd } : null;
+  }
   const byEnd = new Map();
   const used = new Set();
   for (const tag of tags) {
@@ -114,14 +130,15 @@ function adjustSplits(Y) {
   return Y;
 }
 
-function nearest(map, end, tolDays = 12) {
+function nearestRow(map, end, tolDays = 12) {
   if (!map) return null;
-  if (map.has(end)) return map.get(end).val;
+  if (map.has(end)) return map.get(end);
   const t = Date.parse(end);
   let best = null, bd = Infinity;
-  for (const [k, v] of map) { const d = Math.abs(Date.parse(k) - t) / DAY; if (d <= tolDays && d < bd) { bd = d; best = v.val; } }
+  for (const [k, v] of map) { const d = Math.abs(Date.parse(k) - t) / DAY; if (d <= tolDays && d < bd) { bd = d; best = v; } }
   return best;
 }
+function nearest(map, end, tolDays = 12) { const r = nearestRow(map, end, tolDays); return r ? r.val : null; }
 
 const r1 = (x) => (x == null || !isFinite(x) ? null : +x.toFixed(1));
 const r2 = (x) => (x == null || !isFinite(x) ? null : +x.toFixed(2));
@@ -146,11 +163,12 @@ async function fetchMonthly(ticker) {
     return { bars, price: res?.meta?.regularMarketPrice ?? (bars.length ? bars[bars.length - 1].c : null), name: res?.meta?.longName || res?.meta?.shortName || null };
   } catch { return null; }
 }
+/** Close of the fiscal-year-end month (Yahoo monthly bars are stamped at the 1st and carry the month-end close). */
 function priceAt(monthly, end) {
   if (!monthly?.bars?.length) return null;
   const t = Date.parse(end);
   let best = null;
-  for (const b of monthly.bars) { if (b.t <= t + 20 * DAY) best = b.c; else break; }
+  for (const b of monthly.bars) { if (b.t <= t) best = b.c; else break; }
   return best;
 }
 
@@ -195,39 +213,109 @@ export async function forensic(ticker, { sector = null } = {}) {
   const gaap = factsDoc.facts?.['us-gaap'] || {};
   const ecd = factsDoc.facts?.['ecd'] || {};
   const S = {};
-  for (const [k, tags] of Object.entries(TAGS)) S[k] = series(gaap, tags, INSTANT.has(k));
+  // Receivables / inventory / payables fallbacks are NOT the same concept (e.g.
+  // "payables and accrued liabilities" ≈ 3× trade payables), so they are never
+  // merged across years — a mixed series would manufacture a trend.
+  const NO_MERGE = new Set(['ar', 'inventory', 'ap', 'debtLT', 'debtST', 'equity']);
+  for (const [k, tags] of Object.entries(TAGS)) S[k] = series(gaap, tags, INSTANT.has(k), ANNUAL_FORMS, !NO_MERGE.has(k));
+  const apIncludesAccruals = /Accrued/.test(S.ap?.tag || '');
+  // Stock splits as the company filed them (ratio and date), applied to older years.
+  // The same split is filed several times (10-Q, 10-K, different context dates): one event
+  // = one ratio within 240 days. Nvidia's 4:1 (2021) and 10:1 (2024) must not become ×1600.
+  const splitFacts = (() => {
+    const u = gaap.StockholdersEquityNoteStockSplitConversionRatio1?.units; if (!u) return [];
+    const rows = (u[Object.keys(u)[0]] || []).filter((r) => r.val > 0 && r.val !== 1).sort((a, b) => a.end.localeCompare(b.end));
+    const out = [];
+    for (const r of rows) { const prev = out[out.length - 1]; if (prev && prev.ratio === r.val && (Date.parse(r.end) - Date.parse(prev.end)) / DAY < 240) continue; out.push({ end: r.end, ratio: r.val }); }
+    return out;
+  })();
   S.ceoPay = series(ecd, ['PeoTotalCompAmt'], false, null);      // filed on DEF 14A proxies, not 10-Ks
 
-  const anchor = S.netIncome || S.cfo || S.revenue;
-  if (!anchor) return { ticker, cik, error: 'no annual income or cash-flow facts in SEC XBRL for this filer' };
+  let anchor = S.netIncome || S.cfo || S.revenue;
+  let predecessor = null;
+  if (!anchor) {
+    // The ticker map can point at a freshly formed holding company with only 10-Qs.
+    // EDGAR's company search usually lists the operating predecessor under the same
+    // name; use the first candidate that has annual facts and say so in the output.
+    const word = String(factsDoc.entityName || ticker).split(/\s+/)[0].slice(0, 5);
+    try {
+      const r = await fetch(`https://efts.sec.gov/LATEST/search-index?keysTyped=${encodeURIComponent(word)}`, { headers: { 'User-Agent': UA } });
+      const hits = ((await r.json())?.hits?.hits || []).filter((h) => String(h._id) !== String(+cik) && new RegExp('^' + word, 'i').test(h._source?.entity || '')).slice(0, 3);
+      for (const h of hits) {
+        const alt = await fetchFacts(String(h._id).padStart(10, '0'));
+        const g2 = alt.facts?.['us-gaap'] || {};
+        const test = series(g2, TAGS.netIncome, false) || series(g2, TAGS.cfo, false);
+        if (test) {
+          for (const [k2, tags] of Object.entries(TAGS)) S[k2] = series(g2, tags, INSTANT.has(k2), ANNUAL_FORMS, !NO_MERGE.has(k2));
+          S.ceoPay = series(alt.facts?.['ecd'] || {}, ['PeoTotalCompAmt'], false, null);
+          anchor = S.netIncome || S.cfo || S.revenue;
+          predecessor = { name: alt.entityName, cik: String(h._id).padStart(10, '0'), note: `SEC maps ${ticker} to ${factsDoc.entityName}, which has no annual filings yet; the history shown is the predecessor ${alt.entityName} (CIK ${+h._id}).` };
+          break;
+        }
+      }
+    } catch {}
+  }
+  if (!anchor) return { ticker, cik, error: `no annual income or cash-flow facts in SEC XBRL for ${factsDoc.entityName || 'this filer'}` };
   const ends = [...anchor.map.keys()].sort().slice(-6);
   const raw = ends.map((end) => {
     const g = (k) => nearest(S[k]?.map, end, 12);
     const y = { fy: end.slice(0, 4), end };
     for (const k of Object.keys(TAGS)) y[k] = g(k);
+    // Which long-term-debt tag this year used: 'LongTermDebt' already includes the
+    // current portion, so the short-term line must not be added again for that year.
+    y.debtLTTag = nearestRow(S.debtLT?.map, end, 12)?.tag || null;
+    y.debtTagIsTotal = y.debtLTTag === 'LongTermDebt';
     y.ceoPay = nearest(S.ceoPay?.map, end, 400);     // pay-vs-performance table covers the year; dates vary
     return y;
   });
-  adjustSplits(raw);
-  const years = raw.map((y) => {
+  if (splitFacts.length) {
+    // A later 10-K restates its two comparative years, so a given old year may already
+    // carry some of the later splits. Compare the raw count with the latest year and pick
+    // the cumulative split factor (latest split alone, then the last two, …) that matches
+    // the observed jump within ±35%; a year that is already restated has no jump and is left alone.
+    const lastShares = raw[raw.length - 1].shares;
+    for (const y of raw) {
+      if (!(y.shares > 0 && lastShares > 0)) continue;
+      const after = splitFacts.filter((sp) => sp.end > y.end).reverse();      // latest first
+      const candidates = []; let c = 1; for (const sp of after) { c *= sp.ratio; candidates.push(c); }
+      const jump = lastShares / y.shares;
+      if (jump < 1.8 || !candidates.length) continue;
+      const f = candidates.reduce((best, x) => (Math.abs(Math.log(x / jump)) < Math.abs(Math.log(best / jump)) ? x : best), candidates[0]);
+      if (Math.abs(Math.log(f / jump)) <= Math.log(1.35)) { y.shares *= f; if (y.eps != null) y.eps /= f; y.splitAdjusted = f; }
+    }
+  } else adjustSplits(raw);
+  const years = raw.map((y, i) => {
     const end = y.end;
+    const prev = raw[i - 1] || null;
+    const avg = (k) => (y[k] != null && prev && prev[k] != null ? (y[k] + prev[k]) / 2 : y[k]);   // average balances, as convention
     if (y.grossProfit == null && y.revenue != null && y.cogs != null) y.grossProfit = y.revenue - y.cogs;
     if (y.cogs == null && y.revenue != null && y.grossProfit != null) y.cogs = y.revenue - y.grossProfit;
-    y.fcf = y.cfo != null ? y.cfo - (y.capex || 0) : null;
+    // Filers without an operating-income line (Exxon, many conglomerates): EBIT = pre-tax income + interest expense.
+    if (y.opIncome == null && y.pretax != null) { y.opIncome = y.pretax + (y.interest || 0); y.ebitDerived = true; }
+    y.capexAll = y.capex != null || y.capexIntang != null ? (y.capex || 0) + (y.capexIntang || 0) : null;
+    y.fcf = y.cfo != null ? y.cfo - (y.capexAll || 0) : null;
+    y.capexMissing = y.capexAll == null;
     y.ebitda = y.opIncome != null ? y.opIncome + (y.da || 0) : null;
-    y.debt = (y.debtLT || 0) + (y.debtST || 0) || (y.debtLT == null && y.debtST == null ? null : 0);
-    y.cashAll = (y.cash || 0) + (y.stInvest || 0) || (y.cash == null ? null : 0);
+    y.debt = y.debtLT == null && y.debtST == null ? null : (y.debtLT || 0) + (y.debtTagIsTotal ? 0 : (y.debtST || 0));
+    y.cashAll = y.cash == null && y.stInvest == null ? null : (y.cash || 0) + (y.stInvest || 0) + (y.ltInvest || 0);   // EV nets ALL marketable securities, as Street convention
     y.gm = y.revenue > 0 && y.grossProfit != null ? (y.grossProfit / y.revenue) * 100 : null;
     y.om = y.revenue > 0 && y.opIncome != null ? (y.opIncome / y.revenue) * 100 : null;
-    y.capEmployed = y.assets != null && y.curLiab != null ? y.assets - y.curLiab : null;
+    y.capEmployed = avg('assets') != null && avg('curLiab') != null ? avg('assets') - avg('curLiab') : null;
     y.roce = y.opIncome != null && y.capEmployed > 0 ? (y.opIncome / y.capEmployed) * 100 : null;
     const taxRate = y.pretax > 0 && y.tax != null ? Math.min(0.5, Math.max(0, y.tax / y.pretax)) : 0.21;
-    const invested = y.equity != null ? y.equity + (y.debt || 0) - (y.cashAll || 0) : null;
-    y.roic = y.opIncome != null && invested > 0 ? (y.opIncome * (1 - taxRate) / invested) * 100 : null;
+    const prevDebt = prev ? (prev.debtLT || 0) + (prev.debtTagIsTotal ? 0 : (prev.debtST || 0)) : null, prevCash = prev ? (prev.cash || 0) + (prev.stInvest || 0) + (prev.ltInvest || 0) : null;
+    const investedNow = y.equity != null ? y.equity + (y.debt || 0) - (y.cashAll || 0) : null;
+    const investedPrev = prev && prev.equity != null ? prev.equity + (prevDebt || 0) - (prevCash || 0) : null;
+    const invested = investedNow != null && investedPrev != null ? (investedNow + investedPrev) / 2 : investedNow;
+    // Buyback-heavy firms (HD, MCD, AAPL) run book equity to zero or below; a tiny or negative
+    // denominator says nothing about returns. Floor: invested capital must be ≥ 10% of assets.
+    y.roic = y.opIncome != null && invested > 0 && (y.assets == null || invested >= 0.1 * y.assets) ? (y.opIncome * (1 - taxRate) / invested) * 100 : null;
+    y.roicUndefined = y.opIncome != null && !(invested > 0 && (y.assets == null || invested >= 0.1 * y.assets));
+    y.avgAssets = avg('assets');
     y.dso = y.revenue > 0 && y.ar != null ? (y.ar / y.revenue) * 365 : null;
     y.dio = y.cogs > 0 && y.inventory != null ? (y.inventory / y.cogs) * 365 : null;
     y.dpo = y.cogs > 0 && y.ap != null ? (y.ap / y.cogs) * 365 : null;
-    y.ccc = y.dso != null ? y.dso + (y.dio || 0) - (y.dpo || 0) : null;
+    y.ccc = y.dso != null && y.dpo != null ? y.dso + (y.dio || 0) - y.dpo : null;   // needs both ends of the cycle; inventory optional (services)
     y.price = priceAt(monthly, end);
     y.mcap = y.price != null && y.shares ? y.price * y.shares : null;
     y.pe = y.price != null && y.eps > 0 ? y.price / y.eps : null;
@@ -248,25 +336,33 @@ export async function forensic(ticker, { sector = null } = {}) {
       fy: y.fy, netIncome: y.netIncome, cfo: y.cfo, fcf: y.fcf,
       ratio: y.netIncome > 0 && y.cfo != null ? r2(y.cfo / y.netIncome) : null,
       gap: y.netIncome != null && y.cfo != null ? y.netIncome - y.cfo : null,
-      patUpCfoDown: !!(p && y.netIncome > p.netIncome && y.cfo < p.cfo),
+      patUpCfoDown: !!(p && y.netIncome != null && p.netIncome != null && y.cfo != null && p.cfo != null && y.netIncome > p.netIncome && y.cfo < p.cfo),
       cfoNegPatPos: !!(y.cfo < 0 && y.netIncome > 0),
-      accrualPct: y.netIncome != null && y.cfo != null && y.assets > 0 ? r1(((y.netIncome - y.cfo) / y.assets) * 100) : null,
+      accrualPct: y.netIncome != null && y.cfo != null && y.avgAssets > 0 ? r1(((y.netIncome - y.cfo) / y.avgAssets) * 100) : null,
     });
   }
   const ratios = cash.years.map((c) => c.ratio).filter((x) => x != null);
-  const gaps = cash.years.map((c) => (c.gap != null && Y.find((y) => y.fy === c.fy)?.revenue > 0 ? c.gap / Y.find((y) => y.fy === c.fy).revenue : null)).filter((x) => x != null);
-  cash.avgRatio = r2(ratios.length ? sum(ratios) / ratios.length : null);
-  cash.gapTrend = gaps.length >= 4 ? r2((sum(gaps.slice(-2)) / 2 - sum(gaps.slice(0, 2)) / 2) * 100) : null;   // pct of revenue, + = widening
-  cash.divergentYears = cash.years.filter((c) => c.patUpCfoDown).map((c) => c.fy);
+  // Only profit that EXCEEDS cash is an accrual concern. Cash far above profit (heavy
+  // D&A, stock comp, deferred revenue) is the opposite of manufactured earnings, so the
+  // "gap" is floored at zero and the trend is measured on that shortfall, % of revenue.
+  const shortfall = cash.years.map((c) => { const y = Y.find((x) => x.fy === c.fy); return c.gap != null && y?.revenue > 0 ? Math.max(0, c.gap) / y.revenue : null; }).filter((x) => x != null);
+  const sumNI = sum(Y.map((y) => y.netIncome)), sumCFO = sum(Y.filter((y) => y.netIncome != null).map((y) => y.cfo));
+  cash.avgRatio = sumNI > 0 ? r2(sumCFO / sumNI) : null;                       // ΣCFO ÷ ΣNI, not a mean of ratios
+  const Y2 = Y.slice(-2), ni2 = sum(Y2.map((y) => y.netIncome)), cfo2 = sum(Y2.map((y) => y.cfo));
+  cash.recentRatio = ni2 > 0 ? r2(cfo2 / ni2) : null;
+  cash.gapTrend = shortfall.length >= 4 ? r2((sum(shortfall.slice(-2)) / 2 - sum(shortfall.slice(0, 2)) / 2) * 100) : null;   // + = profit outrunning cash more than it used to
+  // "Profit up, cash down" only counts when the shortfall is material: cash under 90% of profit that year.
+  cash.divergentYears = cash.years.filter((c) => c.patUpCfoDown && c.ratio != null && c.ratio < 0.9).map((c) => c.fy);
   cash.negativeYears = cash.years.filter((c) => c.cfoNegPatPos).map((c) => c.fy);
+  cash.lossYears = cash.years.filter((c) => c.netIncome != null && c.netIncome <= 0).map((c) => c.fy);
   if (isFinancial) { cash.verdict = 'N/A'; cash.note = 'Banks and insurers: operating cash flow swings with deposits, trading books and reserves, so CFO vs net income says nothing about earnings quality. Use the credibility and valuation sections.'; }
-  else if (!ratios.length) { cash.verdict = 'N/A'; cash.note = 'No usable cash-flow facts.'; }
-  else if (cash.avgRatio >= 0.9 && !cash.negativeYears.length && !(cash.gapTrend > 3)) { cash.verdict = 'REAL'; cash.note = `Operating cash flow averaged ${cash.avgRatio}× reported profit over ${n} years. The profits are backed by cash.`; }
+  else if (ratios.length < 3 || cash.avgRatio == null) { cash.verdict = 'N/A'; cash.note = cash.lossYears.length ? `Net income was zero or negative in ${cash.lossYears.join(', ')}, so CFO ÷ net income is undefined for most of the window — the ratio needs three profitable years to mean anything. Read the cash-flow column directly: ${cash.years.map((c) => `${c.fy} ${c.cfo != null ? (c.cfo / 1e9).toFixed(1) + 'B' : '—'}`).join(', ')}.` : 'No usable cash-flow facts.'; }
   else if (cash.avgRatio < 0.7 || cash.negativeYears.length || (cash.divergentYears.length >= 2 && cash.gapTrend > 0)) { cash.verdict = 'MANUFACTURED?'; cash.note = `Cash flow averaged only ${cash.avgRatio}× reported profit${cash.negativeYears.length ? `, and was negative in ${cash.negativeYears.join(', ')} while profits were positive` : ''}. Profit that does not arrive as cash is the classic accrual red flag (Sloan 1996: high-accrual firms underperform).`; }
-  else { cash.verdict = 'WATCH'; cash.note = `Cash flow averaged ${cash.avgRatio}× profit${cash.gapTrend > 3 ? ' and the gap is widening' : ''}${cash.divergentYears.length ? `; profit rose while cash fell in ${cash.divergentYears.join(', ')}` : ''}. Not damning, but worth asking where the difference sits (receivables, inventory, capitalised costs).`; }
+  else if (cash.recentRatio < 0.8 || (cash.gapTrend > 3) || cash.divergentYears.length) { cash.verdict = 'WATCH'; cash.note = `Cash flow averaged ${cash.avgRatio}× profit over ${n} years but ${cash.recentRatio}× in the last two${cash.gapTrend > 3 ? ', and the shortfall is widening' : ''}${cash.divergentYears.length ? `; profit rose while cash fell in ${cash.divergentYears.join(', ')}` : ''}. Not damning — one-offs such as tax deposits or litigation payments do this — but ask where the difference sits (receivables, inventory, capitalised costs, or a one-time payment).`; }
+  else { cash.verdict = 'REAL'; cash.note = `Operating cash flow averaged ${cash.avgRatio}× reported profit over ${n} years${cash.avgRatio >= 1.5 ? ' — well above it, as expected for a business with heavy depreciation or stock compensation' : ''}. The profits are backed by cash.`; }
 
   // ── 2. Working capital ───────────────────────────────────────────────────
-  const wc = { years: Y.map((y) => ({ fy: y.fy, dso: r1(y.dso), dio: r1(y.dio), dpo: r1(y.dpo), ccc: r1(y.ccc) })), verdict: null, note: null };
+  const wc = { years: Y.map((y) => ({ fy: y.fy, dso: r1(y.dso), dio: r1(y.dio), dpo: r1(y.dpo), ccc: r1(y.ccc) })), verdict: null, note: null, caveat: apIncludesAccruals ? 'This filer tags payables together with accrued liabilities, so creditor days are overstated versus trade payables alone; the TREND is still valid.' : (S.inventory ? null : 'No inventory tagged (service business): the cycle is receivables minus payables only.') };
   const cccs = Y.map((y) => y.ccc).filter((x) => x != null);
   if (isFinancial || cccs.length < 3) { wc.verdict = 'N/A'; wc.note = isFinancial ? 'Working-capital days have no meaning for a balance-sheet business.' : 'Receivables / inventory / payables are not tagged consistently for this filer.'; }
   else {
@@ -276,10 +372,11 @@ export async function forensic(ticker, { sector = null } = {}) {
     if (d <= -5) { wc.verdict = 'MORE EFFICIENT'; wc.note = `Cash conversion cycle shortened ${Math.abs(d).toFixed(0)} days over ${n} years — the business turns sales into cash faster than it used to.`; }
     else if (d >= 10 || (dsoD != null && dsoD >= 10)) { wc.verdict = 'CONSUMING CASH'; wc.note = `Cash conversion cycle lengthened ${d.toFixed(0)} days${dsoD >= 10 ? ` and customers now take ${dsoD.toFixed(0)} more days to pay` : ''}. Growth is being financed by working capital, which is where manufactured profits usually hide.`; }
     else { wc.verdict = 'STABLE'; wc.note = `Cash conversion cycle moved ${d >= 0 ? '+' : ''}${d.toFixed(0)} days over ${n} years — neither squeezing suppliers nor stretching customers.`; }
+    if (wc.caveat) wc.note += ' ' + wc.caveat;
   }
 
   // ── 3/4. Moat: margins, returns, inflation-cycle test ────────────────────
-  const moat = { years: Y.map((y) => ({ fy: y.fy, gm: r1(y.gm), om: r1(y.om), roce: r1(y.roce), roic: r1(y.roic) })), score: null, verdict: null, note: null, factors: [] };
+  const moat = { years: Y.map((y) => ({ fy: y.fy, gm: r1(y.gm), om: r1(y.om), roce: r1(y.roce), roic: r1(y.roic) })), score: null, verdict: null, note: null, factors: [], roicNote: Y.some((y) => y.roicUndefined) ? 'ROIC is undefined in years where book equity was depleted by buybacks (invested capital below 10% of assets); ROCE, which uses assets, still applies.' : null };
   const gms = Y.map((y) => y.gm).filter((x) => x != null), roces = Y.map((y) => y.roce).filter((x) => x != null);
   if (isFinancial) { moat.verdict = 'N/A'; moat.note = 'Gross margin and ROCE are not defined for banks and insurers; look at return on equity in the filings instead.'; }
   else if (gms.length < 3 && roces.length < 3) { moat.verdict = 'N/A'; moat.note = 'Not enough margin or return data tagged.'; }
@@ -290,10 +387,14 @@ export async function forensic(ticker, { sector = null } = {}) {
     if (gmNow != null && gmFirst != null) { const d = gmNow - gmFirst; const pts = d >= -1 ? 2 : d >= -4 ? 1 : 0; s += pts; moat.factors.push(`Margin trend ${d >= 0 ? '+' : ''}${d.toFixed(1)} pts over ${gms.length} yrs → ${pts}/2`); }
     const roceNow = roces[roces.length - 1];
     if (roceNow != null) { const pts = roceNow >= 25 ? 3 : roceNow >= 15 ? 2 : roceNow >= 8 ? 1 : 0; s += pts; moat.factors.push(`ROCE ${roceNow.toFixed(0)}% → ${pts}/3`); }
-    const y21 = Y.find((y) => y.fy === '2021'), y23 = Y.find((y) => y.fy === '2023');
+    const inWin = (y, a, b) => y.end >= a && y.end < b;
+    const y21 = Y.find((y) => inWin(y, '2021-06-30', '2022-06-30')), y23 = Y.find((y) => inWin(y, '2023-06-30', '2024-06-30'));
     if (y21?.gm != null && y23?.gm != null) { const held = y23.gm >= y21.gm - 2; s += held ? 2 : 0; moat.held2223 = held; moat.factors.push(`2022–23 inflation cycle: margin ${held ? 'held' : 'gave way'} (${y21.gm.toFixed(0)}% → ${y23.gm.toFixed(0)}%) → ${held ? 2 : 0}/2`); }
-    moat.score = Math.min(10, s);
-    moat.verdict = s >= 8 ? 'WIDE' : s >= 5 ? 'NARROW' : 'NONE EVIDENT';
+    let possible = 0; if (gmNow != null) possible += 3; if (gmNow != null && gmFirst != null) possible += 2; if (roceNow != null) possible += 3; if (y21?.gm != null && y23?.gm != null) possible += 2;
+    moat.measured = possible;
+    moat.score = possible ? Math.round((s / possible) * 10) : null;           // scaled to what could be measured
+    moat.verdict = moat.score == null ? 'N/A' : moat.score >= 8 ? 'WIDE' : moat.score >= 5 ? 'NARROW' : 'NONE EVIDENT';
+    if (possible < 10) moat.factors.push(`${possible} of 10 points measurable (${gmNow == null ? 'no gross margin tagged' : 'partial history'}); score scaled`);
     moat.note = `${moat.verdict === 'WIDE' ? 'High, stable margins and high returns on capital — the numbers a durable advantage leaves behind.' : moat.verdict === 'NARROW' ? 'Some pricing power or capital efficiency, but not both, or not consistently.' : 'Margins or returns are thin or falling: competitors can evidently replicate this.'} Which KIND of moat (brand, switching cost, network, cost, regulatory) and how many competitors can copy it is a judgment the numbers cannot make — the prompt below asks that question with these figures attached.`;
   }
 
@@ -334,11 +435,17 @@ export async function forensic(ticker, { sector = null } = {}) {
   const curPE = nasdaq.pe ?? (price != null && ttmEps > 0 ? price / ttmEps : null);
   const curEvEbitda = mcap != null && last.ebitda > 0 ? (mcap + (last.debt || 0) - (last.cashAll || 0)) / last.ebitda : null;
   const curPfcf = mcap != null && last.fcf > 0 ? mcap / last.fcf : null;
-  const hist = { pe: Y.map((y) => y.pe).filter((x) => x != null && x > 0 && x < 500), evEbitda: Y.map((y) => y.evEbitda).filter((x) => x != null && x > 0 && x < 500), pfcf: Y.map((y) => y.pfcf).filter((x) => x != null && x > 0 && x < 500) };
+  // A multiple above 100× says "earnings near zero", not "what the market pays"; those
+  // years are excluded from the medians, and a median needs three usable years.
+  const usable = (a) => { const v = a.filter((x) => x != null && x > 0 && x <= 100); return v.length >= 3 ? v : []; };
+  const hist = { pe: usable(Y.map((y) => y.pe)), evEbitda: usable(Y.map((y) => y.evEbitda)), pfcf: usable(Y.map((y) => y.pfcf)) };
+  const avg3 = (k) => { const v = Y.slice(-3).map((y) => y[k]).filter((x) => x != null); return v.length ? sum(v) / v.length : null; };
+  const fcf3 = avg3('fcf'), ebitda3 = avg3('ebitda');
   const valuation = {
     price, marketCap: mcap, ttmEps, forwardPE: nasdaq.forwardPE,
-    current: { pe: r1(curPE), evEbitda: r1(curEvEbitda), pfcf: r1(curPfcf), fcfYieldPct: curPfcf ? r2(100 / curPfcf) : null },
-    median5y: { pe: r1(median(hist.pe)), evEbitda: r1(median(hist.evEbitda)), pfcf: r1(median(hist.pfcf)) },
+    current: { pe: r1(curPE), evEbitda: isFinancial ? null : r1(curEvEbitda), pfcf: isFinancial ? null : r1(curPfcf), fcfYieldPct: curPfcf && !isFinancial ? r2(100 / curPfcf) : null },
+    fcfCaveat: last.capexMissing ? 'No capex tagged for this filer: free cash flow shown equals operating cash flow and is overstated.' : null,
+    median5y: { pe: r1(median(hist.pe)), evEbitda: isFinancial ? null : r1(median(hist.evEbitda)), pfcf: isFinancial ? null : r1(median(hist.pfcf)) },
     years: Y.map((y) => ({ fy: y.fy, price: r2(y.price), eps: y.eps, pe: r1(y.pe), evEbitda: r1(y.evEbitda), pfcf: r1(y.pfcf) })),
     epsCagr: r1(cagr(first.eps, last.eps, n - 1)),
     revenueCagr: r1(cagr(first.revenue, last.revenue, n - 1)),
@@ -348,29 +455,33 @@ export async function forensic(ticker, { sector = null } = {}) {
   };
   const prem = (cur, med) => (cur != null && med != null && med > 0 ? (cur / med - 1) * 100 : null);
   const pePrem = prem(curPE, valuation.median5y.pe), fcfPrem = prem(curPfcf, valuation.median5y.pfcf), evPrem = prem(curEvEbitda, valuation.median5y.evEbitda);
-  const prems = [pePrem, fcfPrem, evPrem].filter((x) => x != null);
+  const prems = (isFinancial ? [pePrem] : [pePrem, fcfPrem, evPrem]).filter((x) => x != null);   // banks: CFO and EBITDA are not meaningful
   valuation.premiumToOwnHistoryPct = r1(prems.length ? median(prems) : null);
   // Fair value range: the stock's own median multiples applied to today's earnings and cash flow
   const anchors = [];
-  if (valuation.median5y.pe && ttmEps > 0) anchors.push({ basis: `5-yr median P/E ${valuation.median5y.pe}× × TTM EPS $${ttmEps}`, value: valuation.median5y.pe * ttmEps });
-  if (valuation.median5y.pfcf && last.fcf > 0 && last.shares) anchors.push({ basis: `5-yr median P/FCF ${valuation.median5y.pfcf}× × FCF/share $${(last.fcf / last.shares).toFixed(2)}`, value: valuation.median5y.pfcf * last.fcf / last.shares });
-  if (valuation.median5y.evEbitda && last.ebitda > 0 && last.shares) anchors.push({ basis: `5-yr median EV/EBITDA ${valuation.median5y.evEbitda}× − net debt`, value: (valuation.median5y.evEbitda * last.ebitda - (last.debt || 0) + (last.cashAll || 0)) / last.shares });
+  if (valuation.median5y.pe && ttmEps > 0) anchors.push({ basis: `5-yr median P/E ${valuation.median5y.pe}× × TTM GAAP EPS $${ttmEps}`, value: valuation.median5y.pe * ttmEps });
+  if (!isFinancial && valuation.median5y.pfcf && fcf3 > 0 && last.shares) anchors.push({ basis: `5-yr median P/FCF ${valuation.median5y.pfcf}× × 3-yr avg FCF/share $${(fcf3 / last.shares).toFixed(2)}`, value: valuation.median5y.pfcf * fcf3 / last.shares });
+  if (!isFinancial && valuation.median5y.evEbitda && ebitda3 > 0 && last.shares) anchors.push({ basis: `5-yr median EV/EBITDA ${valuation.median5y.evEbitda}× × 3-yr avg EBITDA − net debt`, value: (valuation.median5y.evEbitda * ebitda3 - (last.debt || 0) + (last.cashAll || 0)) / last.shares });
   if (anchors.length) {
     const vals = anchors.map((a) => a.value);
-    valuation.fairValue = { low: r2(Math.min(...vals) * 0.9), high: r2(Math.max(...vals) * 1.1), anchors: anchors.map((a) => ({ ...a, value: r2(a.value) })), assumption: 'Fair value = the stock\'s own 5-year median multiples applied to its latest earnings and cash flow, ±10%. This assumes the last five years are a fair guide to what the market will pay; it is not a forecast.' };
+    valuation.fairValue = { low: r2(Math.min(...vals) * 0.9), high: r2(Math.max(...vals) * 1.1), anchors: anchors.map((a) => ({ ...a, value: r2(a.value) })), assumption: 'Fair value = the stock\'s own 5-year median multiples (years above 100× excluded) applied to TTM GAAP EPS and to 3-year average free cash flow and EBITDA, ±10%. Averaging smooths one-off years; GAAP EPS can be depressed by acquisition amortisation. It assumes the last five years are a fair guide to what the market will pay; it is not a forecast.' };
   }
+  // Absolute sanity check, independent of own history: what the cash yield actually is.
+  valuation.absolute = curPfcf && curPfcf > 0 && 100 / curPfcf < 2 ? `FCF yield ${(100 / curPfcf).toFixed(2)}% — less than half a Treasury bill; the price is a bet on growth, whatever the own-history comparison says.` : curPE > 50 ? `GAAP P/E ${r1(curPE)}× — more than fifty years of current earnings.` : null;
   if (valuation.premiumToOwnHistoryPct == null) { valuation.verdict = 'N/A'; valuation.note = 'Not enough history to compare the stock to itself.'; }
   else if (valuation.premiumToOwnHistoryPct <= -20) { valuation.verdict = 'CHEAP vs own history'; valuation.note = `Trading ${Math.abs(valuation.premiumToOwnHistoryPct).toFixed(0)}% below its own 5-year median multiples.`; }
   else if (valuation.premiumToOwnHistoryPct >= 25) { valuation.verdict = 'EXPENSIVE vs own history'; valuation.note = `Trading ${valuation.premiumToOwnHistoryPct.toFixed(0)}% above its own 5-year median multiples.`; }
   else { valuation.verdict = 'FAIR vs own history'; valuation.note = `Within ${Math.abs(valuation.premiumToOwnHistoryPct).toFixed(0)}% of its own 5-year median multiples.`; }
-  if (valuation.impliedFcfGrowth != null && valuation.revenueCagr != null) valuation.note += ` Today's price needs free cash flow to grow ${valuation.impliedFcfGrowth}%/yr for a decade; revenue actually grew ${valuation.revenueCagr}%/yr over the last ${n - 1} years${valuation.epsCagr != null ? ` and EPS ${valuation.epsCagr}%/yr` : ''} — ${valuation.impliedFcfGrowth > (valuation.epsCagr ?? valuation.revenueCagr) + 5 ? 'the market is pricing acceleration' : valuation.impliedFcfGrowth < (valuation.epsCagr ?? valuation.revenueCagr) - 5 ? 'the market is pricing a slowdown' : 'the market is pricing more of the same'}.`;
+  if (valuation.impliedFcfGrowth != null && valuation.revenueCagr != null) valuation.note += ` Today's price needs free cash flow to grow ${valuation.impliedFcfGrowth}%/yr for a decade; revenue actually grew ${valuation.revenueCagr}%/yr over the last ${n - 1} years${valuation.epsCagr != null ? ` and EPS ${valuation.epsCagr}%/yr` : ''} — ${valuation.impliedFcfGrowth > valuation.revenueCagr + 5 ? 'the market is pricing acceleration beyond the revenue record' : valuation.impliedFcfGrowth < valuation.revenueCagr - 5 ? 'the market is pricing a slowdown from the revenue record' : 'the market is pricing more of the same'}.`;
+  if (valuation.absolute) valuation.note += ' ' + valuation.absolute;
 
   // ── 7. Credibility: EPS vs consensus, last 8 quarters ────────────────────
   const sp = nasdaq.surprises.filter((s) => s.surprise != null);
   const credibility = { quarters: nasdaq.surprises, beats: sp.filter((s) => s.surprise > 0).length, misses: sp.filter((s) => s.surprise < 0).length, inline: sp.filter((s) => s.surprise === 0).length, avgSurprisePct: r1(sp.length ? sum(sp.map((s) => s.surprise)) / sp.length : null), worstPct: r1(sp.length ? Math.min(...sp.map((s) => s.surprise)) : null), score: null, note: null };
   if (sp.length >= 4) {
     credibility.score = Math.max(0, Math.min(10, Math.round((credibility.beats / sp.length) * 8 + (credibility.worstPct > -10 ? 2 : credibility.worstPct > -25 ? 1 : 0))));
-    credibility.note = `Beat consensus in ${credibility.beats} of the last ${sp.length} quarters (average surprise ${credibility.avgSurprisePct >= 0 ? '+' : ''}${credibility.avgSurprisePct}%, worst ${credibility.worstPct}%). This is the quantitative half of credibility — whether the numbers land where the Street was guided. The qualitative half (did the LANGUAGE change, were misses explained or deflected) needs the call transcripts, which no free source provides; the prompt below is pre-filled for that.`;
+    if (credibility.avgSurprisePct > 15) { credibility.score = Math.min(credibility.score, 7); credibility.sandbagging = true; }
+    credibility.note = `Beat consensus in ${credibility.beats} of the last ${sp.length} quarters (average surprise ${credibility.avgSurprisePct >= 0 ? '+' : ''}${credibility.avgSurprisePct}%, worst ${credibility.worstPct}%).${credibility.sandbagging ? ' Beating by more than 15% on average is guidance management, not accuracy — capped at 7.' : ''} This is the quantitative half of credibility — whether the numbers land where the Street was guided. The qualitative half (did the LANGUAGE change, were misses explained or deflected) needs the call transcripts, which no free source provides; the prompt below is pre-filled for that.`;
   } else credibility.note = 'Fewer than four quarters of consensus data.';
 
   // ── 8. Executive pay (US stand-in for "promoter salary as % of PAT") ─────
@@ -404,22 +515,24 @@ export async function forensic(ticker, { sector = null } = {}) {
   if (wc.verdict === 'CONSUMING CASH') flags.push(`Working capital: ${wc.note}`);
   if (alloc.verdict === 'VALUE DESTROYERS') flags.push(`Capital allocation: ${alloc.points.find((p) => /ROSE|borrowed|diluted|destroying/.test(p)) || alloc.note}`);
   if (valuation.verdict?.startsWith('EXPENSIVE')) flags.push(`Valuation: ${valuation.note}`);
+  else if (valuation.absolute) flags.push(`Valuation (absolute): ${valuation.absolute}`);
   if (moat.verdict === 'NONE EVIDENT') flags.push(`Moat: ${moat.note.split('.')[0]}.`);
   if (credibility.score != null && credibility.score <= 4) flags.push(`Credibility: missed consensus in ${credibility.misses} of ${sp.length} quarters.`);
   if (last.gm != null && first.gm != null && last.gm < first.gm - 4) flags.push(`Gross margin down ${(first.gm - last.gm).toFixed(1)} pts since FY${first.fy}.`);
-  if (alloc.debtChange > 0 && last.ebitda > 0 && last.debt / last.ebitda > 3) flags.push(`Leverage: debt ${(last.debt / last.ebitda).toFixed(1)}× EBITDA and rising.`);
+  if (alloc.debtChange > 0 && last.ebitda > 0 && (last.debt - (last.cashAll || 0)) / last.ebitda > 3) flags.push(`Leverage: net debt ${((last.debt - (last.cashAll || 0)) / last.ebitda).toFixed(1)}× EBITDA and rising.`);
   if (pay.latest?.pctOfNetIncome > 5) flags.push(`CEO pay is ${pay.latest.pctOfNetIncome}% of net income.`);
   const question =
     cash.verdict === 'MANUFACTURED?' || cash.verdict === 'WATCH' ? `Operating cash flow has lagged reported profit (${cash.avgRatio}× on average). Where exactly is the difference sitting — receivables, inventory, capitalised costs — and when does it convert?` :
     wc.verdict === 'CONSUMING CASH' ? `The cash conversion cycle lengthened ${wc.change} days. Are customers paying slower by choice (financing growth) or by necessity (pricing power gone)?` :
     valuation.verdict?.startsWith('EXPENSIVE') && valuation.impliedFcfGrowth != null ? `The price implies ${valuation.impliedFcfGrowth}% free-cash-flow growth for a decade; revenue grew ${valuation.revenueCagr}%/yr and EPS ${valuation.epsCagr ?? '?'}%/yr over the last ${n - 1} years, the EPS part helped by buybacks. Which of the two does the next decade look like, and why?` :
     alloc.verdict === 'VALUE DESTROYERS' ? `Buybacks have not reduced the share count and payouts exceed free cash flow. Is the capital-return programme funded by operations or by the balance sheet?` :
-    moat.verdict === 'NONE EVIDENT' ? `Gross margin is ${r1(last.gm)}% and ROCE ${r1(last.roce)}%. What stops a competitor from pricing you out?` :
+    moat.verdict === 'NONE EVIDENT' ? `${last.gm != null ? `Gross margin is ${r1(last.gm)}% and ` : ''}ROCE ${last.roce != null ? r1(last.roce) + '%' : 'is thin'}. What stops a competitor from pricing you out?` :
     isFinancial ? `The filings tagged here do not show credit quality. What are the reserve build and net charge-off trends, and how much of the ${valuation.epsCagr != null ? valuation.epsCagr + '%/yr ' : ''}EPS growth came from the ${alloc.shareChangePct != null ? Math.abs(alloc.shareChangePct) + '% ' : ''}smaller share count rather than earnings?` :
     `Margins held and cash backs profit. What is the one input cost or customer whose change would break that?`;
 
   return {
-    ticker, cik, name: factsDoc.entityName || monthly?.name || ticker, sector, isFinancial, asOf: Date.now(),
+    ticker, cik, name: predecessor ? predecessor.name : (factsDoc.entityName || monthly?.name || ticker), predecessor, sector, isFinancial, asOf: Date.now(),
+    conventions: 'ROCE = EBIT ÷ average (total assets − current liabilities); ROIC = EBIT × (1 − effective tax) ÷ average (equity + debt − cash); accruals = (net income − CFO) ÷ average assets; DSO/DIO/DPO on year-end balances; FCF = CFO − capex; EV = market cap + debt − cash & short-term investments; multiples priced at the fiscal-year-end month close against that year\'s GAAP figures.',
     fiscalYears: Y.map((y) => y.fy), latestFiscalEnd: last.end,
     splitsAdjusted: Y.filter((y) => y.splitAdjusted).map((y) => `${y.fy}: ×${y.splitAdjusted}`),
     years: Y.map((y) => ({ fy: y.fy, end: y.end, revenue: y.revenue, netIncome: y.netIncome, cfo: y.cfo, capex: y.capex, fcf: y.fcf, grossProfit: y.grossProfit, opIncome: y.opIncome, ebitda: y.ebitda, eps: y.eps, shares: y.shares, debt: y.debt, cash: y.cashAll, equity: y.equity, assets: y.assets, ar: y.ar, inventory: y.inventory, ap: y.ap, gm: r1(y.gm), om: r1(y.om), roce: r1(y.roce), roic: r1(y.roic), price: r2(y.price) })),
