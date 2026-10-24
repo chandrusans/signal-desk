@@ -16,7 +16,8 @@
     "lint": "node tools/lint.mjs research.html today.html alerts.html simulate.html index.html dashboard.html options.html crypto.html metals.html handbook.html",
     "validate:co": "sh tools/validate.sh co",
     "validate:risk": "node tools/validate-risk.mjs",
-    "validate:research": "sh tools/validate.sh research"
+    "validate:research": "sh tools/validate.sh research",
+    "test": "node --test test/"
   },
   "overrides": {
     "zod": "^4.6.6"

@@ -202,6 +202,26 @@ bank, historical multiples are sane, the implied-growth solver reproduces
 the market cap, and the research endpoint shape is stable, debt is not double-counted, EV nets
 long-term investments, and a bank gets P/E only. 36 checks.
 
+```bash
+npm test
+```
+
+Unit tests (node:test) for the pure modules — exit rulebook, risk engine and
+journal, UI escaping/formatting, analysis plan — no network. CI runs them with
+the lint and `npm audit` on every push.
+
+### Security model
+
+- The site is same-origin only: a strict Content-Security-Policy, no third-
+  party scripts, no wildcard CORS, strict symbol validation on every endpoint.
+- All third-party text goes through `esc()` in `ui.js`; links through `safeHref()`.
+- Phone alerts: the scheduler sends `Authorization: Bearer RUN_KEY`; the
+  first sync that claims the server store must present the same key once;
+  channel secrets live only in the private Blob store and are never returned.
+- Positions, journal, capital and the sync key are stored in the browser's
+  localStorage in plain text — this is a single-user tool; do not use it on a
+  shared device, and export your data.
+
 ### Checks before committing
 
 ```bash

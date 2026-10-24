@@ -1,3 +1,7 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Signal Desk — Metals · Gold & Silver</title>
 <script>
@@ -36,7 +40,7 @@
       --ground-2: #141821;
       --ink: #E7E2D6;
       --ink-2: #B5AF9F;
-      --ink-3: #7C7767;
+      --ink-3: #918B7B;
       --rule: #262B36;
       --panel: #161B24;
       --accent: #D6A24B;
@@ -53,7 +57,7 @@
     --ground:#F4EFE4;--ground-2:#EDE7D8;--ink:#161512;--ink-2:#3A362E;--ink-3:#6B655A;--rule:#D9D2BF;--panel:#FBF8F0;--accent:#B8863A;--accent-soft:#E9D3A3;--signal:#3B8C5A;--caution:#B57F1F;--risk:#B84438;--grid:rgba(22,21,18,0.06);--gold:#C89B3C;--silver:#9BA1A6;
   }
   :root[data-theme="dark"] {
-    --ground:#0E1116;--ground-2:#141821;--ink:#E7E2D6;--ink-2:#B5AF9F;--ink-3:#7C7767;--rule:#262B36;--panel:#161B24;--accent:#D6A24B;--accent-soft:#4A3820;--signal:#5FBF83;--caution:#D4A040;--risk:#D96355;--grid:rgba(231,226,214,0.06);--gold:#E0B45C;--silver:#C4CBD1;
+    --ground:#0E1116;--ground-2:#141821;--ink:#E7E2D6;--ink-2:#B5AF9F;--ink-3:#918B7B;--rule:#262B36;--panel:#161B24;--accent:#D6A24B;--accent-soft:#4A3820;--signal:#5FBF83;--caution:#D4A040;--risk:#D96355;--grid:rgba(231,226,214,0.06);--gold:#E0B45C;--silver:#C4CBD1;
   }
 
   html { color-scheme: light dark; }
@@ -676,17 +680,17 @@
 
 <div class="shell">
 
-  <nav class="tabbar" role="tablist" aria-label="Views">
+  <nav class="tabbar" aria-label="Views">
     <div class="tabbar-tabs">
-      <a href="/today" class="tab" data-view="today" role="tab" aria-selected="false">Today</a>
-      <a href="/alerts" class="tab" data-view="alerts" role="tab" aria-selected="false">Alerts</a>
-      <a href="/simulate" class="tab" data-view="simulate" role="tab" aria-selected="false">Simulate</a>
-      <a href="/dashboard" class="tab" data-view="dashboard" role="tab" aria-selected="false">Dashboard</a>
-      <a href="/" class="tab" data-view="stocks" role="tab" aria-selected="false">Stocks</a>
-      <a href="/options" class="tab" data-view="options" role="tab" aria-selected="false">Options</a>
-      <a href="/crypto" class="tab" data-view="crypto" role="tab" aria-selected="false">Crypto</a>
-      <a href="/metals" class="tab on" data-view="metals" role="tab" aria-selected="true">Metals</a>
-      <a href="/research" class="tab" data-view="research" role="tab" aria-selected="false">Research</a>
+      <a href="/today" class="tab" data-view="today">Today</a>
+      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
+      <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
+      <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
+      <a href="/" class="tab" data-view="stocks">Stocks</a>
+      <a href="/options" class="tab" data-view="options">Options</a>
+      <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
+      <a href="/metals" class="tab on" data-view="metals" aria-current="page">Metals</a>
+      <a href="/research" class="tab" data-view="research">Research</a>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -868,17 +872,36 @@
   const closeBtn = document.getElementById('hb-close');
   const frame = document.getElementById('hb-frame');
   if (!btn || !drawer || !frame) return;
+  // Keep keyboard focus inside the open drawer (aria-modal promises this); Escape closes it.
+  let untrap = null;
+  function trapFocus(el) {
+    if (untrap) untrap();
+    const sel = 'a[href], button:not([disabled]), input, select, textarea, iframe, [tabindex]:not([tabindex="-1"])';
+    const onKey = (e) => {
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key !== 'Tab') return;
+      const f = [...el.querySelectorAll(sel)].filter((x) => x.offsetParent !== null || x.tagName === 'IFRAME');
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    untrap = () => { document.removeEventListener('keydown', onKey); untrap = null; btn.focus(); };
+  }
   let loaded = false;
   function open() {
     if (!loaded) { frame.src = '/handbook'; loaded = true; }
     drawer.classList.add('open');
     backdrop.classList.add('open');
     drawer.removeAttribute('hidden');
+    trapFocus(drawer);
     backdrop.removeAttribute('hidden');
     document.body.style.overflow = 'hidden';
     setTimeout(() => closeBtn.focus(), 100);
   }
   function close() {
+    if (untrap) untrap();
     drawer.classList.remove('open');
     backdrop.classList.remove('open');
     drawer.setAttribute('hidden', '');
@@ -896,7 +919,7 @@
 <script type="module">
 import { analyze, regime } from './analyze.js';
 import { trackGate } from './risk.js';
-import { esc, safeHref } from './ui.js';
+import { esc, safeHref, parseNum } from './ui.js';
 
 (function () {
   const root = document.documentElement;
@@ -1265,7 +1288,7 @@ import { esc, safeHref } from './ui.js';
     const [sym, p, stop, tgt, label] = b.dataset.track.split('|');
     const price = parseFloat(p);
     const gate = trackGate(); if (gate && !confirm(gate)) return;
-    const q = parseFloat(prompt(`Track ${label} in Dashboard\n\nHow many units (1 unit = 1 troy oz equivalent, fractions fine)?\nStop $${(+stop).toFixed(2)} and target $${(+tgt).toFixed(2)} from the plan will be stored.`, '1'));
+    const q = parseNum(prompt(`Track ${label} in Dashboard\n\nHow many units (1 unit = 1 troy oz equivalent, fractions fine)?\nStop $${(+stop).toFixed(2)} and target $${(+tgt).toFixed(2)} from the plan will be stored.`, '1'));
     if (!(q > 0)) return;
     try {
       const key = 'sd-portfolio-v1'; const cur = JSON.parse(localStorage.getItem(key) || '[]');
@@ -1294,3 +1317,4 @@ import { esc, safeHref } from './ui.js';
   }
 })();
 </script>
+</html>

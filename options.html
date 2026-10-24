@@ -1,3 +1,7 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Signal Desk — Options · Robinhood & Schwab</title>
 <script>
@@ -23,7 +27,7 @@
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --ground:#0E1116; --ground-2:#141821; --ink:#E7E2D6; --ink-2:#B5AF9F; --ink-3:#7C7767;
+      --ground:#0E1116; --ground-2:#141821; --ink:#E7E2D6; --ink-2:#B5AF9F; --ink-3:#918B7B;
       --rule:#262B36; --panel:#161B24; --accent:#D6A24B; --accent-soft:#4A3820;
       --signal:#5FBF83; --caution:#D4A040; --risk:#D96355;
       --neu-hi: rgba(255,255,255,0.045); --neu-lo: rgba(0,0,0,0.55);
@@ -42,7 +46,7 @@
   }
   :root[data-theme="light"] body { background: var(--ground); }
   :root[data-theme="dark"] {
-    --ground:#0E1116;--ground-2:#141821;--ink:#E7E2D6;--ink-2:#B5AF9F;--ink-3:#7C7767;
+    --ground:#0E1116;--ground-2:#141821;--ink:#E7E2D6;--ink-2:#B5AF9F;--ink-3:#918B7B;
     --rule:#262B36;--panel:#161B24;--accent:#D6A24B;--accent-soft:#4A3820;
     --signal:#5FBF83;--caution:#D4A040;--risk:#D96355;
     --neu-hi:rgba(255,255,255,0.045);--neu-lo:rgba(0,0,0,0.55);
@@ -385,14 +389,14 @@
 </style>
 
 <div class="shell">
-  <nav class="tabbar" role="tablist" aria-label="Views">
+  <nav class="tabbar" aria-label="Views">
     <div class="tabbar-tabs">
       <a href="/today" class="tab" data-view="today">Today</a>
       <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
       <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
       <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
       <a href="/" class="tab" data-view="stocks">Stocks</a>
-      <a href="/options" class="tab on" data-view="options" aria-selected="true">Options</a>
+      <a href="/options" class="tab on" data-view="options" aria-current="page">Options</a>
       <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
       <a href="/metals" class="tab" data-view="metals">Metals</a>
       <a href="/research" class="tab" data-view="research">Research</a>
@@ -499,10 +503,30 @@
   function open() {
     if (!loaded) { frame.src = '/handbook#options'; loaded = true; }
     drawer.classList.add('open'); backdrop.classList.add('open');
-    drawer.removeAttribute('hidden'); backdrop.removeAttribute('hidden');
+    drawer.removeAttribute('hidden');
+    trapFocus(drawer); backdrop.removeAttribute('hidden');
     document.body.style.overflow = 'hidden';
   }
+  // Keep keyboard focus inside the open drawer (aria-modal promises this); Escape closes it.
+  let untrap = null;
+  function trapFocus(el) {
+    if (untrap) untrap();
+    const sel = 'a[href], button:not([disabled]), input, select, textarea, iframe, [tabindex]:not([tabindex="-1"])';
+    const onKey = (e) => {
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key !== 'Tab') return;
+      const f = [...el.querySelectorAll(sel)].filter((x) => x.offsetParent !== null || x.tagName === 'IFRAME');
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    untrap = () => { document.removeEventListener('keydown', onKey); untrap = null; btn.focus(); };
+  }
   function close() {
+    if (untrap) untrap();
+    if (untrap) untrap();
     drawer.classList.remove('open'); backdrop.classList.remove('open');
     drawer.setAttribute('hidden',''); backdrop.setAttribute('hidden','');
     document.body.style.overflow = '';
@@ -517,6 +541,7 @@
 <script type="module">
 import { analyze } from './analyze.js';
 import { trackGate } from './risk.js';
+import { parseNum } from './ui.js';
 
 (function () {
   const root = document.documentElement;
@@ -768,7 +793,7 @@ import { trackGate } from './risk.js';
           const key = 'sd-portfolio-v1';
           const cur = JSON.parse(localStorage.getItem(key) || '[]');
           const qtyStr = prompt(`Track ${occ}\n\nHow many contracts?${stopP ? `\nPremium stop $${(+stopP).toFixed(2)}${tgtP ? ` and first target $${(+tgtP).toFixed(2)}` : ''} from the card will be stored.` : ''}`, '1');
-          const qty = parseFloat(qtyStr);
+          const qty = parseNum(qtyStr);
           if (!qty || qty <= 0) return;
           const pos = {
             id: `${occ}-${Date.now()}`,
@@ -801,3 +826,4 @@ import { trackGate } from './risk.js';
   pull();
 })();
 </script>
+</html>

@@ -71,6 +71,7 @@ export default async function handler(req, res) {
 
   res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60');
   res.status(200).json({
+    build: process.env.VERCEL_GIT_COMMIT_SHA ? process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 8) : null,   // lets an open tab notice a new deploy
     asOf: Date.now(),
     range: validRange,
     quotes: out,

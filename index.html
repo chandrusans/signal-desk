@@ -1,3 +1,7 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Signal Desk — Momentum Candidates</title>
 <script>
@@ -36,7 +40,7 @@
       --ground-2: #141821;
       --ink: #E7E2D6;
       --ink-2: #B5AF9F;
-      --ink-3: #7C7767;
+      --ink-3: #918B7B;
       --rule: #262B36;
       --panel: #161B24;
       --accent: #D6A24B;
@@ -68,7 +72,7 @@
     --ground-2: #141821;
     --ink: #E7E2D6;
     --ink-2: #B5AF9F;
-    --ink-3: #7C7767;
+    --ink-3: #918B7B;
     --rule: #262B36;
     --panel: #161B24;
     --accent: #D6A24B;
@@ -1838,17 +1842,17 @@
 
 <div class="shell">
 
-  <nav class="tabbar" role="tablist" aria-label="Views">
+  <nav class="tabbar" aria-label="Views">
     <div class="tabbar-tabs">
-      <a href="/today" class="tab" data-view="today" role="tab" aria-selected="false">Today</a>
-      <a href="/alerts" class="tab" data-view="alerts" role="tab" aria-selected="false">Alerts</a>
-      <a href="/simulate" class="tab" data-view="simulate" role="tab" aria-selected="false">Simulate</a>
-      <a href="/dashboard" class="tab" data-view="dashboard" role="tab" aria-selected="false">Dashboard</a>
-      <a href="/" class="tab on" data-view="stocks" role="tab" aria-selected="true">Stocks</a>
-      <a href="/options" class="tab" data-view="options" role="tab" aria-selected="false">Options</a>
-      <a href="/crypto" class="tab" data-view="crypto" role="tab" aria-selected="false">Crypto</a>
-      <a href="/metals" class="tab" data-view="metals" role="tab" aria-selected="false">Metals</a>
-      <a href="/research" class="tab" data-view="research" role="tab" aria-selected="false">Research</a>
+      <a href="/today" class="tab" data-view="today">Today</a>
+      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
+      <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
+      <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
+      <a href="/" class="tab on" data-view="stocks" aria-current="page">Stocks</a>
+      <a href="/options" class="tab" data-view="options">Options</a>
+      <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
+      <a href="/metals" class="tab" data-view="metals">Metals</a>
+      <a href="/research" class="tab" data-view="research">Research</a>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -2296,6 +2300,7 @@
     setTimeout(() => closeBtn.focus(), 100);
   }
   function close() {
+    if (untrap) untrap();
     drawer.classList.remove('open'); backdrop.classList.remove('open');
     document.body.style.overflow = '';
     if (buzzPollTimer) { clearInterval(buzzPollTimer); buzzPollTimer = null; }
@@ -2334,12 +2339,30 @@
   const closeBtn = document.getElementById('hb-close');
   const frame = document.getElementById('hb-frame');
   if (!btn || !drawer || !frame) return;
+  // Keep keyboard focus inside the open drawer (aria-modal promises this); Escape closes it.
+  let untrap = null;
+  function trapFocus(el) {
+    if (untrap) untrap();
+    const sel = 'a[href], button:not([disabled]), input, select, textarea, iframe, [tabindex]:not([tabindex="-1"])';
+    const onKey = (e) => {
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key !== 'Tab') return;
+      const f = [...el.querySelectorAll(sel)].filter((x) => x.offsetParent !== null || x.tagName === 'IFRAME');
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    untrap = () => { document.removeEventListener('keydown', onKey); untrap = null; btn.focus(); };
+  }
   let loaded = false;
   function open() {
     if (!loaded) { frame.src = '/handbook'; loaded = true; }
     drawer.classList.add('open');
     backdrop.classList.add('open');
     drawer.removeAttribute('hidden');
+    trapFocus(drawer);
     backdrop.removeAttribute('hidden');
     document.body.style.overflow = 'hidden';
     setTimeout(() => closeBtn.focus(), 100);
@@ -2362,7 +2385,7 @@
 <script type="module">
 import { analyze, regime, computeBreadth } from './analyze.js';
 import { trackGate } from './risk.js';
-import { esc, safeHref } from './ui.js';
+import { esc, safeHref, parseNum, noteBuild } from './ui.js';
 import { runBacktest, walkForward } from './backtest.js';
 (function () {
   // ------- Theme toggle -------
@@ -2706,7 +2729,7 @@ import { runBacktest, walkForward } from './backtest.js';
           const planStop = pk?.analysis?.plan?.stop ?? pk?.scan?.stop ?? null;
           const planTarget = pk?.analysis?.plan?.target ?? pk?.scan?.tgt ?? null;
           const qtyStr = prompt(`Track ${ticker} in Dashboard\n\nHow many shares?${planStop ? `\nStop $${planStop.toFixed(2)} and target $${planTarget.toFixed(2)} from the plan will be stored.` : ''}`, '10');
-          const qty = parseFloat(qtyStr);
+          const qty = parseNum(qtyStr);
           if (!qty || qty <= 0) return;
           try {
             const key = 'sd-portfolio-v1';
@@ -2965,6 +2988,7 @@ import { runBacktest, walkForward } from './backtest.js';
     const res = await fetch(`/api/quotes?tickers=${encodeURIComponent(withMacro)}&range=2y`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`quotes HTTP ${res.status}`);
     const data = await res.json();
+    noteBuild(data.build);
     const barsByTicker = {};
     let spy = null, vix = null;
     for (const [t, q] of Object.entries(data.quotes || {})) {
@@ -4095,3 +4119,4 @@ import { runBacktest, walkForward } from './backtest.js';
   setInterval(loadCongress, 6 * 60 * 60 * 1000);
 })();
 </script>
+</html>

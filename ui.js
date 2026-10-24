@@ -52,3 +52,20 @@ export function weekdaysBetween(fromISO, toISO = tradingDateISO()) {
   for (let d = new Date(a); d < b; d.setUTCDate(d.getUTCDate() + 1)) { const w = d.getUTCDay(); if (w !== 0 && w !== 6) n++; }
   return n;
 }
+
+/** Version check: pages pass the `build` field from any API response. The first value seen
+ *  is this tab's build; when a later response carries a different one, a reload bar appears,
+ *  so a tab left open across a deploy does not keep old modules polling changed endpoints. */
+let seenBuild = null;
+export function noteBuild(build) {
+  if (!build || typeof document === 'undefined') return;
+  if (seenBuild == null) { seenBuild = build; return; }
+  if (build === seenBuild || document.getElementById('sd-reload-bar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'sd-reload-bar';
+  bar.setAttribute('role', 'status');
+  bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2000;background:var(--accent,#B8863A);color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:center;';
+  bar.innerHTML = '<span>Signal Desk was updated. Reload to get the new version.</span><button style="background:#fff;color:#000;border:0;padding:6px 12px;cursor:pointer;font-weight:700;">Reload</button>';
+  bar.querySelector('button').addEventListener('click', () => location.reload());
+  document.body.appendChild(bar);
+}
