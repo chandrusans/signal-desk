@@ -1,10 +1,10 @@
 // Re-runnable check of the risk engine and journal arithmetic (risk.js).
 // Pure functions, no network:  npm run validate:risk
-import { riskBudget, journalStats, closeTrade, LIMITS } from '../risk.js';
+import { riskBudget, journalStats, closeTrade, LIMITS, todayISO } from '../risk.js';
 
 let pass = 0, fail = 0;
 const check = (name, ok, detail = '') => { (ok ? pass++ : fail++); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
-const today = new Date().toISOString().slice(0, 10);
+const today = todayISO();   // the New York session date, the same clock risk.js uses (UTC "today" differs after 8 pm ET)
 const near = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
 
 // ── closeTrade: R-multiple, P&L, options multiplier ──
