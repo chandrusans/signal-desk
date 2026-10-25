@@ -1450,9 +1450,9 @@ import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is al
     await registerWorker();
     if (!watch || !watch.length) { $('feed-label').textContent = 'building watchlist…'; watch = await defaultWatch(); setWatch(watch); }
     renderWatch();
+    refreshPhoneStatus();                           // before the (slow) first check, so the panel never sits on "checking server…"
     await check();
     scheduleSync();                                 // keep the server's copy current every visit
-    refreshPhoneStatus();
     setInterval(check, POLL_MS);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
   })();

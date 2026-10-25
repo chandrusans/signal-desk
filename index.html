@@ -2160,6 +2160,8 @@
   const filtersEl = document.getElementById('buzz-filters');
   const countEl = document.getElementById('buzz-count');
   if (!btn || !drawer) return;
+  // This block is a classic script, so the module's esc() is out of scope; headlines are third-party text and must be escaped here.
+  const esc = (s) => String(s ?? '').replace(/[&<>"'`]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' })[c]);
 
   // Live buzz feed from /api/buzz (StockTwits + CNBC RSS).
   // Fetched on first drawer open and every 3 minutes while open.

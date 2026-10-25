@@ -1118,7 +1118,7 @@
 <script type="module">
 import { runBacktest } from '/backtest.js';
 import { esc } from './ui.js';
-import { ask } from './dialog.js';
+import { ask, confirmBox } from './dialog.js';
 
 (() => {
   'use strict';
@@ -1367,7 +1367,7 @@ import { ask } from './dialog.js';
     if (!list.length) { el.innerHTML = `<li style="grid-template-columns:1fr;color:var(--ink-3);">None saved yet.</li>`; return; }
     el.innerHTML = list.map(s => `<li data-id="${esc(s.id)}"><div><div class="nm">${esc(s.name)}</div><div class="meta">${money(s.cfg.capital)} · ${s.cfg.market} · ${s.cfg.strategy} · from ${s.cfg.start} · hold ${s.cfg.hold}d · <span class="eq">recomputing…</span></div></div><button data-load="${s.id}">Load</button><button data-del="${s.id}">Delete</button></li>`).join('');
     el.querySelectorAll('[data-load]').forEach(b => b.addEventListener('click', () => { const s = list.find(x => x.id === b.dataset.load); if (s) { writeCfg(s.cfg); run(); window.scrollTo({ top: 0, behavior: 'smooth' }); } }));
-    el.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => { storeSaved(list.filter(x => x.id !== b.dataset.del)); renderSaved(); }));
+    el.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => { const s = list.find(x => x.id === b.dataset.del); if (!(await confirmBox(`Delete the saved simulation "${s?.name || ''}"?`, { ok: 'Delete', danger: true }))) return; storeSaved(list.filter(x => x.id !== b.dataset.del)); renderSaved(); }));
     // Recompute each saved sim's equity now — the "scheduler" is just this
     for (const s of list) {
       try {

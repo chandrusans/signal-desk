@@ -1295,7 +1295,7 @@ import { ask, confirmBox, notify } from './dialog.js';
     if (!(q > 0)) return;
     try {
       const key = 'sd-portfolio-v1'; const cur = JSON.parse(localStorage.getItem(key) || '[]');
-      cur.push({ id: `${sym}-${Date.now()}`, ticker: sym, label, qty: q, buyPrice: price, buyDate: tradingDateISO(), assetClass: 'metal', stop: +stop, planStop: +stop, target: +tgt, planTarget: +tgt });
+      cur.push({ id: `${sym}-${Date.now()}`, ticker: sym, label, qty: q, buyPrice: price, buyDate: tradingDateISO(), assetClass: 'metal', stop: +(+stop).toFixed(2), planStop: +(+stop).toFixed(2), target: +(+tgt).toFixed(2), planTarget: +(+tgt).toFixed(2) });
       localStorage.setItem(key, JSON.stringify(cur));
       b.textContent = '✓ tracked'; setTimeout(() => { b.textContent = '+ Track in Dashboard'; }, 2000);
     } catch (err) { notify('Failed: ' + err.message); }

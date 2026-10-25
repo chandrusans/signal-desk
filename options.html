@@ -544,7 +544,7 @@
 import { analyze } from './analyze.js';
 import { trackGate } from './risk.js';
 import { parseNum, tradingDateISO } from './ui.js';
-import { ask, confirmBox, notify } from './dialog.js';
+import { ask, confirmBox, notify, showCopy } from './dialog.js';
 
 (function () {
   const root = document.documentElement;
@@ -783,7 +783,9 @@ import { ask, confirmBox, notify } from './dialog.js';
           b.textContent = '✓ copied · paste into Robinhood/Schwab';
           setTimeout(() => { b.classList.remove('copied'); b.textContent = original; }, 2000);
         } catch (e) {
-          b.textContent = '✗ copy failed';
+          b.textContent = '✗ clipboard blocked — copy below';
+          showCopy(text, 'Copy the OCC symbol and paste it into the app\'s search:');
+          setTimeout(() => { b.textContent = '⧉ ' + text; }, 3000);
         }
       });
     });

@@ -1436,7 +1436,8 @@
             <li>Journal streak skips scratch trades instead of counting a flat close as a loss.</li>
             <li>Alerts no longer calls the phone-alert server before a key exists (three 403s on every load); the status line says the device is not set up yet.</li>
             <li>Phone: the tab strip fades at its right edge so the hidden tabs (Options, Crypto, Metals, Research) are discoverable, and tabs are narrower.</li>
-            <li>Stocks stores stops to the cent; Options breaks score ties by spread then open interest, so twenty-five "100"s have an order.</li>
+            <li>Stocks stores stops to the cent (Metals too); Options breaks score ties by spread then open interest, so twenty-five "100"s have an order.</li>
+            <li>Found in the regression pass: the Stocks "Trader Buzz" drawer failed with an escaping-helper error and showed no feed; the Options OCC copy button now offers the symbol in a dialog when the clipboard is blocked; deleting a saved simulation asks first; the Alerts phone-status line no longer sits on "checking server…" during the first check.</li>
           </ul>
         </div>
       </div>
