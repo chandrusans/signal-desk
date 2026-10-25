@@ -619,7 +619,9 @@
       margin: 0 -14px; padding: 0 14px;
     }
     .tabbar-tabs::-webkit-scrollbar { display: none; }
-    .tab { padding: 12px 16px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    /* The strip scrolls sideways; without a hint nobody knows Options, Crypto, Metals and Research are off to the right. */
+    .tabbar-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+    .tab { padding: 12px 11px; letter-spacing: 0.1em; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
     .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
 
     .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
@@ -1134,7 +1136,8 @@
 <script type="module">
 import { analyze, regime, cryptoRegime } from '/analyze.js';
 import { loadJournal, riskBudget } from '/risk.js';
-import { esc, parseNum, noteBuild } from '/ui.js';
+import { esc, parseNum, noteBuild, tradingDateISO } from '/ui.js';
+import { ask, confirmBox, notify } from '/dialog.js';
 
 (() => {
   'use strict';
@@ -1213,6 +1216,7 @@ import { esc, parseNum, noteBuild } from '/ui.js';
   let stocks = [], coins = [], metals = [], options = [];
   let pfStats = null, btStats = null;
   let earningsSoon = {};            // ticker -> { date, daysAway } inside 5 days
+  let earningsKnown = null;         // ticker -> true when the feed returned a next-report date; null until the gate has run
   let scanNote = '';
 
   function sizeMult() {
@@ -1329,20 +1333,23 @@ import { esc, parseNum, noteBuild } from '/ui.js';
 
   // Track: writes the position WITH the card's stop and target, so the
   // Dashboard and the Alerts tab enforce exactly what you read here.
-  document.addEventListener('click', (e) => {
-    const b = e.target.closest('.track-btn'); if (!b) return;
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('.track-btn'); if (!b || b.disabled) return;
     let p; try { p = JSON.parse(b.dataset.track); } catch { return; }
     const unit = p.assetClass === 'option' ? 'contracts' : p.assetClass === 'crypto' ? `${p.ticker} (fractions fine)` : p.assetClass === 'metal' ? 'units (1 = 1 oz equivalent)' : 'shares';
-    if (riskB && riskB.gate === 'BLOCKED' && !confirm(`The risk engine is BLOCKED:\n${riskB.breaches.map(x => x.text).join('\n')}\n\nTrack it anyway (against the rules)?`)) return;
-    const q = parseNum(prompt(`Track ${p.label || p.ticker} in Dashboard\n\nHow many ${unit}?\nStop $${p.stop} and target $${p.target} from this card will be stored.`, String(p.suggestQty || 1)));
+    if (riskB && riskB.gate === 'BLOCKED' && !(await confirmBox(`The risk engine is BLOCKED:\n${riskB.breaches.map(x => x.text).join('\n')}\n\nTrack it anyway (against the rules)?`, { ok: 'Track anyway', danger: true }))) return;
+    const q = parseNum(await ask(`Track ${p.label || p.ticker} in Dashboard\n\nHow many ${unit}?\nStop $${p.stop} and target $${p.target} from this card will be stored.`, { value: String(p.suggestQty || 1), type: 'number', ok: 'Track' }));
     if (!(q > 0)) return;
     try {
       const key = 'sd-portfolio-v1'; const cur = JSON.parse(localStorage.getItem(key) || '[]');
       const { suggestQty, ...pos } = p;
-      cur.push({ id: `${pos.ticker}-${Date.now()}`, qty: q, buyDate: new Date().toISOString().slice(0, 10), planStop: pos.stop, planTarget: pos.target, ...pos });
+      // Dated with the New York session, not the UTC calendar — after 8 pm ET those differ and the time stop would count from the wrong day.
+      cur.push({ id: `${pos.ticker}-${Date.now()}`, qty: q, buyDate: tradingDateISO(), planStop: pos.stop, planTarget: pos.target, ...pos });
       localStorage.setItem(key, JSON.stringify(cur));
-      b.textContent = '✓ tracked'; setTimeout(() => { b.textContent = '+ Track'; }, 2000);
-    } catch (err) { alert('Failed: ' + err.message); }
+      b.textContent = '✓ tracked · in Dashboard'; b.disabled = true;
+      computeRisk(); renderRiskBox();                       // the risk panel reflects the new position at once, not on the next tick
+      setTimeout(() => { b.textContent = '+ Track'; b.disabled = false; }, 6000);
+    } catch (err) { notify('Failed: ' + err.message); }
   });
 
   function renderPicks() {
@@ -1372,8 +1379,9 @@ import { esc, parseNum, noteBuild } from '/ui.js';
         sell: SELL_STOCK(r.stop, r.tgt, r.p),
         sizing: `<div class="cell"><div class="l">Buy this many</div><div class="v">${shares} sh</div></div>
                  <div class="cell"><div class="l">Max you can lose</div><div class="v stop">${money(shares * perShare, 0)}</div></div>`,
-        link: r.kind === 'Metal' ? '/metals' : '/',
+        link: r.kind === 'Metal' ? '/metals' : `/?t=${encodeURIComponent(r.t)}`,
         research: r.kind === 'Metal' ? null : r.t,
+        caveat: r.kind !== 'Metal' && earningsKnown && !earningsKnown[r.t] ? 'The feed has no next-earnings date for this name, so the 5-day earnings gate could not be applied. Confirm the report date before entering.' : undefined,
         track: { ticker: r.kind === 'Metal' ? r.sym : r.t, label: r.kind === 'Metal' ? `${r.t} · ${r.name}` : undefined, buyPrice: r.p, stop: +r.stop.toFixed(4), target: +r.tgt.toFixed(4), assetClass: r.kind === 'Metal' ? 'metal' : 'stock', suggestQty: shares },
       }));
     }
@@ -1534,8 +1542,8 @@ import { esc, parseNum, noteBuild } from '/ui.js';
       const cand = stocks.filter(r => r.kind === 'Stock' && verdict(r.su, r.sc, false) === 'BUY').slice(0, 40).map(r => r.t);
       if (cand.length) {
         const f = (await j(`/api/fundamentals?tickers=${encodeURIComponent(cand.join(','))}`)).fundamentals || {};
-        earningsSoon = {};
-        for (const [tk, x] of Object.entries(f)) { const e = x?.earnings; if (e && e.daysAway != null && e.daysAway >= 0 && e.daysAway <= 5) earningsSoon[tk] = e; }
+        earningsSoon = {}; earningsKnown = {};
+        for (const [tk, x] of Object.entries(f)) { const e = x?.earnings; if (e && e.date) earningsKnown[tk] = true; if (e && e.daysAway != null && e.daysAway >= 0 && e.daysAway <= 5) earningsSoon[tk] = e; }
         for (const r of stocks) if (earningsSoon[r.t]) { r.su = 'EARNINGS'; r.reason = `Earnings in ${earningsSoon[r.t].daysAway}d (${earningsSoon[r.t].date}). No new entry — a gap through your stop is unmanageable.`; }
         renderPicks(); renderAvoid();
       }

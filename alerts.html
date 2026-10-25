@@ -619,7 +619,9 @@
       margin: 0 -14px; padding: 0 14px;
     }
     .tabbar-tabs::-webkit-scrollbar { display: none; }
-    .tab { padding: 12px 16px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    /* The strip scrolls sideways; without a hint nobody knows Options, Crypto, Metals and Research are off to the right. */
+    .tabbar-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+    .tab { padding: 12px 11px; letter-spacing: 0.1em; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
     .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
 
     .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
@@ -1157,6 +1159,7 @@
 <script type="module">
 import { TYPES, evaluate, evaluatePositions, fetchAlertData, fetchPositionContext, notify, requestPermission, registerWorker, getSettings, setSettings, getWatch, setWatch, getHistory, clearHistory } from '/alerts.js';
 import { classOf } from '/exits.js';
+import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is already the browser-notification helper here
 
 (() => {
   'use strict';
@@ -1291,6 +1294,9 @@ import { classOf } from '/exits.js';
   const syncKey = () => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch { return ''; } };
   let syncTimer = null;
   async function syncToServer(extra = {}, { interactive = false } = {}) {
+    // Nothing to sync with until this device has a key or the user presses Save: a background
+    // sync without one is a guaranteed 403 and an error line in the console on every load.
+    if (!syncKey() && !interactive) return { ok: false, error: 'not set up on this device' };
     const body = { syncKey: syncKey(), watch, settings, portfolio: portfolio(), ...extra };
     try {
       let r = await fetch('/api/notify?op=sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -1298,7 +1304,7 @@ import { classOf } from '/exits.js';
       // Claiming an empty server store needs the owner's RUN_KEY once (so nobody else can
       // claim it first). Only ask when the user pressed Save; background syncs stay quiet.
       if (d.needsSetupKey && interactive) {
-        const setupKey = prompt('First sync: paste the RUN_KEY you set in Vercel (Settings → Environment Variables). It is used once to claim the server store and is not kept in the browser.');
+        const setupKey = await ask('First sync: paste the RUN_KEY you set in Vercel (Settings → Environment Variables). It is used once to claim the server store and is not kept in the browser.', { type: 'password', ok: 'Claim server store' });
         if (!setupKey) return { ok: false, error: 'first sync needs the owner key' };
         r = await fetch('/api/notify?op=sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, setupKey: setupKey.trim() }) });
         d = await r.json();
@@ -1311,6 +1317,7 @@ import { classOf } from '/exits.js';
 
   async function refreshPhoneStatus() {
     const st = $('phone-st'); const note = $('phone-note');
+    if (!syncKey()) { st.textContent = '○ not set up on this device — add a Telegram token and chat id, then Save & sync'; st.className = 'st off'; return; }
     try {
       const d = await (await fetch(`/api/notify?op=status&syncKey=${encodeURIComponent(syncKey())}`)).json();
       if (d.storage === 'not-connected') { st.textContent = '✕ server storage not connected yet'; st.className = 'st no'; note.innerHTML = `<strong style="color:var(--risk)">One-time step in Vercel:</strong> Storage → Create → <strong>Blob</strong> → connect it to <em>signal-desk</em>. That adds the storage token and phone alerts start working. Nothing else changes.`; return; }
@@ -1327,20 +1334,20 @@ import { classOf } from '/exits.js';
   $('phone-save').addEventListener('click', async () => {
     const phone = $('cb-phone').value.trim(), apikey = $('cb-key').value.trim();
     const channels = {};
-    if (phone || apikey) { if (!/^\+\d{8,15}$/.test(phone)) { alert('Enter the WhatsApp number in international format, e.g. +14155551234'); return; } if (!apikey) { alert('Paste the API key CallMeBot sent you.'); return; } channels.callmebot = { phone, apikey }; }
+    if (phone || apikey) { if (!/^\+\d{8,15}$/.test(phone)) { say('Enter the WhatsApp number in international format, e.g. +14155551234'); return; } if (!apikey) { say('Paste the API key CallMeBot sent you.'); return; } channels.callmebot = { phone, apikey }; }
     const topic = $('ntfy-topic').value.trim(); if (topic) channels.ntfy = { topic };
-    const token = $('tg-token').value.trim(), chat = $('tg-chat').value.trim(); if (token || chat) { if (!/^\d{6,}:[\w-]{30,}$/.test(token)) { alert('That does not look like a BotFather token (digits:letters).'); return; } if (!/^-?\d{5,}$/.test(chat)) { alert('Chat id should be a number — message @userinfobot to get it.'); return; } channels.telegram = { token, chatId: chat }; }
+    const token = $('tg-token').value.trim(), chat = $('tg-chat').value.trim(); if (token || chat) { if (!/^\d{6,}:[\w-]{30,}$/.test(token)) { say('That does not look like a BotFather token (digits:letters).'); return; } if (!/^-?\d{5,}$/.test(chat)) { say('Chat id should be a number — message @userinfobot to get it.'); return; } channels.telegram = { token, chatId: chat }; }
     const b = $('phone-save'); b.disabled = true; b.textContent = 'Syncing…';
     const d = await syncToServer({ channels }, { interactive: true });
     b.disabled = false; b.textContent = 'Save & sync to server';
-    if (!d.ok) alert(d.error || 'sync failed'); else { $('cb-key').value = ''; $('tg-token').value = ''; }
+    if (!d.ok) say(d.error || 'sync failed'); else { $('cb-key').value = ''; $('tg-token').value = ''; }
     refreshPhoneStatus();
   });
   $('phone-test').addEventListener('click', async () => {
     const b = $('phone-test'); b.disabled = true; b.textContent = 'Sending…';
     try { const d = await (await fetch('/api/notify?op=test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ syncKey: syncKey() }) })).json();
-      alert(d.ok ? 'Sent. Check your phone.' : ('Not sent: ' + (d.error || JSON.stringify(d.results))));
-    } catch (e) { alert('Failed: ' + e.message); } finally { b.disabled = false; b.textContent = 'Send a test to my phone'; }
+      say(d.ok ? 'Sent. Check your phone.' : ('Not sent: ' + (d.error || JSON.stringify(d.results))));
+    } catch (e) { say('Failed: ' + e.message); } finally { b.disabled = false; b.textContent = 'Send a test to my phone'; }
   });
 
   // ---- positions: price every held thing, run the shared exit rulebook, alert ----
@@ -1422,20 +1429,20 @@ import { classOf } from '/exits.js';
     if (r === 'default') $('push-note').textContent = 'The prompt was dismissed without a choice. Press Enable again and choose Allow.';
   });
   $('push-test').addEventListener('click', async () => {
-    if (Notification.permission !== 'granted') { alert('Enable notifications first.'); return; }
+    if (Notification.permission !== 'granted') { say('Enable notifications first.'); return; }
     const n = await notify([{ id: 'test-' + Date.now(), type: 'big_move', title: 'Test alert from Signal Desk', body: 'If you can read this, notifications work in this browser.', severity: 'low' }]);
-    if (!n) alert('The browser refused to show a notification. Check site permissions.');
+    if (!n) say('The browser refused to show a notification. Check site permissions.');
   });
   $('watch-add-btn').addEventListener('click', () => {
     const v = $('watch-add').value.trim().toUpperCase();
     if (!/^[A-Z0-9.\-]{1,6}$/.test(v) || watch.includes(v)) { $('watch-add').value = ''; return; }
     // The engine reads the first 30 names (phone runner too); say so instead of silently dropping the 31st.
-    if (watch.length >= 30) { alert('The watchlist is capped at 30 names — the engine and the phone runner check the first 30. Remove one first.'); return; }
+    if (watch.length >= 30) { say('The watchlist is capped at 30 names — the engine and the phone runner check the first 30. Remove one first.'); return; }
     watch.push(v); setWatch(watch); renderWatch(); check(); scheduleSync(); $('watch-add').value = '';
   });
   $('watch-add').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('watch-add-btn').click(); });
   $('watch-reset').addEventListener('click', async () => { watch = await defaultWatch(); setWatch(watch); renderWatch(); check(); scheduleSync(); });
-  $('hist-clear').addEventListener('click', () => { if (confirm('Clear all alert history on this device?')) { clearHistory(); renderFeed(); } });
+  $('hist-clear').addEventListener('click', async () => { if (await confirmBox('Clear all alert history on this device?', { ok: 'Clear history', danger: true })) { clearHistory(); renderFeed(); } });
   $('refresh-now').addEventListener('click', () => { slow.at = 0; check(); });
 
   (async () => {

@@ -619,7 +619,9 @@
       margin: 0 -14px; padding: 0 14px;
     }
     .tabbar-tabs::-webkit-scrollbar { display: none; }
-    .tab { padding: 12px 16px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    /* The strip scrolls sideways; without a hint nobody knows Options, Crypto, Metals and Research are off to the right. */
+    .tabbar-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+    .tab { padding: 12px 11px; letter-spacing: 0.1em; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
     .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
 
     .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
@@ -1139,6 +1141,7 @@ import { defaultAssumptions, runDcf, sensitivity, breakers } from '/dcf.js';
 import { renderCompare, comparePrompt, DIVIDEND_UNIVERSE, dividendSafety, dividendGrowthYears, renderDividends, buildPlan, renderPlan, renderScreen, screenPrompt } from '/views.js';
 import { rankScreen, pickReasons, pickLevels, PROFILES, HORIZONS } from '/screen.js';
 import { parseNum } from '/ui.js';
+import { ask, showCopy } from '/dialog.js';
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -1165,7 +1168,7 @@ import { parseNum } from '/ui.js';
   subnav.style.cssText = 'display:flex;gap:14px;flex-wrap:wrap;margin:-8px 0 16px;font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;';
   subnav.innerHTML = '<a href="/research" style="color:var(--accent)">one stock</a><a href="/research?view=screen" style="color:var(--accent)">profile screen</a><a href="/research?view=dividends" style="color:var(--accent)">dividend blueprint</a><a href="/research?view=plan" style="color:var(--accent)">allocation plan</a><a href="#" id="cmp-link" style="color:var(--accent)">compare tickers…</a>';
   $('rsearch').after(subnav);
-  document.getElementById('cmp-link').addEventListener('click', (e) => { e.preventDefault(); const v = prompt('Tickers to compare (2 to 7, comma-separated):', 'NVDA, AMD, AVGO, INTC'); if (!v) return; const list = v.toUpperCase().split(/[,\s]+/).filter((x) => /^[A-Z][A-Z0-9.\-]{0,9}$/.test(x)).slice(0, 7); if (list.length >= 2) { history.replaceState(null, '', `?compare=${list.join(',')}`); compare(list); } });
+  document.getElementById('cmp-link').addEventListener('click', async (e) => { e.preventDefault(); const v = await ask('Tickers to compare (2 to 7, comma-separated):', { value: 'NVDA, AMD, AVGO, INTC', ok: 'Compare' }); if (!v) return; const list = v.toUpperCase().split(/[,\s]+/).filter((x) => /^[A-Z][A-Z0-9.\-]{0,9}$/.test(x)).slice(0, 7); if (list.length >= 2) { history.replaceState(null, '', `?compare=${list.join(',')}`); compare(list); } });
   $('recent').addEventListener('click', (e) => { const a = e.target.closest('a'); if (!a) return; e.preventDefault(); const t = new URL(a.href).searchParams.get('t'); $('ticker').value = t; history.replaceState(null, '', `?t=${t}`); research(t); });
 
   const retTo = (bars, days) => { if (!bars || bars.length < days + 1) return null; const a = bars[bars.length - 1 - days].c, b = bars[bars.length - 1].c; return a > 0 ? ((b / a) - 1) * 100 : null; };
@@ -1448,7 +1451,7 @@ import { parseNum } from '/ui.js';
       const kind = b.dataset.copy;
       const text = kind === 'call' ? promptCall(t, D) : kind === 'data' ? dataBlock(t, D) : promptAll(t, D);
       const label = b.textContent;
-      try { await navigator.clipboard.writeText(text); b.textContent = '✓ copied'; } catch { prompt('Copy this:', text); }
+      try { await navigator.clipboard.writeText(text); b.textContent = '✓ copied'; } catch { showCopy(text); }
       setTimeout(() => { b.textContent = label; }, 1800);
     }));
   }
@@ -1505,7 +1508,7 @@ import { parseNum } from '/ui.js';
     lastCompare = rows;
     $('out').innerHTML = renderCompare(rows) + `<div class="sec"><p class="na">Missing names: ${rows.filter((r) => !r.forensic || r.forensic.error).map((r) => esc(r.ticker)).join(', ') || 'none'}. Click a ticker in the search box above for its full page.</p></div>`;
     $('run-ts').textContent = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC'; $('feed-label').textContent = 'live';
-    $('out').querySelector('[data-copy="compare"]')?.addEventListener('click', async (e) => { try { await navigator.clipboard.writeText(comparePrompt(rows)); e.target.textContent = '✓ copied'; } catch { prompt('Copy this:', comparePrompt(rows)); } });
+    $('out').querySelector('[data-copy="compare"]')?.addEventListener('click', async (e) => { try { await navigator.clipboard.writeText(comparePrompt(rows)); e.target.textContent = '✓ copied'; } catch { showCopy(comparePrompt(rows)); } });
   }
   document.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-peers]'); if (!b) return;
@@ -1543,7 +1546,7 @@ import { parseNum } from '/ui.js';
   function renderDiv() {
     $('out').innerHTML = renderDividends(divPicks, divOpts);
     $('run-ts').textContent = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC'; $('feed-label').textContent = 'live';
-    $('out').querySelector('[data-copy="dividends"]')?.addEventListener('click', async (e) => { const txt = `DATA (NASDAQ yields, SEC filings, ${new Date().toISOString().slice(0, 10)}):\n` + divPicks.slice(0, 20).map((p) => `${p.ticker}: yield ${p.yieldPct}%, payout ${p.safety?.payoutPct ?? '?'}% of EPS, dividends ${p.fcfPayoutPct ?? '?'}% of 5-yr FCF, ${p.growth ? p.growth.consecutive + ' consecutive years of DPS growth (of ' + (p.growth.measuredOver - 1) + ' measured), DPS CAGR ' + p.growth.dpsCagrPct + '%' : 'growth n/a'}, safety ${p.safety?.score}/10`).join('\n') + `\n\nBuild a dividend income portfolio from these for ${money(divOpts.amount, 0)} in a ${divOpts.account} account at a ${divOpts.bracket}% bracket: pick 15–20, flag unsustainable payouts, project monthly income and 10-year DRIP compounding, summarise tax treatment, rank safest to most aggressive. State assumptions.`; try { await navigator.clipboard.writeText(txt); e.target.textContent = '✓ copied'; } catch { prompt('Copy this:', txt); } });
+    $('out').querySelector('[data-copy="dividends"]')?.addEventListener('click', async (e) => { const txt = `DATA (NASDAQ yields, SEC filings, ${new Date().toISOString().slice(0, 10)}):\n` + divPicks.slice(0, 20).map((p) => `${p.ticker}: yield ${p.yieldPct}%, payout ${p.safety?.payoutPct ?? '?'}% of EPS, dividends ${p.fcfPayoutPct ?? '?'}% of 5-yr FCF, ${p.growth ? p.growth.consecutive + ' consecutive years of DPS growth (of ' + (p.growth.measuredOver - 1) + ' measured), DPS CAGR ' + p.growth.dpsCagrPct + '%' : 'growth n/a'}, safety ${p.safety?.score}/10`).join('\n') + `\n\nBuild a dividend income portfolio from these for ${money(divOpts.amount, 0)} in a ${divOpts.account} account at a ${divOpts.bracket}% bracket: pick 15–20, flag unsustainable payouts, project monthly income and 10-year DRIP compounding, summarise tax treatment, rank safest to most aggressive. State assumptions.`; try { await navigator.clipboard.writeText(txt); e.target.textContent = '✓ copied'; } catch { showCopy(txt); } });
   }
   document.addEventListener('input', (e) => { const el = e.target.closest('[data-div]'); if (!el || !divPicks) return; const k = el.dataset.div; divOpts = { ...divOpts, [k]: k === 'account' ? el.value : (parseNum(el.value) || 0) }; const focus = k; renderDiv(); const again = $('out').querySelector(`[data-div="${focus}"]`); if (again) again.focus(); });
   document.addEventListener('change', (e) => { const el = e.target.closest('select[data-div]'); if (!el || !divPicks) return; divOpts = { ...divOpts, account: el.value }; renderDiv(); });
@@ -1568,7 +1571,7 @@ import { parseNum } from '/ui.js';
     $('out').innerHTML = renderScreen(screenData, screenResult, screenOpts, { PROFILES, HORIZONS, pickReasons, pickLevels });
     $('run-ts').textContent = (screenData.builtAt || '').slice(0, 16).replace('T', ' ') + ' UTC'; $('feed-label').textContent = 'nightly build';
     const u = new URLSearchParams({ view: 'screen', tolerance: screenOpts.tolerance, horizon: screenOpts.horizon }); if (screenOpts.sectors.length) u.set('sectors', screenOpts.sectors.join(',')); if (screenOpts.minYieldPct > 0) u.set('yield', String(screenOpts.minYieldPct)); history.replaceState(null, '', `?${u}`);
-    $('out').querySelector('[data-copy="screen"]')?.addEventListener('click', async (e) => { const txt = screenPrompt(screenResult.picks.slice(0, screenOpts.top), screenOpts, { pickReasons, pickLevels }); try { await navigator.clipboard.writeText(txt); e.target.textContent = '✓ copied'; } catch { prompt('Copy this:', txt); } });
+    $('out').querySelector('[data-copy="screen"]')?.addEventListener('click', async (e) => { const txt = screenPrompt(screenResult.picks.slice(0, screenOpts.top), screenOpts, { pickReasons, pickLevels }); try { await navigator.clipboard.writeText(txt); e.target.textContent = '✓ copied'; } catch { showCopy(txt); } });
   }
   document.addEventListener('input', (e) => { const el = e.target.closest('input[data-screen]'); if (!el || !screenData) return; const k = el.dataset.screen; const v = parseNum(el.value); if (!isFinite(v)) return; screenOpts = { ...screenOpts, [k]: k === 'top' ? Math.max(5, Math.min(50, Math.round(v))) : Math.max(0, v) }; renderScr(); const again = $('out').querySelector(`[data-screen="${k}"]`); if (again) { again.focus(); try { again.selectionStart = again.selectionEnd = again.value.length; } catch {} } });
   document.addEventListener('change', (e) => { const el = e.target.closest('select[data-screen]'); if (!el || !screenData) return; const k = el.dataset.screen; screenOpts = { ...screenOpts, [k]: k === 'sectors' ? [...el.selectedOptions].map((o) => o.value) : el.value }; renderScr(); });
@@ -1579,7 +1582,7 @@ import { parseNum } from '/ui.js';
     const p = buildPlan(planIn);
     $('out').innerHTML = renderPlan(p);
     $('run-ts').textContent = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC'; $('feed-label').textContent = 'rules, no feed';
-    $('out').querySelector('[data-copy="plan"]')?.addEventListener('click', async (e) => { const txt = $('out').querySelector('pre').innerText; try { await navigator.clipboard.writeText(txt); e.target.textContent = '✓ copied'; } catch { prompt('Copy this:', txt); } });
+    $('out').querySelector('[data-copy="plan"]')?.addEventListener('click', async (e) => { const txt = $('out').querySelector('pre').innerText; try { await navigator.clipboard.writeText(txt); e.target.textContent = '✓ copied'; } catch { showCopy(txt); } });
   }
   document.addEventListener('input', (e) => { const el = e.target.closest('[data-plan]'); if (!el || el.tagName === 'SELECT') return; const k = el.dataset.plan; const v = parseNum(el.value); if (!isFinite(v)) return; planIn = { ...planIn, [k]: v }; plan(); const again = $('out').querySelector(`[data-plan="${k}"]`); if (again) again.focus(); });
   document.addEventListener('change', (e) => { const el = e.target.closest('select[data-plan]'); if (!el) return; planIn = { ...planIn, [el.dataset.plan]: el.value }; plan(); });

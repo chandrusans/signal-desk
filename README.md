@@ -98,6 +98,7 @@ signal-desk/
 ├── views.js           Compare, dividend blueprint, allocation-plan and screen views
 ├── data/screen.json   Nightly screen file (built by tools/build-screen.mjs via screen.yml)
 ├── risk.js            Risk engine (book-level limits) + trade journal, shared by Today and Dashboard
+├── dialog.js          In-page ask / confirm / notify dialogs (prompt() is blocked in embedded browsers)
 ├── handbook.html      Beginner reference + changelog (see CLAUDE.md — keep current)
 ├── analyze.js         Pure computation — indicators, score, setup, trade plan
 ├── exits.js           The ONE exit rulebook — shared by Dashboard and Alerts

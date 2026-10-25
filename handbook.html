@@ -485,7 +485,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.19</div>
+      <div class="kicker">Signal Desk · Handbook · v3.20</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -1421,6 +1421,25 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 25</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.20<br/>2026-10-24</div>
+        <div class="what">
+          <h4>Eleven fixes from an end-to-end test of every tab</h4>
+          <ul>
+            <li><strong>Bulk paste and the sample portfolio kept only the last row.</strong> The commit loop reloaded the stored book on every line; it now merges once, so five pasted lines store five positions.</li>
+            <li><strong>In-page dialogs replace the browser's prompt / confirm / alert everywhere</strong> (Track, Close, Edit stop, past trade, clear, import, simulation name, compare, copy fallbacks). The native ones are blocked in embedded browsers and some installed web apps, where a click then did nothing.</li>
+            <li><strong>Positions tracked from Today, Stocks, Options, Crypto and Metals are dated with the New York session</strong>, as the Dashboard already did; after 8 pm Eastern the UTC date was a day ahead and the time stop counted from the wrong day.</li>
+            <li><strong>Earnings gate is no longer silent when the feed has no date</strong>: Today's card and the Stocks setup line say "earnings date unknown — confirm before entering".</li>
+            <li>Today: Track shows "✓ tracked · in Dashboard" and the risk panel updates at once; "full detail →" opens that stock on the Stocks tab (<code>/?t=KMI</code> now deep-links).</li>
+            <li>Dashboard re-renders only when a price or the book changed, and never while you are selecting text or have a dialog open; newly added names get their ten-year history immediately instead of at the next half-hour pull; "Capital at risk" has its dollar sign.</li>
+            <li>Journal streak skips scratch trades instead of counting a flat close as a loss.</li>
+            <li>Alerts no longer calls the phone-alert server before a key exists (three 403s on every load); the status line says the device is not set up yet.</li>
+            <li>Phone: the tab strip fades at its right edge so the hidden tabs (Options, Crypto, Metals, Research) are discoverable, and tabs are narrower.</li>
+            <li>Stocks stores stops to the cent; Options breaks score ties by spread then open interest, so twenty-five "100"s have an order.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.19<br/>2026-10-24</div>

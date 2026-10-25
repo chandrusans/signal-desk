@@ -785,7 +785,9 @@
       margin: 0 -14px; padding: 0 14px;
     }
     .tabbar-tabs::-webkit-scrollbar { display: none; }
-    .tab { padding: 12px 16px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    /* The strip scrolls sideways; without a hint nobody knows Options, Crypto, Metals and Research are off to the right. */
+    .tabbar-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+    .tab { padding: 12px 11px; letter-spacing: 0.1em; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
     .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
 
     /* Masthead */
@@ -1088,6 +1090,7 @@ import { analyze, regime, cryptoRegime } from './analyze.js';
 import { positionVerdict, defaultStop, classOf } from './exits.js';
 import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget } from './risk.js';
 import { px, num, tradingDateISO, parseNum, noteBuild } from './ui.js';
+import { ask, confirmBox, notify } from './dialog.js';
 import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from './indicators.js';
 
 (function () {
@@ -1249,7 +1252,7 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
       lastError = null;
       pullLong();
       updateRunDate(lastGoodAt);
-      render();
+      renderIfChanged();
       applyPendingFlashes();
       updateLiveLabel();
     } catch (e) {
@@ -1273,7 +1276,26 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
   const countEl = document.getElementById('pos-count');
   const summaryEl = document.getElementById('summary');
 
+  // The poll used to rebuild the whole positions DOM every 15 s even when no price had moved,
+  // which dropped text selection, focus and any open dialog. Now it renders only when a price,
+  // a quote or the book itself changed, and never while the user is working inside the list.
+  let lastRenderSig = '';
+  function renderSig() {
+    const q = Object.entries(latestQuotes).map(([t, x]) => `${t}:${x?.price ?? ''}`).sort().join('|');
+    const o = Object.entries(latestOptionQuotes).map(([t, x]) => `${t}:${x?.mid ?? x?.price ?? ''}`).sort().join('|');
+    const c = Object.entries(latestCrypto).map(([t, b]) => `${t}:${b?.length ? b[b.length - 1].c : ''}`).join('|');
+    return `${portfolio.map(p => p.id + ':' + p.qty + ':' + (p.stop ?? '')).join(',')}#${q}#${o}#${c}#${vixPrice}`;
+  }
+  function renderIfChanged() {
+    const sig = renderSig();
+    if (sig === lastRenderSig) return;
+    const a = document.activeElement, sel = window.getSelection ? window.getSelection() : null;
+    const busy = (a && a !== document.body && positionsEl.contains(a)) || (sel && !sel.isCollapsed && sel.anchorNode && positionsEl.contains(sel.anchorNode)) || document.querySelector('dialog[open]');
+    if (busy) return;                              // try again on the next poll; nothing is lost, the prices are already stored
+    render();
+  }
   function render() {
+    lastRenderSig = renderSig();
     countEl.textContent = `${portfolio.length} position${portfolio.length === 1 ? '' : 's'}`;
     if (!portfolio.length) {
       positionsEl.innerHTML = `<div class="empty-state"><strong>No positions yet.</strong><br/>Add one above and the desk will track it live and tell you when to sell.</div>`;
@@ -1508,17 +1530,18 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
 
     // Wire close + edit buttons
     positionsEl.querySelectorAll('[data-close]').forEach(b => {
-      b.addEventListener('click', () => {
+      b.addEventListener('click', async () => {
         const id = b.dataset.close;
         portfolio = load();                   // another tab may have added or removed positions since this render
         const pos = portfolio.find(p => p.id === id);
         if (!pos) return;
         const r = lastRows.find(x => x.pos.id === id);
         const cur = r ? r.price : pos.buyPrice;
-        const inp = prompt(`Close ${pos.ticker}\n\nExit price per ${pos.isOption ? 'contract (premium)' : 'unit'}?\nThe trade is recorded in your journal with its R-multiple; the position leaves the dashboard.`, cur >= 1 ? cur.toFixed(2) : cur.toPrecision(4));
+        const inp = await ask(`Close ${pos.ticker}\n\nExit price per ${pos.isOption ? 'contract (premium)' : 'unit'}?\nThe trade is recorded in your journal with its R-multiple; the position leaves the dashboard.`, { value: cur >= 1 ? cur.toFixed(2) : cur.toPrecision(4), type: 'number', ok: 'Close position' });
         if (inp == null) return;
         const exitPrice = parseNum(inp);
-        if (!(exitPrice > 0)) { alert('Enter the price you sold at.'); return; }
+        if (!(exitPrice > 0)) { notify('Enter the price you sold at.'); return; }
+        portfolio = load();                   // re-read after the dialog: a poll may have re-rendered meanwhile
         journal.push(closeTrade(pos, { exitPrice, stop: r ? r.stop : null, rule: r ? r.verdict.rule : null }));
         saveJournal(journal);
         portfolio = portfolio.filter(p => p.id !== id);
@@ -1526,13 +1549,15 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
       });
     });
     positionsEl.querySelectorAll('[data-edit]').forEach(b => {
-      b.addEventListener('click', () => {
+      b.addEventListener('click', async () => {
         const id = b.dataset.edit;
+        const before = load().find(p => p.id === id);
+        if (!before) return;
+        const newStop = await ask(`Update stop for ${before.ticker}\n\nCurrent: ${before.stop ? '$' + before.stop : 'automatic'}. Leave the box empty to return to the automatic stop.`, { value: before.stop || '', type: 'number', ok: 'Save stop' });
+        if (newStop == null) return;
         portfolio = load();
         const pos = portfolio.find(p => p.id === id);
         if (!pos) return;
-        const newStop = prompt(`Update stop for ${pos.ticker} (current: $${(pos.stop || 'auto').toString()}):`, pos.stop || '');
-        if (newStop == null) return;
         const s = parseNum(newStop);
         if (!isNaN(s) && s > 0) {
           // The first time a stop is moved, freeze what it was as the INITIAL stop so
@@ -1610,7 +1635,7 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
     const rb = rows.map((r) => ({ t: name(r), b: tnx5.length && !r.pos.isOption ? rateBeta(latestLong[name(r)]?.bars || [], tnx5) : null }));
     const portRateBeta = (() => { let s = 0, w = 0; for (const r of rows) { const x = rb.find((z) => z.t === name(r))?.b; if (!x) continue; const wgt = (r.price * r.pos.qty * r.mult) / total; s += wgt * x.betaPerPoint; w += wgt; } return w > 0 ? s / w : null; })();
     const worstStress = stress.filter((s) => s.portPct != null).sort((a, b) => a.portPct - b.portPct)[0];
-    if (worstStress && worstStress.portPct <= -30) vulns.push(`<strong>A ${escapeHtml(worstStress.name)} repeat would cost about ${worstStress.portPct.toFixed(0)}% of the book.</strong> Capital at risk ${fmt(Math.abs(total * worstStress.portPct / 100))} — more than the risk engine's 5% heat limit by a wide margin, because stops gap in crashes.`);
+    if (worstStress && worstStress.portPct <= -30) vulns.push(`<strong>A ${escapeHtml(worstStress.name)} repeat would cost about ${worstStress.portPct.toFixed(0)}% of the book.</strong> Capital at risk $${fmt(Math.abs(total * worstStress.portPct / 100))} — more than the risk engine's 5% heat limit by a wide margin, because stops gap in crashes.`);
     const illiq = liq.filter((x) => x.l && (x.l.rating === 'thin' || x.l.rating === 'illiquid'));
     if (illiq.length) vulns.push(`<strong>${illiq.map((x) => escapeHtml(x.t)).join(', ')} would take ${illiq.map((x) => x.l.sessionsToExit.toFixed(1)).join(' / ')} sessions to exit at a tenth of normal volume.</strong> A stop in a thin name fills far below the line.`);
     if (portRateBeta != null && Math.abs(portRateBeta) >= 3) vulns.push(`<strong>The book moves about ${portRateBeta.toFixed(1)}% for every +1 point in the 10-year yield.</strong> ${portRateBeta < 0 ? 'A rate shock hits every position at once; nothing here benefits from higher yields.' : 'It is positioned for higher yields; a rate rally hurts it.'}`);
@@ -1711,17 +1736,17 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
         ${s.n ? '<button id="jr-csv">Export CSV</button><button id="jr-json">Export JSON</button>' : ''}
       </div>
       <p class="jr-note">R = profit divided by the risk you took at entry (entry minus the initial stop). +2R means you made twice what you were prepared to lose. Expectancy is the average R per trade; the rulebook's backtest runs about +0.07R on stocks, so fewer than ~30 of your own trades cannot tell you whether you are beating it. Stored only in this browser — export it.</p>`;
-    el.querySelectorAll('[data-jr-del]').forEach(b => b.addEventListener('click', () => {
-      if (!confirm('Delete this journal record?')) return;
+    el.querySelectorAll('[data-jr-del]').forEach(b => b.addEventListener('click', async () => {
+      if (!(await confirmBox('Delete this journal record?', { ok: 'Delete', danger: true }))) return;
       journal = journal.filter(t => t.id !== b.dataset.jrDel); saveJournal(journal); renderJournal(); renderRisk(lastRows);
     }));
-    document.getElementById('jr-add').addEventListener('click', () => {
-      const raw = prompt('Add a past trade\n\nTICKER QTY BUY EXIT [BUYDATE] [EXITDATE] [class]\ne.g.  NVDA 10 120 131.50 2026-09-01 2026-09-12\n      BTC 0.2 61000 58000 crypto\nStop is assumed at the class default (−5% stocks, −7% crypto, −2% metals, −50% options) unless you add stop=PRICE.');
+    document.getElementById('jr-add').addEventListener('click', async () => {
+      const raw = await ask('Add a past trade\n\nTICKER QTY BUY EXIT [BUYDATE] [EXITDATE] [class]\ne.g.  NVDA 10 120 131.50 2026-09-01 2026-09-12\n      BTC 0.2 61000 58000 crypto\nStop is assumed at the class default (−5% stocks, −7% crypto, −2% metals, −50% options) unless you add stop=PRICE.', { placeholder: 'NVDA 10 120 131.50 2026-09-01 2026-09-12', ok: 'Add to journal' });
       if (!raw) return;
       const parts = raw.trim().replace(/[@$,]/g, ' ').split(/\s+/).filter(Boolean);
-      if (parts.length < 4) { alert('Need at least TICKER QTY BUY EXIT'); return; }
+      if (parts.length < 4) { notify('Need at least TICKER QTY BUY EXIT'); return; }
       const [tk, q, bp, xp] = [parts[0].toUpperCase(), +parts[1], +parts[2], +parts[3]];
-      if (!(q > 0 && bp > 0 && xp > 0)) { alert('Quantity and prices must be positive numbers'); return; }
+      if (!(q > 0 && bp > 0 && xp > 0)) { notify('Quantity and prices must be positive numbers'); return; }
       const dates = parts.slice(4).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x));
       const cls = parts.slice(4).map(x => x.toLowerCase()).find(x => ['stock', 'crypto', 'metal', 'option'].includes(x)) || 'stock';
       const stopTok = parts.slice(4).find(x => /^stop=/i.test(x));
@@ -1808,6 +1833,7 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
     const priceMap = Object.fromEntries(prices.map(x => [x.ticker, x.live]));
     const today = tradingDateISO();
     const results = [];
+    portfolio = load();                            // merge ONCE with anything another tab added; reloading inside the loop dropped every row but the last
     for (const p of parsedList) {
       if (p.error) { results.push({ ok: false, msg: p.error, raw: p.raw }); continue; }
       let buyPrice = p.price;
@@ -1828,12 +1854,12 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
         if (p.stop >= buyPrice) { results.push({ ok: false, msg: `${p.ticker}: stop $${p.stop} is not below the live price $${buyPrice.toFixed(2)}`, raw: p.raw }); continue; }
         pos.stop = p.stop; pos.initialStop = p.stop;
       }
-      portfolio = load();                          // merge with anything another tab added meanwhile
       portfolio.push(pos);
       results.push({ ok: true, msg: `${p.ticker} ${p.qty} @ $${buyPrice.toFixed(2)} · ${pos.buyDate}${pos.stop ? ` · stop $${pos.stop.toFixed(2)}` : ''}` });
     }
     save();
     render();
+    latestLongAt = 0;                              // new names need their ten-year history now, not at the next half-hour pull
     pull();
     return results;
   }
@@ -1958,7 +1984,7 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
 
   // ---- Sample portfolio ----
   document.getElementById('load-sample').addEventListener('click', async () => {
-    if (portfolio.length && !confirm(`Add 5 sample positions to your existing ${portfolio.length}?`)) return;
+    if (portfolio.length && !(await confirmBox(`Add 5 sample positions to your existing ${portfolio.length}?`, { ok: 'Add samples' }))) return;
     const today = new Date();
     const daysAgo = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
     // Realistic-ish: mix of winners/losers/fresh, with dates ranging from 5-50 days ago
@@ -2039,20 +2065,21 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
       if (Array.isArray(data.portfolio)) {
         const okRow = (p) => p && typeof p === 'object' && typeof p.ticker === 'string' && p.qty > 0 && p.buyPrice > 0 && /^\d{4}-\d{2}-\d{2}$/.test(String(p.buyDate || '')) && (!p.isOption || (p.underlying && p.strike > 0 && /^\d{4}-\d{2}-\d{2}$/.test(String(p.expiration || ''))));
         const good = data.portfolio.filter(okRow), bad = data.portfolio.length - good.length;
-        if (bad) alert(`${bad} row${bad > 1 ? 's' : ''} skipped: each position needs ticker, qty, buyPrice, buyDate (and strike/expiration/underlying for options).`);
+        if (bad) await notify(`${bad} row${bad > 1 ? 's' : ''} skipped: each position needs ticker, qty, buyPrice, buyDate (and strike/expiration/underlying for options).`);
         if (!good.length) return;
-        if (portfolio.length && !confirm(`Replace current ${portfolio.length} position(s) with ${good.length} imported position(s)?`)) return;
+        if (portfolio.length && !(await confirmBox(`Replace current ${portfolio.length} position(s) with ${good.length} imported position(s)?`, { ok: 'Replace', danger: true }))) return;
         portfolio = good.map((p) => ({ ...p, id: p.id || `${p.ticker}-${Date.now()}-${Math.floor(Math.random() * 1e4)}` }));
         save(); render();
+        latestLongAt = 0;
         pull();
       }
-    } catch (err) { alert('Import failed: ' + err.message); }
+    } catch (err) { notify('Import failed: ' + err.message); }
     importFile.value = '';
   });
 
-  document.getElementById('clear-btn').addEventListener('click', () => {
+  document.getElementById('clear-btn').addEventListener('click', async () => {
     if (!portfolio.length) return;
-    if (confirm(`Delete all ${portfolio.length} position(s)? This cannot be undone.`)) {
+    if (await confirmBox(`Delete all ${portfolio.length} position(s)? This cannot be undone.`, { ok: 'Delete all', danger: true })) {
       portfolio = [];
       save(); render();
     }

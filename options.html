@@ -330,7 +330,9 @@
       margin: 0 -14px; padding: 0 14px;
     }
     .tabbar-tabs::-webkit-scrollbar { display: none; }
-    .tab { padding: 12px 16px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    /* The strip scrolls sideways; without a hint nobody knows Options, Crypto, Metals and Research are off to the right. */
+    .tabbar-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+    .tab { padding: 12px 11px; letter-spacing: 0.1em; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
     .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
 
     .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
@@ -541,7 +543,8 @@
 <script type="module">
 import { analyze } from './analyze.js';
 import { trackGate } from './risk.js';
-import { parseNum } from './ui.js';
+import { parseNum, tradingDateISO } from './ui.js';
+import { ask, confirmBox, notify } from './dialog.js';
 
 (function () {
   const root = document.documentElement;
@@ -786,13 +789,13 @@ import { parseNum } from './ui.js';
     });
     // Wire track buttons — writes to dashboard portfolio in localStorage
     picksEl.querySelectorAll('.track-btn').forEach(b => {
-      b.addEventListener('click', () => {
+      b.addEventListener('click', async () => {
         const [occ, und, dir, strike, exp, mid, stopP, tgtP] = b.dataset.track.split('|');
-        const gate = trackGate(); if (gate && !confirm(gate)) return;
+        const gate = trackGate(); if (gate && !(await confirmBox(gate, { ok: 'Track anyway', danger: true }))) return;
         try {
           const key = 'sd-portfolio-v1';
           const cur = JSON.parse(localStorage.getItem(key) || '[]');
-          const qtyStr = prompt(`Track ${occ}\n\nHow many contracts?${stopP ? `\nPremium stop $${(+stopP).toFixed(2)}${tgtP ? ` and first target $${(+tgtP).toFixed(2)}` : ''} from the card will be stored.` : ''}`, '1');
+          const qtyStr = await ask(`Track ${occ}\n\nHow many contracts?${stopP ? `\nPremium stop $${(+stopP).toFixed(2)}${tgtP ? ` and first target $${(+tgtP).toFixed(2)}` : ''} from the card will be stored.` : ''}`, { value: '1', type: 'number', ok: 'Track' });
           const qty = parseNum(qtyStr);
           if (!qty || qty <= 0) return;
           const pos = {
@@ -804,7 +807,7 @@ import { parseNum } from './ui.js';
             expiration: exp,
             qty,
             buyPrice: parseFloat(mid),            // per-share premium
-            buyDate: new Date().toISOString().slice(0, 10),
+            buyDate: tradingDateISO(),
             isOption: true,
             multiplier: 100,
             assetClass: 'option',
@@ -817,7 +820,7 @@ import { parseNum } from './ui.js';
           b.textContent = '✓ added to dashboard';
           b.style.color = 'var(--signal)';
           setTimeout(() => { b.textContent = orig; b.style.color = ''; }, 2000);
-        } catch (e) { alert('Failed: ' + e.message); }
+        } catch (e) { notify('Failed: ' + e.message); }
       });
     });
   }

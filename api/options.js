@@ -296,7 +296,8 @@ export default async function handler(req, res) {
     recommendations.push(...recommendationsForTicker(chain, ticker, dir, perTicker));
   }
 
-  recommendations.sort((a, b) => b.score - a.score);
+  // Score first; among equal scores the tighter spread, then the deeper open interest, ranks higher — a 100 with a 1% spread beats a 100 with a 4% spread.
+  recommendations.sort((a, b) => (b.score - a.score) || ((a.spreadPct ?? 99) - (b.spreadPct ?? 99)) || ((b.openInterest ?? 0) - (a.openInterest ?? 0)));
   const capped = recommendations.slice(0, limit);
 
   res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=300');

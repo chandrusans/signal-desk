@@ -1702,8 +1702,9 @@
       margin: 0 -14px; padding: 0 14px;       /* bleed to the screen edges */
     }
     .tabbar-tabs::-webkit-scrollbar { display: none; }
+    .tabbar-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
     .tab {
-      padding: 12px 16px; font-size: 11px;
+      padding: 12px 11px; letter-spacing: 0.1em; font-size: 11px;
       flex: 0 0 auto; scroll-snap-align: start;
       min-height: 44px; display: flex; align-items: center;
     }
@@ -2385,7 +2386,8 @@
 <script type="module">
 import { analyze, regime, computeBreadth } from './analyze.js';
 import { trackGate } from './risk.js';
-import { esc, safeHref, parseNum, noteBuild } from './ui.js';
+import { esc, safeHref, parseNum, noteBuild, tradingDateISO } from './ui.js';
+import { ask, confirmBox, notify } from './dialog.js';
 import { runBacktest, walkForward } from './backtest.js';
 (function () {
   // ------- Theme toggle -------
@@ -2591,7 +2593,8 @@ import { runBacktest, walkForward } from './backtest.js';
 
   // ------- Render candidate cards -------
   const picksEl = document.getElementById('picks');
-  let activeTicker = 'NVDA';
+  // ?t=KMI opens that name in the detail panel (the Today tab's "full detail" links here).
+  let activeTicker = (() => { try { const q = (new URLSearchParams(location.search).get('t') || '').toUpperCase(); return /^[A-Z][A-Z0-9.\-]{0,9}$/.test(q) ? q : 'NVDA'; } catch { return 'NVDA'; } })();
 
   function originClass(src) {
     const k = src.toLowerCase();
@@ -2708,7 +2711,7 @@ import { runBacktest, walkForward } from './backtest.js';
       </div>
     `;}).join('');
     picksEl.querySelectorAll('.card').forEach(el => {
-      el.addEventListener('click', (e) => {
+      el.addEventListener('click', async (e) => {
         // Buzz pill opens the drawer without also toggling the card
         if (e.target.closest('[data-buzz-open]')) {
           e.stopPropagation();
@@ -2721,14 +2724,15 @@ import { runBacktest, walkForward } from './backtest.js';
           const btn = e.target.closest('.track-btn');
           const [ticker, priceStr] = btn.dataset.track.split('|');
           const price = parseFloat(priceStr);
-          const gate = trackGate(); if (gate && !confirm(gate)) return;
+          const gate = trackGate(); if (gate && !(await confirmBox(gate, { ok: 'Track anyway', danger: true }))) return;
           const pk = picks.find(x => x.ticker === ticker);
           // The stop and target on the card are what the Dashboard and Alerts
           // must enforce — otherwise the card says "sell at $124" and the
-          // Dashboard silently uses -5%.
+          // Dashboard silently uses -5%. Stored to the cent, as the card shows them.
           const planStop = pk?.analysis?.plan?.stop ?? pk?.scan?.stop ?? null;
           const planTarget = pk?.analysis?.plan?.target ?? pk?.scan?.tgt ?? null;
-          const qtyStr = prompt(`Track ${ticker} in Dashboard\n\nHow many shares?${planStop ? `\nStop $${planStop.toFixed(2)} and target $${planTarget.toFixed(2)} from the plan will be stored.` : ''}`, '10');
+          const r2 = (x) => (x == null ? null : +(+x).toFixed(2));
+          const qtyStr = await ask(`Track ${ticker} in Dashboard\n\nHow many shares?${planStop ? `\nStop $${planStop.toFixed(2)} and target $${planTarget.toFixed(2)} from the plan will be stored.` : ''}`, { value: '10', type: 'number', ok: 'Track' });
           const qty = parseNum(qtyStr);
           if (!qty || qty <= 0) return;
           try {
@@ -2738,15 +2742,15 @@ import { runBacktest, walkForward } from './backtest.js';
               id: `${ticker}-${Date.now()}`,
               ticker, qty,
               buyPrice: price,
-              buyDate: new Date().toISOString().slice(0, 10),
+              buyDate: tradingDateISO(),             // New York session date, same as the Dashboard
               assetClass: 'stock',
-              ...(planStop ? { stop: planStop, planStop, target: planTarget, planTarget } : {}),
+              ...(planStop ? { stop: r2(planStop), planStop: r2(planStop), target: r2(planTarget), planTarget: r2(planTarget) } : {}),
             });
             localStorage.setItem(key, JSON.stringify(cur));
             btn.classList.add('added');
-            btn.textContent = '✓ tracked';
-            setTimeout(() => { btn.classList.remove('added'); btn.textContent = '+ Track'; }, 2000);
-          } catch (err) { alert('Failed: ' + err.message); }
+            btn.textContent = '✓ tracked · in Dashboard';
+            setTimeout(() => { btn.classList.remove('added'); btn.textContent = '+ Track'; }, 4000);
+          } catch (err) { notify('Failed: ' + err.message); }
           return;
         }
         activeTicker = el.dataset.ticker;
@@ -3661,6 +3665,8 @@ import { runBacktest, walkForward } from './backtest.js';
       }
       earningsSoon = next;
       for (const p of picks) if (earningsSoon[p.ticker] && p.setup !== 'EARNINGS') { p.setup = 'EARNINGS'; p.setupReason = `Earnings in ${earningsSoon[p.ticker].daysAway}d (${earningsSoon[p.ticker].date}). No new entry — a gap through your stop is unmanageable.`; }
+      // When the feed has no date at all the gate cannot run; say so on the entry setups rather than looking clean.
+      for (const p of picks) if ((p.setup === 'BREAKOUT' || p.setup === 'PULLBACK') && top.includes(p.ticker) && !f[p.ticker]?.earnings?.date && !/earnings date unknown/.test(p.setupReason || '')) p.setupReason = `${p.setupReason || p.thesis || ''} · earnings date unknown to the feed — confirm the next report before entering`.replace(/^ · /, '');
       renderPicks();
     } catch { /* gate simply stays open for these names */ }
   }

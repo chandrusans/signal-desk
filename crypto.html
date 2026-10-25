@@ -619,7 +619,9 @@
       margin: 0 -14px; padding: 0 14px;
     }
     .tabbar-tabs::-webkit-scrollbar { display: none; }
-    .tab { padding: 12px 16px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    /* The strip scrolls sideways; without a hint nobody knows Options, Crypto, Metals and Research are off to the right. */
+    .tabbar-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+    .tab { padding: 12px 11px; letter-spacing: 0.1em; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
     .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
 
     .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
@@ -1108,7 +1110,8 @@
 <script type="module">
 import { cryptoRegime } from '/analyze.js';
 import { trackGate } from './risk.js';
-import { esc, safeHref, parseNum } from './ui.js';
+import { esc, safeHref, parseNum, tradingDateISO } from './ui.js';
+import { ask, confirmBox, notify } from './dialog.js';
 
 (() => {
   'use strict';
@@ -1393,20 +1396,20 @@ import { esc, safeHref, parseNum } from './ui.js';
 
     el.querySelectorAll('.coin-card').forEach(card => {
       const open = () => { activeCoin = card.dataset.coin; renderCoins(); renderDetail(); loadHours(activeCoin); };
-      card.addEventListener('click', (e) => {
+      card.addEventListener('click', async (e) => {
         if (e.target.closest('.track-btn')) {
           e.stopPropagation();
           const [t, p, stop, tgt, name] = card.querySelector('.track-btn').dataset.track.split('|');
           const price = parseFloat(p);
-          const gate = trackGate(); if (gate && !confirm(gate)) return;
-          const q = parseNum(prompt(`Track ${t} in Dashboard\n\nHow many ${t}? (fractions are fine)${stop ? `\nStop $${(+stop).toPrecision(5)} and target $${(+tgt).toPrecision(5)} from the plan will be stored.` : ''}`, '0.1'));
+          const gate = trackGate(); if (gate && !(await confirmBox(gate, { ok: 'Track anyway', danger: true }))) return;
+          const q = parseNum(await ask(`Track ${t} in Dashboard\n\nHow many ${t}? (fractions are fine)${stop ? `\nStop $${(+stop).toPrecision(5)} and target $${(+tgt).toPrecision(5)} from the plan will be stored.` : ''}`, { value: '0.1', type: 'number', ok: 'Track' }));
           if (!(q > 0)) return;
           try {
             const key = 'sd-portfolio-v1'; const cur = JSON.parse(localStorage.getItem(key) || '[]');
-            cur.push({ id: `${t}-${Date.now()}`, ticker: t, label: `${t} · ${name}`, qty: q, buyPrice: price, buyDate: new Date().toISOString().slice(0, 10), assetClass: 'crypto', ...(stop ? { stop: +stop, planStop: +stop, target: +tgt, planTarget: +tgt } : {}) });
+            cur.push({ id: `${t}-${Date.now()}`, ticker: t, label: `${t} · ${name}`, qty: q, buyPrice: price, buyDate: tradingDateISO(), assetClass: 'crypto', ...(stop ? { stop: +stop, planStop: +stop, target: +tgt, planTarget: +tgt } : {}) });
             localStorage.setItem(key, JSON.stringify(cur));
             const b = card.querySelector('.track-btn'); b.textContent = '✓ tracked'; setTimeout(() => { b.textContent = '+ Track'; }, 2000);
-          } catch (err) { alert('Failed: ' + err.message); }
+          } catch (err) { notify('Failed: ' + err.message); }
           return;
         }
         open();

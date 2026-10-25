@@ -70,7 +70,8 @@ export function journalStats(trades) {
     for (const x of t) { const k = x[key] || 'other'; (m[k] = m[k] || []).push(x); }
     return Object.fromEntries(Object.entries(m).map(([k, a]) => [k, { n: a.length, winRate: +((a.filter((x) => x.r > 0.05).length / a.length) * 100).toFixed(0), expectancyR: +(a.reduce((s, x) => s + x.r, 0) / a.length).toFixed(2), pl: +a.reduce((s, x) => s + x.pl, 0).toFixed(2) }]));
   };
-  let streak = 0; for (let i = t.length - 1; i >= 0; i--) { const w = t[i].r > 0.05; if (i === t.length - 1) streak = w ? 1 : -1; else if ((w && streak > 0) || (!w && streak < 0)) streak += w ? 1 : -1; else break; }
+  // Streak counts wins and losses only; a scratch (within ±0.05R) is neither and is skipped, matching the win/loss/flat tally.
+  let streak = 0; for (let i = t.length - 1; i >= 0; i--) { const r = t[i].r; if (!(r > 0.05) && !(r < -0.05)) continue; const w = r > 0.05; if (streak === 0) streak = w ? 1 : -1; else if ((w && streak > 0) || (!w && streak < 0)) streak += w ? 1 : -1; else break; }
   const last20 = t.slice(-20);
   return {
     n, wins: wins.length, losses: losses.length, scratches: n - wins.length - losses.length,

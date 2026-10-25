@@ -619,7 +619,9 @@
       margin: 0 -14px; padding: 0 14px;
     }
     .tabbar-tabs::-webkit-scrollbar { display: none; }
-    .tab { padding: 12px 16px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    /* The strip scrolls sideways; without a hint nobody knows Options, Crypto, Metals and Research are off to the right. */
+    .tabbar-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+    .tab { padding: 12px 11px; letter-spacing: 0.1em; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
     .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
 
     .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
@@ -1116,6 +1118,7 @@
 <script type="module">
 import { runBacktest } from '/backtest.js';
 import { esc } from './ui.js';
+import { ask } from './dialog.js';
 
 (() => {
   'use strict';
@@ -1380,9 +1383,9 @@ import { esc } from './ui.js';
     }
   }
 
-  $('save').addEventListener('click', () => {
+  $('save').addEventListener('click', async () => {
     const cfg = readCfg();
-    const name = prompt('Name this simulation', `${cfg.market} · ${money(cfg.capital)} · from ${cfg.start}`);
+    const name = await ask('Name this simulation', { value: `${cfg.market} · ${money(cfg.capital)} · from ${cfg.start}`, ok: 'Save' });
     if (!name) return;
     const list = loadSaved(); list.unshift({ id: String(Date.now()), name, cfg }); storeSaved(list.slice(0, 12)); renderSaved();
   });

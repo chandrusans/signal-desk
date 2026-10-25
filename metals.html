@@ -619,7 +619,9 @@
       margin: 0 -14px; padding: 0 14px;
     }
     .tabbar-tabs::-webkit-scrollbar { display: none; }
-    .tab { padding: 12px 16px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    /* The strip scrolls sideways; without a hint nobody knows Options, Crypto, Metals and Research are off to the right. */
+    .tabbar-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+    .tab { padding: 12px 11px; letter-spacing: 0.1em; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
     .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
 
     .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
@@ -919,7 +921,8 @@
 <script type="module">
 import { analyze, regime } from './analyze.js';
 import { trackGate } from './risk.js';
-import { esc, safeHref, parseNum } from './ui.js';
+import { esc, safeHref, parseNum, tradingDateISO } from './ui.js';
+import { ask, confirmBox, notify } from './dialog.js';
 
 (function () {
   const root = document.documentElement;
@@ -1283,19 +1286,19 @@ import { esc, safeHref, parseNum } from './ui.js';
     return `${Math.floor(h / 24)}d`;
   }
 
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', async (e) => {
     const b = e.target.closest('.track-btn'); if (!b) return;
     const [sym, p, stop, tgt, label] = b.dataset.track.split('|');
     const price = parseFloat(p);
-    const gate = trackGate(); if (gate && !confirm(gate)) return;
-    const q = parseNum(prompt(`Track ${label} in Dashboard\n\nHow many units (1 unit = 1 troy oz equivalent, fractions fine)?\nStop $${(+stop).toFixed(2)} and target $${(+tgt).toFixed(2)} from the plan will be stored.`, '1'));
+    const gate = trackGate(); if (gate && !(await confirmBox(gate, { ok: 'Track anyway', danger: true }))) return;
+    const q = parseNum(await ask(`Track ${label} in Dashboard\n\nHow many units (1 unit = 1 troy oz equivalent, fractions fine)?\nStop $${(+stop).toFixed(2)} and target $${(+tgt).toFixed(2)} from the plan will be stored.`, { value: '1', type: 'number', ok: 'Track' }));
     if (!(q > 0)) return;
     try {
       const key = 'sd-portfolio-v1'; const cur = JSON.parse(localStorage.getItem(key) || '[]');
-      cur.push({ id: `${sym}-${Date.now()}`, ticker: sym, label, qty: q, buyPrice: price, buyDate: new Date().toISOString().slice(0, 10), assetClass: 'metal', stop: +stop, planStop: +stop, target: +tgt, planTarget: +tgt });
+      cur.push({ id: `${sym}-${Date.now()}`, ticker: sym, label, qty: q, buyPrice: price, buyDate: tradingDateISO(), assetClass: 'metal', stop: +stop, planStop: +stop, target: +tgt, planTarget: +tgt });
       localStorage.setItem(key, JSON.stringify(cur));
       b.textContent = '✓ tracked'; setTimeout(() => { b.textContent = '+ Track in Dashboard'; }, 2000);
-    } catch (err) { alert('Failed: ' + err.message); }
+    } catch (err) { notify('Failed: ' + err.message); }
   });
 
   renderCalendar();
