@@ -12,7 +12,7 @@
 // Honesty rules: a field the sources did not return stays null; the file records when it
 // was built and how many names each source covered, and the page prints both.
 
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
 import { forensic } from '../api/_forensic.js';
 
 const BASE = process.env.APP_URL || 'https://signal-desk-virid.vercel.app';
@@ -56,13 +56,42 @@ const nas = {};
 await pool(chunk(symbols, 40), 3, async (b) => { const d = await j(`${BASE}/api/fundamentals?tickers=${encodeURIComponent(b.join(','))}`); Object.assign(nas, d.fundamentals || {}); });
 log(`nasdaq summaries ${Object.keys(nas).length}`);
 
-// 4. filings — the forensic module, directly against SEC (one companyfacts read per name)
+// 4. filings — the forensic module, directly against SEC (one companyfacts read per name), with
+//    a retry on throttling and a second pass through the deployed research endpoint (Vercel's
+//    egress, which SEC and NASDAQ treat differently from a shared CI runner) for whatever failed.
+//    SCREEN_FILINGS=direct|api|auto (default auto = direct first, API for the leftovers).
+const FILINGS_MODE = process.env.SCREEN_FILINGS || 'auto';
+const errors = {};
+const noteError = (e) => { const k = String(e?.message || e).replace(/\d{3,}/g, '#').slice(0, 60); errors[k] = (errors[k] || 0) + 1; };
+const throttled = (e) => /\b(403|429|503)\b|rate|threshold|fetch failed|ECONN|ETIMEDOUT/i.test(String(e?.message || e));
+async function direct(t) {
+  for (let i = 0; i < 3; i++) {
+    try { const f = await forensic(t, { sector: meta[t]?.sector || null }); if (!f || f.error) throw new Error(f?.error || 'empty'); return f; }
+    catch (e) { if (i === 2 || !throttled(e)) throw e; await new Promise((s) => setTimeout(s, 2000 * (i + 1) + Math.random() * 1000)); }
+  }
+}
+async function viaApi(t) {
+  const d = await j(`${BASE}/api/fundamentals?op=research&ticker=${encodeURIComponent(t)}${meta[t]?.sector ? `&sector=${encodeURIComponent(meta[t].sector)}` : ''}`, 2);
+  if (!d.forensic || d.forensic.error) throw new Error(`api: ${d.forensic?.error || 'no forensic'}`);
+  return d.forensic;
+}
 let done = 0, failed = 0;
-const fx = await pool(symbols, CONCURRENCY, async (t) => {
-  try { const f = await forensic(t, { sector: meta[t]?.sector || null }); done++; if (done % 50 === 0) log(`filings ${done}/${symbols.length}`); return f; }
-  catch (e) { failed++; return { error: e.message }; }
-});
-log(`filings done ${done} failed ${failed}`);
+const fx = new Array(symbols.length).fill(null);
+if (FILINGS_MODE !== 'api') {
+  const r = await pool(symbols, CONCURRENCY, async (t) => { try { const f = await direct(t); done++; if (done % 50 === 0) log(`filings ${done}/${symbols.length}`); return f; } catch (e) { noteError(e); return { error: e.message }; } });
+  r.forEach((f, i) => { fx[i] = f; });
+  log(`filings direct: ${done} ok, ${symbols.length - done} failed${Object.keys(errors).length ? ` — ${JSON.stringify(errors)}` : ''}`);
+}
+const leftovers = symbols.map((t, i) => [t, i]).filter(([, i]) => !fx[i] || fx[i].error);
+if (leftovers.length && FILINGS_MODE !== 'direct') {
+  let viaOk = 0;
+  const r = await pool(leftovers, 3, async ([t]) => { try { const f = await viaApi(t); viaOk++; return f; } catch (e) { noteError(e); return { error: e.message }; } });
+  r.forEach((f, k) => { fx[leftovers[k][1]] = f; });
+  done += viaOk;
+  log(`filings via deployed endpoint: ${viaOk} of ${leftovers.length} recovered`);
+}
+failed = symbols.length - done;
+log(`filings done ${done} failed ${failed}${failed ? ` — ${JSON.stringify(errors)}` : ''}`);
 
 // 5. assemble compact rows
 const rows = symbols.map((t, i) => {
@@ -98,6 +127,21 @@ const out = {
   conventions: 'Fundamentals from the latest 10-K via the forensic module (same conventions as the Research page); technicals from the scan at build time; risk 1–10 from ATR%, 5-yr drawdown, beta and net debt/EBITDA; P/E from NASDAQ when available, else price ÷ last fiscal-year GAAP EPS.',
   rows,
 };
+// Coverage guard: never replace a good file with a thin one. A build must cover at least 90% of
+// the universe on filings and the scan, and must not fall more than 25 names below the file it
+// replaces. Fail loudly instead (the workflow goes red, the previous file stays live).
+const prev = (() => { try { return JSON.parse(readFileSync('data/screen.json', 'utf8')); } catch { return null; } })();
+const floor = Math.ceil(symbols.length * 0.9);
+const problems = [];
+if (out.coverage.filings < floor) problems.push(`filings ${out.coverage.filings} < ${floor}`);
+if (out.coverage.scan < floor) problems.push(`scan ${out.coverage.scan} < ${floor}`);
+if (prev?.coverage && prev.universe === symbols.length) {
+  for (const k of ['filings', 'scan', 'history']) if (out.coverage[k] < (prev.coverage[k] || 0) - 25) problems.push(`${k} ${out.coverage[k]} vs ${prev.coverage[k]} in the current file`);
+}
+if (problems.length && !process.env.SCREEN_FORCE) {
+  log(`NOT writing data/screen.json — coverage too thin: ${problems.join('; ')}. Set SCREEN_FORCE=1 to override.`);
+  process.exit(2);
+}
 mkdirSync('data', { recursive: true });
 writeFileSync('data/screen.json', JSON.stringify(out));
 log(`wrote data/screen.json · ${rows.length} rows · ${(JSON.stringify(out).length / 1024).toFixed(0)} KB`);

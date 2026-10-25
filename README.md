@@ -62,7 +62,11 @@ every S&P 500 name through the forensic module (SEC XBRL), the scan, five
 years of price history and NASDAQ, written to `data/screen.json` (~270 KB)
 and committed. Research → "profile screen" ranks that file in the browser
 (`screen.js`: five percentile components, profile weights, hard filters) and
-prints when it was built and what each source covered. Local build:
+prints when it was built and what each source covered. Filings are read
+directly from SEC with a retry; whatever a shared CI runner cannot fetch is
+re-read through the deployed research endpoint. A build that covers under 90%
+of the universe, or 25+ names fewer than the file it replaces, is not written
+(the job goes red and the previous file stays live). Local build:
 `npm run screen:build` (needs the CA bundle, see Validation). Handbook ch. 24.
 
 ## What it does
