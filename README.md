@@ -55,6 +55,16 @@ saved with that card's stop and target. The Dashboard shows a live verdict
 `positionVerdict()` in `exits.js` — one rulebook, so they cannot disagree.
 Handbook ch. 20 lists every rule.
 
+## Profile screen (nightly batch)
+
+`.github/workflows/screen.yml` runs `tools/build-screen.mjs` each weeknight:
+every S&P 500 name through the forensic module (SEC XBRL), the scan, five
+years of price history and NASDAQ, written to `data/screen.json` (~270 KB)
+and committed. Research → "profile screen" ranks that file in the browser
+(`screen.js`: five percentile components, profile weights, hard filters) and
+prints when it was built and what each source covered. Local build:
+`npm run screen:build` (needs the CA bundle, see Validation). Handbook ch. 24.
+
 ## What it does
 
 - **Live prices**: 1-year OHLC + volume via Yahoo Finance chart API (no auth key). Polls every 15s (Stocks) / 20s (Crypto) behind a 30s edge cache.
@@ -77,10 +87,12 @@ signal-desk/
 ├── options.html       Options recommendations
 ├── crypto.html        Crypto — rankings + measured-edge reality check
 ├── metals.html        Gold / silver
-├── research.html      Research tab — forensics, earnings brief, DCF, patterns, compare, dividends, plan
+├── research.html      Research tab — forensics, earnings brief, DCF, patterns, screen, compare, dividends, plan
 ├── dcf.js             Forward DCF (editable assumptions, two terminal methods, sensitivity)
 ├── indicators.js      Display-only indicators + seasonality / drawdown / liquidity / rate-beta tests
-├── views.js           Compare, dividend blueprint and allocation-plan views
+├── screen.js          Profile-driven ranking of the universe (percentile components, weights, filters)
+├── views.js           Compare, dividend blueprint, allocation-plan and screen views
+├── data/screen.json   Nightly screen file (built by tools/build-screen.mjs via screen.yml)
 ├── risk.js            Risk engine (book-level limits) + trade journal, shared by Today and Dashboard
 ├── handbook.html      Beginner reference + changelog (see CLAUDE.md — keep current)
 ├── analyze.js         Pure computation — indicators, score, setup, trade plan
@@ -110,6 +122,7 @@ signal-desk/
 │   └── _pumpfun.js           pump.fun exit-risk screen (DexScreener)
 ├── tools/
 │   ├── devserver.mjs  Local server routing /api/* to the handler modules
+│   ├── build-screen.mjs  Nightly screen builder (filings + scan + history + NASDAQ → data/screen.json)
 │   └── lint.mjs       Undefined-function detector for inline scripts
 └── vercel.json        Static + serverless config
 ```
@@ -211,7 +224,7 @@ npm test
 
 Unit tests (node:test) for the pure modules — exit rulebook, risk engine and
 journal, UI escaping/formatting, analysis plan, forward DCF, indicators and
-statistical tests — no network. 32 tests. CI runs them with
+statistical tests, the profile screen — no network. 37 tests. CI runs them with
 the lint and `npm audit` on every push.
 
 ### Security model

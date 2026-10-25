@@ -49,6 +49,7 @@ export function renderCompare(rows) {
       ${metric('R&D % revenue', rnd, (v) => pct(v, 1, false))}
       ${metric('Free cash flow', (r) => L(r).fcf, big)}
       ${metric('Net debt / EBITDA', nde, (v) => v.toFixed(1) + '×', 'low')}
+      ${metric('Debt / equity', (r) => L(r).de, (v) => v.toFixed(2), 'low', 'book; n/a when equity is negative')}
       ${metric('P/E (GAAP)', (r) => r.forensic.valuation.current.pe, (v) => v.toFixed(1) + '×', 'low')}
       ${metric('EV / EBITDA', (r) => r.forensic.valuation.current.evEbitda, (v) => v.toFixed(1) + '×', 'low')}
       ${metric('FCF yield', (r) => r.forensic.valuation.current.fcfYieldPct, (v) => pct(v, 2, false))}
@@ -208,3 +209,74 @@ Rules I will keep: no single stock above 5% of the whole; the momentum sleeve is
     <button class="copy" data-copy="plan">Copy the policy statement</button></div>`;
 }
 export { CLASSES };
+
+// ── Screen: the profile-driven ranking of the whole universe (data/screen.json, nightly) ──
+const inp = 'padding:6px;font-family:var(--mono);background:var(--ground);color:var(--ink);border:1px solid var(--rule);';
+const lbl = 'font-family:var(--mono);font-size:11px;color:var(--ink-3);display:flex;flex-direction:column;';
+const f0 = (x, d = 0, suf = '') => (x == null || !isFinite(x) ? '—' : x.toFixed(d) + suf);
+export function screenFreshness(builtAt) {
+  const ageH = builtAt ? (Date.now() - new Date(builtAt).getTime()) / 36e5 : null;
+  return { ageH, stale: ageH == null || ageH > 36, text: ageH == null ? 'build time unknown' : ageH < 1 ? 'built under an hour ago' : `built ${ageH.toFixed(0)} h ago (${new Date(builtAt).toISOString().slice(0, 16).replace('T', ' ')} UTC)` };
+}
+/**
+ * @param data   the parsed data/screen.json
+ * @param result rankScreen() output for the current profile
+ * @param opts   { tolerance, horizon, sectors, minYieldPct, amount, top }
+ * @param helpers { PROFILES, HORIZONS, pickReasons, pickLevels } from screen.js (kept out of this module so views.js stays dependency-free)
+ */
+export function renderScreen(data, result, opts, { PROFILES, HORIZONS, pickReasons, pickLevels }) {
+  const { tolerance = 'balanced', horizon = 'months', sectors = [], minYieldPct = 0, amount = 100000, top = 10 } = opts;
+  const fresh = screenFreshness(data?.builtAt);
+  const allSectors = [...new Set((data?.rows || []).map((r) => r.sector).filter(Boolean))].sort();
+  const P = PROFILES[tolerance] || PROFILES.balanced;
+  const picks = result.picks.slice(0, top);
+  const cov = data?.coverage || {};
+  const w = result.weights;
+  const perName = picks.length ? amount / picks.length : 0;
+  const form = `<form id="screen-form" style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px;" onsubmit="return false;">
+      <label style="${lbl}">risk tolerance<select data-screen="tolerance" style="${inp}">${Object.entries(PROFILES).map(([k, p]) => `<option value="${k}" ${k === tolerance ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}</select></label>
+      <label style="${lbl}">horizon<select data-screen="horizon" style="${inp}">${Object.entries(HORIZONS).map(([k, h]) => `<option value="${k}" ${k === horizon ? 'selected' : ''}>${esc(h.label)}</option>`).join('')}</select></label>
+      <label style="${lbl}">sectors (none = all)<select data-screen="sectors" multiple size="4" style="${inp}min-width:200px;">${allSectors.map((s) => `<option value="${esc(s)}" ${sectors.includes(s) ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
+      <label style="${lbl}">min yield %<input data-screen="minYieldPct" type="number" step="0.5" min="0" value="${minYieldPct}" style="${inp}width:80px;" /></label>
+      <label style="${lbl}">amount to deploy $<input data-screen="amount" type="number" step="1000" min="0" value="${amount}" style="${inp}width:120px;" /></label>
+      <label style="${lbl}">show top<input data-screen="top" type="number" step="5" min="5" max="50" value="${top}" style="${inp}width:70px;" /></label>
+    </form>`;
+  const rules = `${P.label}: risk ≤ ${P.maxRisk}/10${P.minMoat ? `, moat ≥ ${P.minMoat}` : ''}, profits at least ${P.minCash === 'WATCH' ? 'WATCH (no MANUFACTURED? or N/A)' : 'not MANUFACTURED?'}, setups excluded: ${P.excludeSetups.join(', ')}. Weights after the ${(HORIZONS[horizon] || HORIZONS.months).label.toLowerCase()} tilt — quality ${(w.quality * 100).toFixed(0)}%, value ${(w.value * 100).toFixed(0)}%, growth ${(w.growth * 100).toFixed(0)}%, momentum ${(w.momentum * 100).toFixed(0)}%, safety ${(w.safety * 100).toFixed(0)}%.`;
+  const exclBy = {}; for (const [, why] of result.excluded) { const k = /^too little/.test(why) ? 'too little data' : /^moat unknown/.test(why) ? 'moat unknown' : why.split(' ')[0]; exclBy[k] = (exclBy[k] || 0) + 1; }
+  const rows = picks.map((r, i) => {
+    const L = pickLevels(r);
+    const payout = r.yieldPct > 0 ? (r.divFcfPct == null ? 'payout n/a' : r.divFcfPct > 100 ? `pays ${r.divFcfPct.toFixed(0)}% of FCF — unsustainable` : r.divFcfPct > 70 ? `${r.divFcfPct.toFixed(0)}% of FCF — stretched` : `${r.divFcfPct.toFixed(0)}% of FCF — covered`) : 'no dividend';
+    const peCell = r.pe != null ? `${r.pe.toFixed(0)}×${r.sectorMedianPe ? ` <span class="s">vs ${r.sectorMedianPe.toFixed(0)}× ${r.peRel < 0.85 ? 'cheaper' : r.peRel > 1.2 ? 'dearer' : 'in line'}</span>` : ''}` : '—';
+    const riskColor = r.risk <= 3 ? 'var(--signal)' : r.risk <= 6 ? 'var(--caution)' : 'var(--risk)';
+    const shares = perName > 0 && r.price > 0 ? Math.floor(perName / r.price) : null;
+    return `<tr>
+      <td>${i + 1}</td>
+      <td><a href="?t=${esc(r.t)}" style="color:var(--accent)"><strong>${esc(r.t)}</strong></a><div class="s">${esc(r.name || '')}</div></td>
+      <td>${esc(r.sector || '—')}</td>
+      <td>${money(r.price)}<div class="s">${r.setup ? esc(r.setup) : ''}${r.score != null ? ` · score ${r.score}` : ''}</div></td>
+      <td><strong>${r.total}</strong><div class="s">Q${f0(r.comps.quality)} V${f0(r.comps.value)} G${f0(r.comps.growth)} M${f0(r.comps.momentum)} S${f0(r.comps.safety)}</div></td>
+      <td>${L.entryLow != null ? `${money(L.entryLow)}–${money(L.entryHigh)}` : '—'}<div class="s">stop ${L.stop != null ? money(L.stop) : '—'} · target ${L.target != null ? money(L.target) : '—'}</div></td>
+      <td>${peCell}</td>
+      <td class="${r.revCagr != null && r.revCagr < 0 ? 'down' : ''}">${f0(r.revCagr, 0, '%')}</td>
+      <td class="${r.de != null && r.de > 2 ? 'down' : ''}">${r.de != null ? r.de.toFixed(2) : r.financial ? 'n/a (bank)' : '—'}<div class="s">${r.ndEbitda != null ? `ND/EBITDA ${r.ndEbitda.toFixed(1)}×` : ''}</div></td>
+      <td class="${r.divFcfPct > 100 ? 'down' : ''}">${r.yieldPct > 0 ? r.yieldPct.toFixed(2) + '%' : '—'}<div class="s">${esc(payout)}</div></td>
+      <td>${esc(r.moatWord)}${r.moat != null ? ` <span class="s">${r.moat}/10</span>` : ''}</td>
+      <td>${L.bull12m != null ? `${money(L.bear12m)}–${money(L.bull12m)}<div class="s" style="color:${L.bull12m >= r.price ? 'var(--signal)' : 'var(--risk)'}">${pct((L.bear12m / r.price - 1) * 100, 0)} to ${pct((L.bull12m / r.price - 1) * 100, 0)}</div>` : '<span class="s">no range</span>'}</td>
+      <td style="color:${riskColor}"><strong>${r.risk}/10</strong>${r.maxDd != null ? `<div class="s">worst ${r.maxDd.toFixed(0)}%</div>` : ''}</td>
+      <td>${shares != null ? `${shares} sh` : '—'}</td>
+    </tr>
+    <tr class="why"><td></td><td colspan="13" class="s">${pickReasons(r).map(esc).join(' · ')}</td></tr>`;
+  }).join('');
+  return `<div class="sec"><div class="step"><span class="n">1</span><h3>Profile screen</h3><span class="sub">${result.picks.length} of ${result.considered} names pass the ${esc(P.label.toLowerCase())} filters · top ${picks.length} shown</span></div>
+    <p class="${fresh.stale ? 'down' : 'na'}" style="margin:0 0 10px;"><strong>Data:</strong> ${esc(fresh.text)}${fresh.stale ? ' — STALE, the nightly build has not run; prices and setups are out of date' : ''}. Coverage of ${data?.universe ?? '?'} names: scan ${cov.scan ?? '?'}, 5-yr history ${cov.history ?? '?'}, NASDAQ ${cov.nasdaq ?? '?'}, filings ${cov.filings ?? '?'}.</p>
+    ${form}
+    <p class="na"><strong>Rules applied.</strong> ${esc(rules)}${result.excluded.length ? ` Excluded ${result.excluded.length}: ${Object.entries(exclBy).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${esc(k)} ${n}`).join(', ')}.` : ''}</p>
+    ${picks.length ? `<div class="tbl-wrap"><table class="r screen"><thead><tr><th>#</th><th>Ticker</th><th>Sector</th><th>Price · setup</th><th>Score</th><th>Entry zone</th><th>P/E vs sector</th><th>Rev CAGR 5y</th><th>D/E</th><th>Yield</th><th>Moat</th><th>Fair range (bear–bull)</th><th>Risk</th><th>Size (${money(perName, 0)} ea)</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="na">Nothing passes these filters. Loosen the sector list, the yield floor or the tolerance.</p>`}
+    <p class="na">Score = weighted mean of five 0–100 percentile components (Q quality: ROIC, gross margin, moat, profits-are-real verdict, credibility · V value: FCF yield, P/E vs sector median, premium to own history · G growth: 5-yr revenue and EPS CAGR · M momentum: scan score, 20-day relative strength, setup · S safety: risk rating, net debt/EBITDA, 5-yr drawdown, yield). Entry zone = scan entry −0.5 ATR to +0.25 ATR; stop and target are the scan's ATR stop and 2.5R target. The fair range is the own-history fair-value bracket (5-yr median multiples ±10%, the bear and bull anchors for a 12-month view) with the move from today's price under it, shown only when the bracket sits within 0.3×–3× of price; a range wholly below price says the stock trades above its own history, not that it will fall. These are anchors, not forecasts. D/E is total debt ÷ book equity from the latest 10-K (n/a for banks and negative-equity names). Sizing is equal-weight across the names shown, before the risk engine's per-trade cap. A screen is a reading list, not a recommendation.</p>
+    <button class="copy" data-copy="screen">Copy as a prompt</button></div>`;
+}
+/** Prompt text for the screen: one line per pick, then the ask. */
+export function screenPrompt(picks, opts, { pickReasons, pickLevels }) {
+  const lines = picks.map((r) => { const L = pickLevels(r); return `${r.t} (${r.sector || '?'}): $${r.price}, score ${r.total}; ${pickReasons(r).join('; ')}; entry ${L.entryLow != null ? `$${L.entryLow.toFixed(2)}–$${L.entryHigh.toFixed(2)}` : '?'}, stop ${L.stop ?? '?'}, target ${L.target ?? '?'}${L.bull12m != null ? `, fair range $${L.bear12m}–$${L.bull12m}` : ''}`; });
+  return `DATA (SEC filings, scan technicals, Yahoo history, NASDAQ; built for a ${opts.tolerance} / ${opts.horizon} profile${opts.sectors?.length ? `, sectors ${opts.sectors.join(', ')}` : ''}${opts.minYieldPct > 0 ? `, yield ≥ ${opts.minYieldPct}%` : ''}):\n${lines.join('\n')}\n\nAct as a portfolio strategist. For each name: why it fits this profile, the one number that would make you drop it, and a 12-month bull and bear case anchored on the fair range given. Then rank the ${picks.length} by conviction, size them for $${opts.amount} with no name above 10% and no sector above 30%, and state every assumption.`;
+}

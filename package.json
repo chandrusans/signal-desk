@@ -17,7 +17,8 @@
     "validate:co": "sh tools/validate.sh co",
     "validate:risk": "node tools/validate-risk.mjs",
     "validate:research": "sh tools/validate.sh research",
-    "test": "node --test test/"
+    "test": "node --test test/",
+    "screen:build": "node tools/build-screen.mjs"
   },
   "overrides": {
     "zod": "^4.6.6"

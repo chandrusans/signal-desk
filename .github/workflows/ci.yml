@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore: ['data/**']   # the nightly screen commit is data only
   pull_request:
 
 jobs:

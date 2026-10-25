@@ -299,6 +299,8 @@ export async function forensic(ticker, { sector = null } = {}) {
     y.debt = y.debtLT == null && y.debtST == null ? null : (y.debtLT || 0) + (y.debtTagIsTotal ? 0 : (y.debtST || 0));
     y.cashAll = y.cash == null && y.stInvest == null ? null : (y.cash || 0) + (y.stInvest || 0) + (y.ltInvest || 0);   // EV nets ALL marketable securities, as Street convention
     y.gm = y.revenue > 0 && y.grossProfit != null ? (y.grossProfit / y.revenue) * 100 : null;
+    y.de = y.debt != null && y.equity > 0 ? y.debt / y.equity : null;           // debt-to-equity (book); null when equity ≤ 0 (buyback-depleted)
+    y.ndEbitda = y.debt != null && y.ebitda > 0 ? (y.debt - (y.cashAll || 0)) / y.ebitda : null;
     y.om = y.revenue > 0 && y.opIncome != null ? (y.opIncome / y.revenue) * 100 : null;
     y.capEmployed = avg('assets') != null && avg('curLiab') != null ? avg('assets') - avg('curLiab') : null;
     y.roce = y.opIncome != null && y.capEmployed > 0 ? (y.opIncome / y.capEmployed) * 100 : null;
@@ -535,7 +537,7 @@ export async function forensic(ticker, { sector = null } = {}) {
     conventions: 'ROCE = EBIT ÷ average (total assets − current liabilities); ROIC = EBIT × (1 − effective tax) ÷ average (equity + debt − cash); accruals = (net income − CFO) ÷ average assets; DSO/DIO/DPO on year-end balances; FCF = CFO − capex; EV = market cap + debt − cash & short-term investments; multiples priced at the fiscal-year-end month close against that year\'s GAAP figures.',
     fiscalYears: Y.map((y) => y.fy), latestFiscalEnd: last.end,
     splitsAdjusted: Y.filter((y) => y.splitAdjusted).map((y) => `${y.fy}: ×${y.splitAdjusted}`),
-    years: Y.map((y) => ({ fy: y.fy, end: y.end, revenue: y.revenue, netIncome: y.netIncome, cfo: y.cfo, capex: y.capex, fcf: y.fcf, grossProfit: y.grossProfit, opIncome: y.opIncome, ebitda: y.ebitda, eps: y.eps, shares: y.shares, debt: y.debt, cash: y.cashAll, equity: y.equity, assets: y.assets, ar: y.ar, inventory: y.inventory, ap: y.ap, gm: r1(y.gm), om: r1(y.om), roce: r1(y.roce), roic: r1(y.roic), price: r2(y.price) })),
+    years: Y.map((y) => ({ fy: y.fy, end: y.end, revenue: y.revenue, netIncome: y.netIncome, cfo: y.cfo, capex: y.capex, fcf: y.fcf, grossProfit: y.grossProfit, opIncome: y.opIncome, ebitda: y.ebitda, eps: y.eps, shares: y.shares, debt: y.debt, cash: y.cashAll, equity: y.equity, assets: y.assets, ar: y.ar, inventory: y.inventory, ap: y.ap, gm: r1(y.gm), om: r1(y.om), roce: r1(y.roce), roic: r1(y.roic), de: r2(y.de), ndEbitda: r2(y.ndEbitda), price: r2(y.price) })),
     cash, workingCapital: wc, moat, allocation: alloc, valuation, credibility, pay, multibagger,
     synthesis: { bull: bull.slice(0, 3), flags: flags.slice(0, 3), question, fairValue: valuation.fairValue },
     sources: ['SEC XBRL companyfacts (10-K)', 'Yahoo monthly closes', 'NASDAQ summary & earnings-surprise'],

@@ -485,7 +485,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.18</div>
+      <div class="kicker">Signal Desk · Handbook · v3.19</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -1408,6 +1408,12 @@
       <p>A fixed universe of 84 long-record payers. Yield is cash actually paid in the last twelve months (Yahoo dividend events) divided by price, not a quote field. Payout from trailing GAAP EPS; for the top 24, dividends vs free cash flow over five years and consecutive years of rising dividends per share from the filings (capped by the six years read). Safety score 1–10 from stated rules; unsustainable flags at payout above 80% or dividends above free cash flow. Income for your amount, the capital needed for an income goal, a ten-year DRIP projection with its assumptions printed, and tax treatment by account type and bracket.</p>
       <h3>Allocation plan</h3>
       <p>A policy statement from rules you can see: equity share 110 − age, ±10 for tolerance, capped by horizon; core index sleeves (US total market, international, aggregate bonds, TIPS, cash, gold) with example funds; the desk's momentum sleeve as a capped satellite; expected long-run return and a bad-year figure blended from each sleeve's approximate historical averages; a 5-point rebalancing band with new money to the most underweight sleeve; asset location by account type; a benchmark; and a one-page statement to copy. It is a template, not advice.</p>
+      <h3>Profile screen (nightly, all 500 names)</h3>
+      <p>The "rank the whole index for my profile" prompt needs filings for every name, so it runs as a batch: each night a GitHub Actions job (<code>screen.yml</code>) reads the latest 10-K of every S&amp;P 500 constituent through the same forensic module the one-stock page uses, the scan for technicals, five years of price history for the worst drawdown and cash dividends, and NASDAQ for P/E and beta, then commits one file (<code>data/screen.json</code>, about 270 KB). The page ranks that file in your browser, so changing the profile is instant. Five components, each a 0–100 percentile across the universe (ties share the middle of their band): <strong>quality</strong> (ROIC, gross margin, moat score, the profits-are-real verdict, credibility), <strong>value</strong> (FCF yield, P/E against the sector median, premium to own history), <strong>growth</strong> (five-year revenue and EPS CAGR), <strong>momentum</strong> (scan score, 20-day relative strength, setup), <strong>safety</strong> (risk rating, net debt/EBITDA, five-year drawdown, yield). Weights by tolerance — conservative 30/20/5/10/35, balanced 25/20/15/20/20, aggressive 15/10/30/35/10 — shifted by horizon (weeks adds 20 points to momentum, years takes 15 away and gives them to quality and value). Hard filters before ranking: conservative allows risk ≤ 5, needs a known moat ≥ 5 and at least a WATCH cash verdict, and drops BROKEN, EARNINGS and AVOID setups; balanced allows risk ≤ 7 and drops BROKEN and EARNINGS; aggressive allows anything but EARNINGS. Sector list and a yield floor are yours. Each pick prints its entry zone (scan entry −0.5 to +0.25 ATR), the scan's stop and 2.5R target, P/E against its sector median, five-year revenue CAGR, debt/equity next to net debt/EBITDA, yield with how much of free cash flow the dividend takes, the moat word, the own-history fair range as the 12-month bear and bull anchors (hidden when it sits outside 0.3×–3× of price), the 1–10 risk rating with the drawdown behind it, equal-weight sizing for your amount, and a one-line reason list built only from those numbers. The page prints when the file was built and how many names each source covered, and marks itself stale after 36 hours. A screen is a reading list: every name still goes through the one-stock page and the risk engine before it is a trade.</p>
+      <h3>Debt / equity next to net debt / EBITDA</h3>
+      <p>Two leverage readings, because they fail differently: net debt/EBITDA says how many years of operating cash the debt represents (the lender's view), debt/equity says how much of the balance sheet is borrowed (the shareholder's view). D/E is total debt ÷ book equity from the latest 10-K; it is shown as n/a when equity is negative — buyback-heavy names such as Home Depot or McDonald's have negative book equity and a ratio there would be meaningless, not alarming. Banks get neither, as before. It appears on the one-stock business card, in Compare and in the screen.</p>
+      <h3>Options volume vs open interest</h3>
+      <p>A separate signal from the implied move. For the first expiry on or after the next report (or the nearest expiry): call and put volume today, call and put open interest, the put/call volume ratio, total volume as a multiple of open interest, and any strike trading at least 500 contracts and three times its open interest. Volume above open interest means new positions are being opened today rather than existing ones traded around; a put/call volume ratio above 1.5 is read as hedging or bearish positioning, below 0.5 as call chasing. It is a reading of today's flow from NASDAQ's chain, not a prediction, and it is not measured in the backtest — the desk's earnings rule still decides.</p>
       <h3>Dashboard stress test</h3>
       <p>For each holding, its own move in the COVID crash window (19 Feb – 23 Mar 2020), the 2022 bear market (3 Jan – 12 Oct 2022) and its worst 60 sessions in ten years, weighted by today's values into a book figure; the S&amp;P 500's move stands in where a name has no history and options are taken as three times the underlying. Liquidity as sessions to exit at a tenth of average dollar volume. Rate sensitivity as % move per +1 point in the 10-year yield over the last 120 sessions, per name and for the book. Each feeds the biggest-vulnerability sentence. Geographic and currency exposure are not in structured filings.</p>
     </section>
@@ -1415,6 +1421,19 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 25</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.19<br/>2026-10-24</div>
+        <div class="what">
+          <h4>Profile screen, debt/equity, options flow (Chapter 24)</h4>
+          <ul>
+            <li>Research → <strong>Profile screen</strong>: all S&amp;P 500 names ranked for a risk tolerance, horizon, sector list and yield floor from a nightly file built by <code>screen.yml</code> (filings via the forensic module, scan technicals, five-year history, NASDAQ). Five percentile components with profile weights, hard filters per profile, entry zone / stop / target, P/E vs sector median, revenue CAGR, D/E, yield and payout coverage, moat, fair-range anchors, risk 1–10, equal-weight sizing, reasons from the numbers, a freshness line and a copy-as-prompt. Module <code>screen.js</code> with unit tests (37 in total); builder <code>tools/build-screen.mjs</code>.</li>
+            <li><strong>Debt / equity</strong> next to net debt / EBITDA on the one-stock card, in Compare and in the screen (n/a for negative equity and banks).</li>
+            <li><strong>Options volume vs open interest</strong> as its own card in Patterns and its own line in the pre-earnings brief: call/put volume and open interest, put/call ratio, volume ÷ OI, unusual strikes.</li>
+            <li>Fix: the dividend-blueprint and allocation-plan input boxes did not recompute on the live page (a missing import); they do now.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.18<br/>2026-10-24</div>

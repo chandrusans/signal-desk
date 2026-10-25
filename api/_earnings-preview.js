@@ -106,8 +106,20 @@ async function impliedMove(t, reportDate, price) {
       if (!best || Math.abs(k - spot) < Math.abs(best.strike - spot)) best = { strike: k, call: cm, put: pm };
     }
     if (!best) return null;
+    // Volume vs open interest across that expiry: a put/call volume ratio, how much of today's
+    // volume is new positioning, and strikes trading at ≥3× their open interest (≥500 contracts).
+    let cv = 0, pv = 0, coi = 0, poi = 0; const unusual = [];
+    for (const r of g.rows) {
+      const k = num(r.strike); if (!(k > 0)) continue;
+      const cvol = num(r.c_Volume) || 0, pvol = num(r.p_Volume) || 0, co = num(r.c_Openinterest) || 0, po = num(r.p_Openinterest) || 0;
+      cv += cvol; pv += pvol; coi += co; poi += po;
+      if (cvol >= 500 && cvol >= 3 * Math.max(co, 1)) unusual.push({ strike: k, type: 'call', volume: cvol, openInterest: co });
+      if (pvol >= 500 && pvol >= 3 * Math.max(po, 1)) unusual.push({ strike: k, type: 'put', volume: pvol, openInterest: po });
+    }
+    const activity = { expiry: g.expiry, callVolume: cv, putVolume: pv, callOpenInterest: coi, putOpenInterest: poi, putCallVolumeRatio: cv > 0 ? +(pv / cv).toFixed(2) : null, volumeToOpenInterest: coi + poi > 0 ? +((cv + pv) / (coi + poi)).toFixed(2) : null, unusual: unusual.sort((a, b) => b.volume - a.volume).slice(0, 6), read: null };
+    activity.read = `${activity.putCallVolumeRatio == null ? '' : activity.putCallVolumeRatio > 1.2 ? 'Puts outrun calls today (' + activity.putCallVolumeRatio + ' put/call by volume) — hedging or bearish positioning. ' : activity.putCallVolumeRatio < 0.6 ? 'Calls dominate today (' + activity.putCallVolumeRatio + ' put/call by volume). ' : 'Balanced put/call volume (' + activity.putCallVolumeRatio + '). '}${activity.volumeToOpenInterest == null ? '' : activity.volumeToOpenInterest > 0.5 ? 'Volume is more than half of open interest — a lot of NEW positioning into this expiry. ' : 'Volume is a small share of open interest — mostly existing positions. '}${unusual.length ? 'Unusual strikes: ' + unusual.slice(0, 3).map((u) => `${u.type} $${u.strike} (${u.volume} vs ${u.openInterest} OI)`).join(', ') + '.' : 'No strike is trading at three times its open interest.'}`;
     const straddle = best.call + best.put;
-    return { expiry: g.expiry, strike: best.strike, straddle: +straddle.toFixed(2), impliedMovePct: +((straddle / spot) * 100).toFixed(2), spot, note: 'ATM straddle ÷ price — the move the market is paying for into that expiry, both directions. Roughly 85% of a straddle is the one-day expectation when the expiry is the report week.' };
+    return { expiry: g.expiry, strike: best.strike, straddle: +straddle.toFixed(2), impliedMovePct: +((straddle / spot) * 100).toFixed(2), spot, activity, note: 'ATM straddle ÷ price — the move the market is paying for into that expiry, both directions. Roughly 85% of a straddle is the one-day expectation when the expiry is the report week.' };
   } catch { return null; }
 }
 
@@ -131,5 +143,6 @@ export default async function handler(req, res) {
   if (si?.latest) read.push(`Short interest ${(si.latest.shares / 1e6).toFixed(1)}M shares, ${(+si.latest.daysToCover).toFixed(1)} days to cover${si.changePct != null ? `, ${si.changePct >= 0 ? '+' : ''}${si.changePct}% since the prior settlement` : ''}${si.latest.daysToCover >= 5 ? ' — crowded enough that a beat can squeeze' : ''}.`);
   read.push('The desk\'s rule: no NEW position inside 5 days of the report; a holder with +1R or more trims before the print, otherwise sizes for a 10% gap. Buying "before" is a coin flip at options prices; the brief tells you the odds, it does not place the bet.');
   res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
-  res.status(200).json({ asOf: Date.now(), ticker: t, next: nd, consensus: fc, history: sp, reactions: rx, avgAbsMovePct: avgAbs, impliedMove: im, shortInterest: si, read, notAvailable: ['segment revenue breakdown (10-Q text)', 'management guidance language (transcript)', 'key metrics the Street watches (judgment)'] });
+  if (im?.activity?.read) read.splice(read.length - 1, 0, im.activity.read);
+  res.status(200).json({ asOf: Date.now(), ticker: t, next: nd, consensus: fc, history: sp, reactions: rx, avgAbsMovePct: avgAbs, impliedMove: im, optionsActivity: im?.activity || null, shortInterest: si, read, notAvailable: ['segment revenue breakdown (10-Q text)', 'management guidance language (transcript)', 'key metrics the Street watches (judgment)'] });
 }

@@ -989,6 +989,7 @@
   table.r th { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
   table.r th:first-child, table.r td:first-child { text-align: left; }
   table.r td.up { color: var(--signal); } table.r td.down { color: var(--risk); }
+  table.r.screen td { white-space: normal; vertical-align: top; } table.r.screen td .s { font-size: 10.5px; color: var(--ink-3); white-space: nowrap; } table.r.screen tr.why td { border-bottom: 1px solid var(--rule); padding-top: 0; text-align: left; font-size: 11px; color: var(--ink-3); } table.r.screen tbody tr:not(.why) td { border-bottom: 0; }
   .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin: 8px 0 12px; }
   .kv .c { background: var(--panel); padding: 10px 12px; min-width: 0; }
   .kv .l { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
@@ -1130,11 +1131,14 @@
 
 
 
+
 <script type="module">
 import { regime, analyze } from '/analyze.js';
 import { multiTimeframeTrend, macd, bollinger, rsi, seasonality, dayOfWeek, maxDrawdown, riskRating } from '/indicators.js';
 import { defaultAssumptions, runDcf, sensitivity, breakers } from '/dcf.js';
-import { renderCompare, comparePrompt, DIVIDEND_UNIVERSE, dividendSafety, dividendGrowthYears, renderDividends, buildPlan, renderPlan } from '/views.js';
+import { renderCompare, comparePrompt, DIVIDEND_UNIVERSE, dividendSafety, dividendGrowthYears, renderDividends, buildPlan, renderPlan, renderScreen, screenPrompt } from '/views.js';
+import { rankScreen, pickReasons, pickLevels, PROFILES, HORIZONS } from '/screen.js';
+import { parseNum } from '/ui.js';
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -1156,10 +1160,10 @@ import { renderCompare, comparePrompt, DIVIDEND_UNIVERSE, dividendSafety, divide
   renderRecent();
 
   $('rsearch').addEventListener('submit', (e) => { e.preventDefault(); const t = $('ticker').value.trim().toUpperCase(); if (t) { history.replaceState(null, '', `?t=${t}`); research(t); } });
-  // sub-views: ?compare=A,B,C · ?view=dividends · ?view=plan
+  // sub-views: ?compare=A,B,C · ?view=screen · ?view=dividends · ?view=plan
   const subnav = document.createElement('div');
   subnav.style.cssText = 'display:flex;gap:14px;flex-wrap:wrap;margin:-8px 0 16px;font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;';
-  subnav.innerHTML = '<a href="/research" style="color:var(--accent)">one stock</a><a href="/research?view=dividends" style="color:var(--accent)">dividend blueprint</a><a href="/research?view=plan" style="color:var(--accent)">allocation plan</a><a href="#" id="cmp-link" style="color:var(--accent)">compare tickers…</a>';
+  subnav.innerHTML = '<a href="/research" style="color:var(--accent)">one stock</a><a href="/research?view=screen" style="color:var(--accent)">profile screen</a><a href="/research?view=dividends" style="color:var(--accent)">dividend blueprint</a><a href="/research?view=plan" style="color:var(--accent)">allocation plan</a><a href="#" id="cmp-link" style="color:var(--accent)">compare tickers…</a>';
   $('rsearch').after(subnav);
   document.getElementById('cmp-link').addEventListener('click', (e) => { e.preventDefault(); const v = prompt('Tickers to compare (2 to 7, comma-separated):', 'NVDA, AMD, AVGO, INTC'); if (!v) return; const list = v.toUpperCase().split(/[,\s]+/).filter((x) => /^[A-Z][A-Z0-9.\-]{0,9}$/.test(x)).slice(0, 7); if (list.length >= 2) { history.replaceState(null, '', `?compare=${list.join(',')}`); compare(list); } });
   $('recent').addEventListener('click', (e) => { const a = e.target.closest('a'); if (!a) return; e.preventDefault(); const t = new URL(a.href).searchParams.get('t'); $('ticker').value = t; history.replaceState(null, '', `?t=${t}`); research(t); });
@@ -1235,7 +1239,7 @@ import { renderCompare, comparePrompt, DIVIDEND_UNIVERSE, dividendSafety, divide
         <div class="c"><div class="l">R&amp;D intensity</div><div class="v">${pct(rndPct, 1, false)}</div><div class="s">of revenue</div></div>
         <div class="c"><div class="l">Market cap</div><div class="v">${S?.marketCapRaw ? big(S.marketCapRaw) : big(f?.valuation?.marketCap)}</div><div class="s">price ${money(price)}${S?.beta != null ? ` · beta ${S.beta}` : ''}</div></div>
         <div class="c"><div class="l">Price performance</div><div class="v">${pct(perf(21))}</div><div class="s">1m · 3m ${pct(perf(63))} · 1y ${pct(perf(252))}${dd5 ? ` · worst 5-yr drawdown ${dd5.maxDrawdownPct}%` : ''}</div></div>
-        ${(() => { const nde = last.debt != null && last.ebitda > 0 ? (last.debt - (last.cash || 0)) / last.ebitda : null; const rr = riskRating({ atrPct, maxDrawdownPct: dd5?.maxDrawdownPct, beta: S?.beta, netDebtToEbitda: nde }); return `<div class="c"><div class="l">Risk rating</div><div class="v" style="color:${rr >= 7 ? 'var(--risk)' : rr >= 4 ? 'var(--caution)' : 'var(--signal)'}">${rr} / 10</div><div class="s">${atrPct != null ? `ATR ${atrPct.toFixed(1)}%` : ''}${dd5 ? ` · drawdown ${dd5.maxDrawdownPct}%` : ''}${S?.beta != null ? ` · beta ${S.beta}` : ''}${nde != null ? ` · net debt ${nde.toFixed(1)}× EBITDA` : ''}</div></div>`; })()}
+        ${(() => { const nde = last.debt != null && last.ebitda > 0 ? (last.debt - (last.cash || 0)) / last.ebitda : null; const rr = riskRating({ atrPct, maxDrawdownPct: dd5?.maxDrawdownPct, beta: S?.beta, netDebtToEbitda: nde }); return `<div class="c"><div class="l">Risk rating</div><div class="v" style="color:${rr >= 7 ? 'var(--risk)' : rr >= 4 ? 'var(--caution)' : 'var(--signal)'}">${rr} / 10</div><div class="s">${atrPct != null ? `ATR ${atrPct.toFixed(1)}%` : ''}${dd5 ? ` · drawdown ${dd5.maxDrawdownPct}%` : ''}${S?.beta != null ? ` · beta ${S.beta}` : ''}${nde != null ? ` · net debt ${nde.toFixed(1)}× EBITDA` : ''}${last.de != null ? ` · D/E ${last.de.toFixed(2)}` : last.equity <= 0 ? ' · D/E n/a (negative equity)' : ''}</div></div>`; })()}
       </div>
       <p style="margin:0 0 10px;"><button class="copy" data-peers="${esc(t)}">Compare with the biggest names in ${esc(sector || 'its sector')} →</button></p>
       <h4>Key risks (from the numbers)</h4>${risks.length ? `<ul>${risks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="na">No filings-based risks could be computed.</p>'}
@@ -1399,7 +1403,8 @@ import { renderCompare, comparePrompt, DIVIDEND_UNIVERSE, dividendSafety, divide
         <div class="kv">
           <div class="c"><div class="l">Insider filings · 90 days</div><div class="v">${ins ? `${insBuys} buy · ${insSells} sell` : '—'}</div><div class="s">officers and directors, Form 4 · ${ins ? 'measured: officer sells have no predictive value; buys too rare to score' : 'no filings read'}</div></div>
           ${P1?.shortInterest?.latest ? `<div class="c"><div class="l">Short interest</div><div class="v">${(+P1.shortInterest.latest.daysToCover).toFixed(1)}d to cover</div><div class="s">${(P1.shortInterest.latest.shares / 1e6).toFixed(1)}M shares · ${pct(P1.shortInterest.changePct)} vs prior · squeeze potential ${P1.shortInterest.latest.daysToCover >= 5 ? 'meaningful' : P1.shortInterest.latest.daysToCover >= 3 ? 'modest' : 'low'}</div></div>` : ''}
-          ${P1?.impliedMove ? `<div class="c"><div class="l">Options activity</div><div class="v">±${P1.impliedMove.impliedMovePct}%</div><div class="s">implied into the next report vs ${P1.avgAbsMovePct ?? '?'}% realised — ${P1.avgAbsMovePct != null && P1.impliedMove.impliedMovePct > P1.avgAbsMovePct * 1.2 ? 'rich premium' : 'in line'}</div></div>` : ''}
+          ${P1?.impliedMove ? `<div class="c"><div class="l">Options premium</div><div class="v">±${P1.impliedMove.impliedMovePct}%</div><div class="s">implied into the next report vs ${P1.avgAbsMovePct ?? '?'}% realised — ${P1.avgAbsMovePct != null && P1.impliedMove.impliedMovePct > P1.avgAbsMovePct * 1.2 ? 'rich premium' : 'in line'}</div></div>` : ''}
+          ${P1?.optionsActivity ? `<div class="c"><div class="l">Options volume vs open interest</div><div class="v">${P1.optionsActivity.putCallVolumeRatio ?? '—'} p/c · ${P1.optionsActivity.volumeToOpenInterest ?? '—'} vol/OI</div><div class="s">${esc(P1.optionsActivity.read)}</div></div>` : ''}
           ${P1?.reactions?.length ? `<div class="c"><div class="l">Earnings behaviour</div><div class="v">${P1.reactions.filter((r) => r.closePct > 0).length}/${P1.reactions.length} up</div><div class="s">avg gap ${pct(P1.reactions.reduce((a, r) => a + r.gapPct, 0) / P1.reactions.length)} · avg 5-day ${pct(P1.reactions.reduce((a, r) => a + r.fiveDayPct, 0) / P1.reactions.length)}</div></div>` : ''}
         </div>
         <h4>Statistical edge summary</h4><p class="plain">${esc(edges.join('; '))}. Institutional ownership trends need 13F aggregation, which no free source provides cleanly; Fed-day and CPI-day correlations need an event calendar going back years — both are left to the prompt rather than approximated.</p></div>`);
@@ -1543,8 +1548,33 @@ import { renderCompare, comparePrompt, DIVIDEND_UNIVERSE, dividendSafety, divide
   document.addEventListener('input', (e) => { const el = e.target.closest('[data-div]'); if (!el || !divPicks) return; const k = el.dataset.div; divOpts = { ...divOpts, [k]: k === 'account' ? el.value : (parseNum(el.value) || 0) }; const focus = k; renderDiv(); const again = $('out').querySelector(`[data-div="${focus}"]`); if (again) again.focus(); });
   document.addEventListener('change', (e) => { const el = e.target.closest('select[data-div]'); if (!el || !divPicks) return; divOpts = { ...divOpts, account: el.value }; renderDiv(); });
 
+  // ── Profile screen (nightly data/screen.json, ranked in the browser) ──
+  let screenData = null, screenOpts = { tolerance: 'balanced', horizon: 'months', sectors: [], minYieldPct: 0, amount: 100000, top: 10 }, screenResult = null;
+  async function screen() {
+    if (!screenData) {
+      $('out').innerHTML = `<div class="none"><strong>Loading the nightly screen…</strong><span class="loading">one file, ${'~'}270 KB, built from filings + scan + history</span></div>`;
+      try { screenData = await j('/data/screen.json'); } catch (e) { $('out').innerHTML = `<div class="sec"><p class="na">The screen file is missing (${esc(e.message)}). It is built nightly by the screen workflow; run <code>npm run screen:build</code> locally or dispatch the workflow.</p></div>`; return; }
+      // honour ?tolerance= ?horizon= ?sectors= ?yield= from the URL
+      const q = new URLSearchParams(location.search);
+      if (PROFILES[q.get('tolerance')]) screenOpts.tolerance = q.get('tolerance');
+      if (HORIZONS[q.get('horizon')]) screenOpts.horizon = q.get('horizon');
+      if (q.get('sectors')) screenOpts.sectors = q.get('sectors').split(',').filter(Boolean).slice(0, 11);
+      if (parseNum(q.get('yield')) > 0) screenOpts.minYieldPct = parseNum(q.get('yield'));
+    }
+    renderScr();
+  }
+  function renderScr() {
+    screenResult = rankScreen(screenData.rows, screenOpts);
+    $('out').innerHTML = renderScreen(screenData, screenResult, screenOpts, { PROFILES, HORIZONS, pickReasons, pickLevels });
+    $('run-ts').textContent = (screenData.builtAt || '').slice(0, 16).replace('T', ' ') + ' UTC'; $('feed-label').textContent = 'nightly build';
+    const u = new URLSearchParams({ view: 'screen', tolerance: screenOpts.tolerance, horizon: screenOpts.horizon }); if (screenOpts.sectors.length) u.set('sectors', screenOpts.sectors.join(',')); if (screenOpts.minYieldPct > 0) u.set('yield', String(screenOpts.minYieldPct)); history.replaceState(null, '', `?${u}`);
+    $('out').querySelector('[data-copy="screen"]')?.addEventListener('click', async (e) => { const txt = screenPrompt(screenResult.picks.slice(0, screenOpts.top), screenOpts, { pickReasons, pickLevels }); try { await navigator.clipboard.writeText(txt); e.target.textContent = '✓ copied'; } catch { prompt('Copy this:', txt); } });
+  }
+  document.addEventListener('input', (e) => { const el = e.target.closest('input[data-screen]'); if (!el || !screenData) return; const k = el.dataset.screen; const v = parseNum(el.value); if (!isFinite(v)) return; screenOpts = { ...screenOpts, [k]: k === 'top' ? Math.max(5, Math.min(50, Math.round(v))) : Math.max(0, v) }; renderScr(); const again = $('out').querySelector(`[data-screen="${k}"]`); if (again) { again.focus(); try { again.selectionStart = again.selectionEnd = again.value.length; } catch {} } });
+  document.addEventListener('change', (e) => { const el = e.target.closest('select[data-screen]'); if (!el || !screenData) return; const k = el.dataset.screen; screenOpts = { ...screenOpts, [k]: k === 'sectors' ? [...el.selectedOptions].map((o) => o.value) : el.value }; renderScr(); });
+
   // ── Allocation plan ──
-  let planIn = { age: 40, horizonYears: 20, tolerance: 'balanced', account: 'taxable', monthly: 1000, savings: 100000 };
+  let planIn ={ age: 40, horizonYears: 20, tolerance: 'balanced', account: 'taxable', monthly: 1000, savings: 100000 };
   function plan() {
     const p = buildPlan(planIn);
     $('out').innerHTML = renderPlan(p);
@@ -1583,6 +1613,7 @@ import { renderCompare, comparePrompt, DIVIDEND_UNIVERSE, dividendSafety, divide
   const qs = new URLSearchParams(location.search);
   const t0 = qs.get('t'), cmp = qs.get('compare'), view = qs.get('view');
   if (cmp) { const list = cmp.toUpperCase().split(',').filter((x) => /^[A-Z][A-Z0-9.\-]{0,9}$/.test(x)).slice(0, 7); if (list.length >= 2) compare(list); }
+  else if (view === 'screen') screen();
   else if (view === 'dividends') dividends();
   else if (view === 'plan') plan();
   else if (t0) { $('ticker').value = t0.toUpperCase(); research(t0.toUpperCase()); }
