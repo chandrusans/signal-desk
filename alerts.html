@@ -959,6 +959,7 @@
   <nav class="tabbar" aria-label="Views">
     <div class="tabbar-tabs">
       <a href="/today" class="tab" data-view="today">Today</a>
+      <a href="/swing" class="tab" data-view="swing">Swing</a>
       <a href="/alerts" class="tab on" data-view="alerts" aria-current="page">Alerts</a>
       <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
       <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
@@ -1157,7 +1158,7 @@
 
 
 <script type="module">
-import { TYPES, evaluate, evaluatePositions, fetchAlertData, fetchPositionContext, notify, requestPermission, registerWorker, getSettings, setSettings, getWatch, setWatch, getHistory, clearHistory } from '/alerts.js';
+import { TYPES, watchUnion, bookUnion, evaluate, evaluatePositions, fetchAlertData, fetchPositionContext, notify, requestPermission, registerWorker, getSettings, setSettings, getWatch, setWatch, getHistory, clearHistory } from '/alerts.js';
 import { classOf } from '/exits.js';
 import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is already the browser-notification helper here
 
@@ -1297,7 +1298,7 @@ import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is al
     // Nothing to sync with until this device has a key or the user presses Save: a background
     // sync without one is a guaranteed 403 and an error line in the console on every load.
     if (!syncKey() && !interactive) return { ok: false, error: 'not set up on this device' };
-    const body = { syncKey: syncKey(), watch, settings, portfolio: portfolio(), ...extra };
+    const body = { syncKey: syncKey(), watch: watchUnion(watch).slice(0, 30), settings, portfolio: portfolio(), ...extra };
     try {
       let r = await fetch('/api/notify?op=sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       let d = await r.json();
@@ -1351,7 +1352,8 @@ import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is al
   });
 
   // ---- positions: price every held thing, run the shared exit rulebook, alert ----
-  const portfolio = () => { try { return JSON.parse(localStorage.getItem('sd-portfolio-v1') || '[]'); } catch { return []; } };
+  // Dashboard positions plus the Swing tab's paper book: one exit rulebook, one alert stream.
+  const portfolio = () => { let pf = []; try { pf = JSON.parse(localStorage.getItem('sd-portfolio-v1') || '[]'); } catch {} return bookUnion(Array.isArray(pf) ? pf : []); };
   const fmtp = (x) => (x == null ? '—' : x >= 1000 ? '$' + Math.round(x).toLocaleString('en-US') : x >= 1 ? '$' + x.toFixed(2) : '$' + Number(x).toPrecision(3));
   async function checkPositions() {
     const pf = portfolio();
@@ -1377,19 +1379,19 @@ import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is al
   // ---- the poll ----
   async function check() {
     if (inFlight) return;
-    if (!watch.length) { try { const f = await checkPositions(); await notify(f); renderFeed(); } catch {} return; }
+    if (!watchUnion(watch).length) { try { const f = await checkPositions(); await notify(f); renderFeed(); } catch {} return; }
     inFlight = true;
     $('feed-dot').style.background = 'var(--caution)'; $('feed-label').textContent = 'checking…';
     try {
-      const tk = watch.slice(0, 30);
+      const tk = watchUnion(watch).slice(0, 30);     // the Alerts list plus whatever is on the Swing tab
       const need = Date.now() - slow.at > SLOW_MS;
       const data = await fetchAlertData(tk, { slow: need });
       const scan = data.scan, news = data.news;
-      if (need) { if (data.earnings) slow.earnings = data.earnings; if (data.analyst) slow.analyst = data.analyst; if (data.insider) slow.insider = data.insider; slow.at = Date.now(); }
+      if (need) { if (data.earnings) slow.earnings = data.earnings; if (data.analyst) slow.analyst = data.analyst; if (data.insider) slow.insider = data.insider; if (data.gate !== undefined) slow.gate = data.gate; if (data.next !== undefined) slow.next = data.next; slow.at = Date.now(); }
       const failed = data.failed;
       snap = { scan, news };
       renderSnapshot(tk);
-      const fresh = evaluate(tk, { scan, news, earnings: slow.earnings, analyst: slow.analyst, insider: slow.insider }, settings);
+      const fresh = evaluate(tk, { scan, news, earnings: slow.earnings, analyst: slow.analyst, insider: slow.insider, gate: slow.gate || null, next: slow.next || null }, settings);
       let posFired = []; try { posFired = await checkPositions(); } catch { /* positions panel stays as it was */ }
       const all = [...posFired, ...fresh];
       const shown = await notify(all);

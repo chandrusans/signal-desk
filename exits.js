@@ -107,6 +107,18 @@ export function positionVerdict(pos, ctx = {}) {
   if (rg && cls !== 'metal' && rg.level === 'crisis') return V('SELL', 'high', `Regime is CRISIS${rg.vix != null ? ` (VIX ${rg.vix.toFixed(1)})` : ''}. The rulebook cuts the momentum book here regardless of the chart.`, 'regime');
   if (rg && cls !== 'metal' && rg.level === 'stress' && gainR < 0) return V('SELL', 'high', `Regime is STRESS${rg.vix != null ? ` (VIX ${rg.vix.toFixed(1)})` : ''} and this position is already losing (${gainR.toFixed(1)}R). Momentum losers in a stress tape get worse; cut it.`, 'regime');
   if (rg && cls !== 'metal' && rg.level === 'stress' && stop < buy) return V('WATCH', 'high', `Regime is STRESS${rg.vix != null ? ` (VIX ${rg.vix.toFixed(1)})` : ''}. Winners survive stress; losers do not — move the stop to breakeven ($${fmt(buy)}) now and let the stop decide.`, 'regime_stress');
+  // ── Strategy-specific exits (positions opened from the Swing tab carry `strategy`) ──
+  // Mean reversion is a bounce trade: it has no profit target. It is over on the first
+  // close back above the 5-day average, or when its short clock runs out, win or lose.
+  if (pos.strategy === 'meanrev') {
+    const ma5 = a?.indicators?.ma5;
+    if (ma5 != null && price > ma5 && sessionsHeld >= 1) return V('SELL', 'high', `Mean-reversion exit: $${fmt(price)} is back above its 5-day average ($${fmt(ma5)}). The bounce this trade was bought for has happened (${gainR >= 0 ? '+' : ''}${gainR.toFixed(1)}R) — sell.`, 'meanrev_exit');
+    if (sessionsHeld >= timeStop) return V('SELL', 'medium', `Mean-reversion time stop: ${sessionsHeld} sessions and no bounce above the 5-day average (${gainR >= 0 ? '+' : ''}${gainR.toFixed(1)}R). The dip did not revert — free the capital.`, 'time_stop');
+  }
+  // The Swing book never carries a non-winner into a report: inside two days it is a sell, not a decision.
+  if (cls === 'stock' && pos.book === 'swing' && ctx.earnings?.daysAway != null && ctx.earnings.daysAway >= 0 && ctx.earnings.daysAway <= 2 && gainR < 1) {
+    return V('SELL', 'high', `Earnings in ${ctx.earnings.daysAway} day${ctx.earnings.daysAway === 1 ? '' : 's'} (${ctx.earnings.date}) and the trade is at ${gainR >= 0 ? '+' : ''}${gainR.toFixed(1)}R. The swing rules do not hold a non-winner through a report — sell before the print.`, 'earnings_exit');
+  }
   if (cls === 'stock' && ctx.earnings?.daysAway != null && ctx.earnings.daysAway >= 0 && ctx.earnings.daysAway <= 5) {
     return V(gainR >= 1 ? 'TRIM' : 'WATCH', 'high', `Earnings in ${ctx.earnings.daysAway} day${ctx.earnings.daysAway === 1 ? '' : 's'} (${ctx.earnings.date}). A gap fills through your stop, not at it — ${gainR >= 1 ? 'take at least half off before the print' : 'decide now whether you are holding through it, and size for a 10% gap if so'}.`, 'earnings_soon');
   }

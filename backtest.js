@@ -51,7 +51,13 @@ const CLASS_CFG = {
  */
 export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars = null) {
   const cfg = { ...DEFAULTS, ...opts };
-  const strategy = cfg.strategy || 'momentum';   // 'momentum' | 'mean-reversion' | 'composite'
+  // 'momentum' (breakout + pullback) | 'breakout' | 'pullback' | 'mean-reversion' | 'composite'
+  const strategy = cfg.strategy || 'momentum';
+  const trendFollowing = strategy === 'momentum' || strategy === 'breakout' || strategy === 'pullback';
+  // cfg.mrExit: give mean reversion its own exit (first close above the 5-day average, no
+  // profit target) instead of the momentum exits. Off by default so existing results hold.
+  const mrExit = !!cfg.mrExit && strategy === 'mean-reversion';
+  const sma5At = (bars, t) => { if (t < 4) return null; let s = 0; for (let k = t - 4; k <= t; k++) s += bars[k].c; return s / 5; };
   const klass = CLASS_CFG[cfg.assetClass] || CLASS_CFG.equity;
   // An explicit slippageBps in opts wins; otherwise take the asset class's cost.
   const costBps = opts.slippageBps != null ? opts.slippageBps : klass.costBps;
@@ -98,6 +104,10 @@ export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars =
         // 3. Target hit
         else if (bar.h >= open.target) {
           exit = { price: open.target, reason: 'target', gapped: false };
+        }
+        // 3b. Mean-reversion exit: the bounce has happened
+        else if (mrExit && held >= 1 && sma5At(bars, t) != null && bar.c > sma5At(bars, t)) {
+          exit = { price: bar.c, reason: 'ma5_exit', gapped: false };
         }
         // 4. Time stop
         else if (held >= cfg.timeStopDays) {
@@ -151,6 +161,10 @@ export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars =
       let wantEntry = false;
       if (strategy === 'momentum') {
         wantEntry = (a.setup === 'BREAKOUT' || a.setup === 'PULLBACK');
+      } else if (strategy === 'breakout') {
+        wantEntry = a.setup === 'BREAKOUT';
+      } else if (strategy === 'pullback') {
+        wantEntry = a.setup === 'PULLBACK';
       } else if (strategy === 'mean-reversion') {
         // Connors-style: RSI(2) deeply oversold inside a confirmed uptrend.
         // RSI(14) is the wrong tool here — it rarely prints below 35 while a
@@ -164,7 +178,7 @@ export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars =
         wantEntry = a.score >= 70 && a.setup !== 'BROKEN' && a.setup !== 'AVOID';
       }
       if (!wantEntry) continue;
-      if (rg && rg.allow.length && !rg.allow.includes(a.setup) && strategy === 'momentum') continue;
+      if (rg && rg.allow.length && !rg.allow.includes(a.setup) && trendFollowing) continue;
 
       // Entry at NEXT bar's open, with slippage
       const entryRaw = next.o;
@@ -173,7 +187,7 @@ export function runBacktest(barsByTicker, opts = {}, vixBars = null, benchBars =
       if (!(atr > 0)) continue;
       const stopDist = Math.min(entryFill * klass.stopCapPct, Math.max(1.5 * atr, entryFill * klass.stopFloorPct));
       const stop = entryFill - stopDist;
-      const target = entryFill + cfg.targetR * stopDist;
+      const target = mrExit ? Infinity : entryFill + cfg.targetR * stopDist;
 
       open = {
         entryIdx: t,

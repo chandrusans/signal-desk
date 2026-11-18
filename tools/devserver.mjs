@@ -14,6 +14,7 @@ const PAGES = {
   '/': 'index.html',
   '/stocks': 'index.html',
   '/today': 'today.html',
+  '/swing': 'swing.html',
   '/alerts': 'alerts.html',
   '/simulate': 'simulate.html',
   '/dashboard': 'dashboard.html',

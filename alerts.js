@@ -36,6 +36,7 @@
 
 import { positionVerdict, alertKey, classOf } from './exits.js';
 import { analyze, regime, cryptoRegime } from './analyze.js';
+import { signalFor, applySpyTrend, STRATEGIES } from './strategies.js';
 
 const LS = {
   seen: 'sd-alerts-seen-v1',
@@ -43,6 +44,8 @@ const LS = {
   sent: 'sd-alerts-sentiment-v1',
   settings: 'sd-alerts-settings-v1',
   watch: 'sd-alerts-watch-v1',
+  swingWatch: 'sd-swing-watch-v1',   // the Swing tab's own list — buy signals are raised for these too
+  swingBook: 'sd-swing-book-v1',     // the Swing tab's paper positions — exit alerts are raised for these too
 };
 const MAX_HISTORY = 400;
 const MAX_SEEN = 3000;
@@ -60,6 +63,7 @@ const load = (k, d) => { const v = store.get(k); return v == null ? d : v; };
 const save = (k, v) => store.set(k, v);
 
 export const TYPES = {
+  entry:     { label: 'Buy signal',       icon: '🟢' },
   big_move:  { label: 'Big price move',   icon: '📈' },
   news:      { label: 'Breaking news',    icon: '📰' },
   earnings:  { label: 'Earnings report',  icon: '📄' },
@@ -77,6 +81,34 @@ export function setSettings(s) { save(LS.settings, s); }
 export function getWatch() { return load(LS.watch, null); }
 export function setWatch(list) { save(LS.watch, [...new Set(list.map((t) => String(t).toUpperCase().trim()).filter(Boolean))]); }
 export function getHistory() { return load(LS.history, []); }
+// The Swing tab's list and paper book. Kept apart from the Alerts watchlist and the Dashboard
+// book so the tab stays a self-contained paper account, but read by this engine so its names
+// get buy signals and its positions get exit alerts — in the browser and from the phone runner.
+const TICKER = /^[A-Z][A-Z0-9.\-]{0,9}$/;
+export function getSwingWatch() { const w = load(LS.swingWatch, []); return Array.isArray(w) ? w.filter((t) => TICKER.test(t)) : []; }
+export function setSwingWatch(list) { save(LS.swingWatch, [...new Set((list || []).map((t) => String(t).toUpperCase().trim()).filter((t) => TICKER.test(t)))].slice(0, 30)); }
+export function getSwingBook() { const b = load(LS.swingBook, []); return Array.isArray(b) ? b.filter((p) => p && p.ticker && p.qty > 0 && p.buyPrice > 0) : []; }
+export function setSwingBook(book) { save(LS.swingBook, (book || []).slice(0, 40)); }
+/** Everything the alert engine should watch / hold: the Alerts list plus the Swing list, both books. */
+export function watchUnion(watch = getWatch() || []) { return [...new Set([...(watch || []), ...getSwingWatch(), ...getSwingBook().map((p) => p.ticker)])]; }
+export function bookUnion(portfolio = []) { return [...(portfolio || []), ...getSwingBook()]; }
+/** Record alerts built elsewhere (the Swing tab builds its own buy signals) through the same
+ *  seen-store and history, so nothing is raised twice across tabs. Returns the new ones. */
+export function recordAlerts(alerts) {
+  const seen = load(LS.seen, {}); const now = Date.now(); const out = [];
+  for (const a of alerts || []) { if (!a || !a.id || seen[a.id]) continue; seen[a.id] = now; out.push({ ts: now, ...a }); }
+  if (out.length) { seen.__init = seen.__init || now; save(LS.seen, seen); const hist = load(LS.history, []); hist.unshift(...out); save(LS.history, hist.slice(0, MAX_HISTORY)); }
+  return out;
+}
+/** The one sentence a buy alert carries, built from a signalFor() result. */
+export function entryAlert(t, sig, today) {
+  const S = STRATEGIES[sig.strategy];
+  const stopPct = ((sig.entry - sig.stop) / sig.entry) * 100;
+  const px = (x) => (x >= 1000 ? '$' + Math.round(x).toLocaleString('en-US') : '$' + Number(x).toFixed(2));
+  return { id: `entry:${t}:${sig.strategy}:${today}`, type: 'entry', ticker: t, severity: 'high', link: '/swing', strategy: sig.strategy,
+    title: `Buy signal: ${t} — ${S.name.toLowerCase()}`,
+    body: `${sig.reason} Entry near ${px(sig.entry)}, stop ${px(sig.stop)} (−${stopPct.toFixed(1)}%)${sig.target ? `, target ${px(sig.target)}` : ', exit on the first close above the 5-day average'}, ${sig.timeStopDays}-session time stop.${sig.caveats[0] ? ' ' + sig.caveats[0] : ''}` };
+}
 export function clearHistory() { save(LS.history, []); save(LS.seen, {}); }
 
 const pct = (x, d = 1) => `${x >= 0 ? '+' : ''}${Number(x).toFixed(d)}%`;
@@ -107,7 +139,7 @@ export function evaluate(tickers, data, settings = getSettings()) {
     if (seen[key]) return;
     seen[key] = now;                      // recorded even when the type is switched off, so re-enabling never floods old items
     if (!settings.enabled[type]) return;
-    if (baseline && type !== 'big_move' && type !== 'earnings') return;   // recorded, not raised
+    if (baseline && type !== 'big_move' && type !== 'earnings' && type !== 'entry') return;   // recorded, not raised
     out.push({ id: key, type, ticker, title, body, ts: now, ...meta });
   };
 
@@ -117,6 +149,15 @@ export function evaluate(tickers, data, settings = getSettings()) {
     const e = data.earnings?.[t];
     const a = data.analyst?.[t];
     const ins = data.insider?.[t];
+
+    // 0. buy signal — a watched stock meets a swing strategy's entry rule with the gates open.
+    //    Needs the market gate (VIX, macro) from the slow cycle; without it nothing is raised,
+    //    because a "buy" issued blind to the regime is worse than no alert.
+    if (s && s.cls !== 'crypto' && data.gate) {
+      const sig = signalFor(s, { regime: data.gate.vix != null ? applySpyTrend(regime(data.gate.vix), data.gate.spyAbove50) : null, macroLevel: data.gate.macroLevel || null,
+        nextEarnings: data.next ? (t in data.next ? data.next[t] : null) : undefined, lastEarnings: e || null });
+      if (sig.action === 'BUY') { const al = entryAlert(t, sig, today); fire('entry', t, `${sig.strategy}:${today}`, al.title, al.body, { severity: 'high', link: '/swing', strategy: sig.strategy }); }
+    }
 
     // 1. big move — one alert per ticker per day per direction
     if (s && s.c != null) {
@@ -242,7 +283,7 @@ export function evaluatePositions(portfolio, ctxByPos, settings = getSettings())
     out.push({ id: key, type: 'position', ticker: pos.ticker, ts: now, severity: v.severity,
       title: `${head}: ${name}`,
       body: `${v.reason} (${v.gainR >= 0 ? '+' : ''}${v.gainR.toFixed(1)}R, ${v.gainPct >= 0 ? '+' : ''}${v.gainPct.toFixed(1)}%, day ${v.daysHeld})`,
-      link: '/dashboard', action: v.action, rule: v.rule });
+      link: pos.book === 'swing' ? '/swing' : '/dashboard', action: v.action, rule: v.rule });
   }
   save(LS.seen, seen);
   if (out.length) { const hist = load(LS.history, []); hist.unshift(...out); save(LS.history, hist.slice(0, MAX_HISTORY)); }
@@ -275,7 +316,7 @@ export async function fetchAlertData(tickers, { base = '', slow = true, fetchFn 
   const cr = all.filter((t) => isCoin(t, coins)).slice(0, 20);
   const q = encodeURIComponent(eq.join(','));
   const qc = encodeURIComponent(cr.join(','));
-  const [scanR, newsR, earnR, anaR, insR, cscanR, cnewsR] = await Promise.allSettled([
+  const [scanR, newsR, earnR, anaR, insR, cscanR, cnewsR, vixR, macroR, nextR] = await Promise.allSettled([
     eq.length ? jget(`${base}/api/scan?tickers=${q}`, fetchFn) : Promise.resolve({ rows: [] }),
     eq.length ? jget(`${base}/api/news?tickers=${q}`, fetchFn) : Promise.resolve({ news: {} }),
     slow && eq.length ? jget(`${base}/api/intel?op=earnings&tickers=${q}`, fetchFn) : Promise.resolve(null),
@@ -283,6 +324,10 @@ export async function fetchAlertData(tickers, { base = '', slow = true, fetchFn 
     slow && eq.length ? jget(`${base}/api/intel?op=insider&tickers=${encodeURIComponent(eq.slice(0, 12).join(','))}&days=30`, fetchFn) : Promise.resolve(null),
     cr.length ? jget(`${base}/api/crypto?op=scan&coins=${qc}`, fetchFn) : Promise.resolve({ rows: [] }),
     cr.length ? jget(`${base}/api/news?crypto=${qc}`, fetchFn) : Promise.resolve({ news: {} }),
+    // The market gate and next-report dates for buy signals — slow cycle only, they do not change by the minute
+    slow && eq.length ? jget(`${base}/api/quotes?tickers=%5EVIX,SPY&range=3mo`, fetchFn) : Promise.resolve(null),
+    slow && eq.length ? jget(`${base}/api/intel?op=macro&hours=96`, fetchFn) : Promise.resolve(null),
+    slow && eq.length ? jget(`${base}/api/fundamentals?tickers=${q}`, fetchFn) : Promise.resolve(null),
   ]);
   const scan = {};
   if (scanR.status === 'fulfilled') for (const r of scanR.value.rows || []) scan[r.t] = { ...r, cls: 'stock' };
@@ -293,6 +338,13 @@ export async function fetchAlertData(tickers, { base = '', slow = true, fetchFn 
     out.earnings = earnR.status === 'fulfilled' ? (earnR.value?.results || {}) : null;
     out.analyst = anaR.status === 'fulfilled' ? (anaR.value?.results || {}) : null;
     out.insider = insR.status === 'fulfilled' ? (insR.value?.results || {}) : null;
+    const vix = vixR.status === 'fulfilled' ? vixR.value?.quotes?.['^VIX']?.price ?? null : null;
+    const spy = vixR.status === 'fulfilled' ? vixR.value?.quotes?.SPY : null;
+    const sc = (spy?.bars || []).map((b) => b.c).slice(-50);
+    const spyAbove50 = sc.length === 50 && spy.price != null ? spy.price > sc.reduce((a, b) => a + b, 0) / 50 : null;   // null = not enough bars, gate untouched
+    out.gate = vix != null ? { vix, spyAbove50, macroLevel: macroR.status === 'fulfilled' ? macroR.value?.macroRisk?.level || null : null } : null;
+    // ticker -> { date, daysAway } | null. A ticker the feed answered without a date is present as null ("unknown").
+    out.next = nextR.status === 'fulfilled' && nextR.value?.fundamentals ? Object.fromEntries(eq.map((t) => [t, nextR.value.fundamentals[t]?.earnings || null])) : null;
   }
   return out;
 }
@@ -335,10 +387,11 @@ export async function notify(alerts) {
   let shown = 0;
   const reg = typeof navigator !== 'undefined' && 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration().catch(() => null) : null;
   for (const a of alerts.slice(0, 5)) {              // never spam — the page has the rest
-    const opts = { body: a.body, tag: a.id, icon: '/favicon.svg', data: { url: '/alerts' } };
+    const opts = { body: a.body, tag: a.id, icon: '/favicon.svg', data: { url: a.link || '/alerts' } };
     try {
-      if (reg?.showNotification) await reg.showNotification(`${TYPES[a.type].icon} ${a.title}`, opts);
-      else new Notification(`${TYPES[a.type].icon} ${a.title}`, opts);
+      const icon = (TYPES[a.type] || TYPES.position).icon;
+      if (reg?.showNotification) await reg.showNotification(`${icon} ${a.title}`, opts);
+      else new Notification(`${icon} ${a.title}`, opts);
       shown++;
     } catch { /* unsupported in this context */ }
   }

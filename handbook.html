@@ -485,7 +485,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.20</div>
+      <div class="kicker">Signal Desk · Handbook · v3.21</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -571,6 +571,7 @@
         <li><a href="#riskengine">Risk engine &amp; trade journal</a></li>
         <li><a href="#research">Research — the seven questions from the filings</a></li>
         <li><a href="#deepdives">Research deep-dives — earnings brief, DCF, patterns, compare, dividends, plan</a></li>
+        <li><a href="#swing">Swing — a small paper account, four strategies, buy and exit alerts</a></li>
       </ul>
     </div>
 
@@ -1418,9 +1419,60 @@
       <p>For each holding, its own move in the COVID crash window (19 Feb – 23 Mar 2020), the 2022 bear market (3 Jan – 12 Oct 2022) and its worst 60 sessions in ten years, weighted by today's values into a book figure; the S&amp;P 500's move stands in where a name has no history and options are taken as three times the underlying. Liquidity as sessions to exit at a tenth of average dollar volume. Rate sensitivity as % move per +1 point in the 10-year yield over the last 120 sessions, per name and for the book. Each feeds the biggest-vulnerability sentence. Geographic and currency exposure are not in structured filings.</p>
     </section>
 
+    <section id="swing">
+      <h2><span class="chnum">Chapter 25</span>Swing — a small paper account, four strategies, alerts both ways</h2>
+      <p>The Swing tab is one simple dashboard for swing trades: a list of stocks you choose, a paper account that starts at $500, and two kinds of alert — <strong>when to buy</strong> a listed stock and <strong>when to get out</strong> of a paper trade. It places no orders. It exists so the rules can be tested with small numbers before real money follows them, and its own two-year test (below) is the reason to test first.</p>
+      <h3>The order of decisions</h3>
+      <ol>
+        <li><strong>The market gate.</strong> No new buys when VIX is 25 or higher, when the S&amp;P 500 is below its own 50-day average, when fewer than 30% of stocks are above theirs, or when a high-impact US release is inside 48 hours. Between VIX 20 and 25 only pullbacks trade, at half size. Good charts fail in a bad market, so this comes before any stock.</li>
+        <li><strong>A strategy's entry rule</strong> on the stock (next section).</li>
+        <li><strong>The earnings calendar.</strong> A report inside five days is a hard no. A report inside the holding window (15 sessions is about 21 calendar days) is printed as a warning to be out, or half out, before the print. When the feed has no date the card says so.</li>
+        <li><strong>A grade</strong> from five yes/no checks, printed: beating the market by 5% or more over 20 days; stop 6% or closer; profits marked REAL in the filings; risk rating 4 or lower; next earnings after the holding window. Four or five is A, three is B, fewer is C. It ranks several buys; it does not create one.</li>
+        <li><strong>Size from the stop.</strong> Shares = (risk % × account) ÷ (entry − stop), then three caps: one name at most 25% of the account, never more than the free cash (a cash account cannot borrow), and whole shares if your broker does not do fractions.</li>
+      </ol>
+      <h3>The four strategies</h3>
+      <div class="tbl-wrap"><table><thead><tr><th>Strategy</th><th>Buy when</th><th>Sell when</th><th>Record in this app</th></tr></thead><tbody>
+        <tr><td><strong>Breakout</strong></td><td>New 20-day high on volume ≥ 1.2× average, RSI 55–72, above rising 20 and 50-day averages, score ≥ 65.</td><td>Stop at the larger of 1.5 ATR or 5% (max 10%); stop to breakeven at +1R; half off at 2.5R and trail the rest; out after 15 flat sessions.</td><td>Backtested.</td></tr>
+        <tr><td><strong>Pullback</strong></td><td>Uptrend, within 2% of the 10-day average, RSI 40–58, up more than 3% over 20 days, score ≥ 60.</td><td>Same exits as a breakout.</td><td>Backtested.</td></tr>
+        <tr><td><strong>Mean reversion</strong></td><td>Above the 200-day average with the 2-day RSI below 10: a sharp, short dip inside a long uptrend.</td><td>First close back above the 5-day average, or 7 sessions, or the stop. No profit target; the bounce is the trade.</td><td>Backtested with its own exit.</td></tr>
+        <tr><td><strong>Post-earnings drift</strong></td><td>Reported 2–10 sessions ago with EPS at least 5% above consensus, still above the 50-day and up over 20 days.</td><td>ATR stop, 2.5R target, 20-session time stop.</td><td><strong>None.</strong> Past earnings dates are not in the price history, so it is sized at half risk and only the paper scorecard measures it. It is checked only for stocks on your list.</td></tr>
+      </tbody></table></div>
+      <p>When more than one fires on the same stock the tested ones win, in the order breakout, pullback, post-earnings drift, mean reversion. A paper trade remembers its strategy, and the exit rulebook (Chapter 20) applies that strategy's rules to it. Two rules are stricter here than on the Dashboard: a mean-reversion trade is a sell the moment price is back above its 5-day average, and no trade that is not at least +1R is carried into the last two days before earnings.</p>
+      <h3>$500 and fractional shares</h3>
+      <p>At 1% risk a $500 account risks $5 a trade. With a 5% stop that is about $100 of stock: 0.2 of a $420 share, or 2.9 of a $34 one. Without fractional shares most signals cannot be taken at all — the page then says how much capital one whole share at that risk would need — and the two-year test shows the difference in a column of its own. Five trades at $100 is the whole account, which is why the cash cap exists and why the book stops at 5% total risk.</p>
+      <h3>Alerts</h3>
+      <ul>
+        <li><strong>Buy signal</strong> (new alert type). Raised once per stock per strategy per day when a listed stock meets an entry rule with every gate open. It carries the entry, the stop with its percentage, the target or exit line, the time stop and the first warning. It is not raised when the gate data is missing: a buy issued blind to the market is worse than silence.</li>
+        <li><strong>Exit signals</strong> for paper trades are the existing position alerts: SELL and TRIM once per rule per day, WATCH and "move your stop" once.</li>
+        <li><strong>Where they show.</strong> In the tab's feed; as browser notifications while any Signal Desk tab is open; and on your phone, because the Alerts tab's sync now sends the Swing list and paper trades along with its own, and the server runner (Chapter 21) checks them with the same engine. Phone delivery needs the one-time Telegram setup on the Alerts tab.</li>
+        <li>The Alerts tab shows buy signals for its own watchlist too, and has a switch for the type.</li>
+      </ul>
+      <h3>Is it working?</h3>
+      <p>Every paper sell goes to a scorecard split by strategy: closed trades, win rate, expectancy in R, dollars. Beside it, "Test each strategy on two years of prices" runs each strategy alone over 30 liquid stocks at your account size — with fractions, with whole shares only, and on $10,000 — and prints what holding the S&amp;P 500 returned over the same window. When this chapter was written every tested strategy had a <em>negative</em> two-year expectancy on that set (breakout −0.12R, pullback −0.18R, mean reversion −0.02R) while the index made +12%. The test leaves out the market, earnings and macro gates that the live signals apply, so it is a lower bound, but it is the honest starting point: the paper account is there to find out whether the gated rules do better, not to assume it.</p>
+      <h3>Preview on a closed day</h3>
+      <p><code>/swing?preview=open</code> forces the market gate open so the cards, sizing and paper buttons can be tried when the real gate is shut. A banner states the real verdict and no buy alert is raised in preview.</p>
+      <h3>Where it is stored</h3>
+      <p>In this browser only: the list, the paper trades, the journal and the three settings (capital, risk per trade, fractional shares) under <code>sd-swing-*</code> keys. The Dashboard's book and risk engine are separate and untouched. "Reset paper account" clears the trades and journal and keeps the list.</p>
+    </section>
+
     <section id="changelog" class="changelog">
-      <h2><span class="chnum">Chapter 25</span>Changelog</h2>
+      <h2><span class="chnum">Chapter 26</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.21<br/>2026-11-18</div>
+        <div class="what">
+          <h4>Swing tab: a $500 paper account, four strategies, buy and exit alerts (Chapter 25)</h4>
+          <ul>
+            <li>New <strong>Swing</strong> tab: market gate (VIX, S&amp;P 500 vs its 50-day, breadth, macro), your own stock list with a BUY / WAIT / AVOID verdict, a printed five-check grade, sizing for a small account with fractional shares and a cash cap, a paper book with strategy-aware exit verdicts, an alert feed, today's signals across the S&amp;P 500, and a per-strategy scorecard.</li>
+            <li>Four strategies in one module (<code>strategies.js</code>): breakout, pullback, mean reversion (2-day RSI under 10 above the 200-day; exit on the first close above the 5-day average) and post-earnings drift (half size, not backtested here).</li>
+            <li>New alert type <strong>Buy signal</strong>, raised by the same engine in the browser and on the phone runner; the Swing list and paper trades are included in the Alerts tab's server sync. Exit alerts for paper trades link back to the tab.</li>
+            <li>Exit rulebook: mean-reversion positions sell above their 5-day average or after 7 sessions; Swing-book positions that are not +1R are sold inside two days of earnings. Dashboard positions are unchanged.</li>
+            <li>Backtest: breakout and pullback can run alone, and mean reversion can use its own exit; "Test each strategy on two years of prices" reads the result at your account size with and without fractional shares.</li>
+            <li>Scan rows carry the 2-day RSI, the 200-day flag and the 5-day average; the journal splits results by strategy. 54 unit tests.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.20<br/>2026-10-24</div>

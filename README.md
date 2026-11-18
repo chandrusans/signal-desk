@@ -69,6 +69,16 @@ of the universe, or 25+ names fewer than the file it replaces, is not written
 (the job goes red and the previous file stays live). Local build:
 `npm run screen:build` (needs the CA bundle, see Validation). Handbook ch. 24.
 
+## Swing tab (paper trading)
+
+`/swing` is a self-contained paper account (default $500, fractional shares)
+run by `strategies.js`: breakout, pullback, mean reversion and post-earnings
+drift, each with its own entry rule and exit profile. The alert engine raises a
+**Buy signal** for listed stocks and exit alerts for paper trades, in the tab,
+as browser notifications and through the phone runner (the Alerts tab's sync
+includes the Swing list and book). `/swing?preview=open` forces the market
+gate open for trying the page. Nothing places an order. Handbook ch. 25.
+
 ## What it does
 
 - **Live prices**: 1-year OHLC + volume via Yahoo Finance chart API (no auth key). Polls every 15s (Stocks) / 20s (Crypto) behind a 30s edge cache.
@@ -84,6 +94,8 @@ of the universe, or 25+ names fewer than the file it replaces, is not written
 ```
 signal-desk/
 ├── today.html         START HERE — one page, three questions, all four markets
+├── swing.html         Swing — $500 paper account, four strategies, buy and exit alerts
+├── strategies.js      The swing strategies: entry signal, grade, small-account sizing (shared with alerts)
 ├── alerts.html        Seven alert types + browser notifications (engine in alerts.js)
 ├── simulate.html      Paper auto-trading — the rulebook trades pretend money
 ├── index.html         Stocks UI (all inline CSS/JS)
@@ -229,7 +241,7 @@ npm test
 
 Unit tests (node:test) for the pure modules — exit rulebook, risk engine and
 journal, UI escaping/formatting, analysis plan, forward DCF, indicators and
-statistical tests, the profile screen — no network. 37 tests. CI runs them with
+statistical tests, the profile screen, the swing strategies and buy alerts — no network. 54 tests. CI runs them with
 the lint and `npm audit` on every push.
 
 ### Security model

@@ -126,6 +126,10 @@ export default async function handler(req, res) {
       vr: r2(a.indicators.volRatio),
       // Above its own 50d MA — the input for market-breadth calculation
       a50: a.indicators.ma50 != null ? data.price > a.indicators.ma50 : null,
+      // Mean-reversion inputs for the Swing tab: long-trend filter, the 2-day RSI trigger, the 5-day exit line
+      a200: a.indicators.ma200 != null ? data.price > a.indicators.ma200 : null,
+      rsi2: r1(a.indicators.rsi2),
+      ma5: r2(a.indicators.ma5),
       // Trade plan essentials so cards can render without a second round trip
       stop: r2(a.plan?.stop),
       tgt: r2(a.plan?.target),

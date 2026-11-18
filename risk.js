@@ -53,6 +53,8 @@ export function closeTrade(pos, { exitPrice, exitDate = todayISO(), stop = null,
     r: +((exitPrice - pos.buyPrice) / R).toFixed(2),
     daysHeld: Math.max(0, Math.round((Date.parse(exitDate) - Date.parse(pos.buyDate)) / DAY)),
     rule, note,
+    // Which strategy opened it and which book it sat in, so the scorecard can split results by strategy.
+    ...(pos.strategy ? { strategy: pos.strategy } : {}), ...(pos.book ? { book: pos.book } : {}),
   };
 }
 
@@ -84,7 +86,7 @@ export function journalStats(trades) {
     totalPL: +t.reduce((s, x) => s + x.pl, 0).toFixed(2),
     avgDays: avg(t, 'daysHeld') != null ? +avg(t, 'daysHeld').toFixed(1) : null,
     streak,
-    byClass: byKey('cls'), byRule: byKey('rule'),
+    byClass: byKey('cls'), byRule: byKey('rule'), byStrategy: byKey('strategy'),
     // Enough trades to believe the number? ±1.96·σ/√n on expectancy.
     expectancySE: n >= 2 ? +(Math.sqrt(t.reduce((s, x) => s + Math.pow(x.r - expectancyR, 2), 0) / (n - 1)) / Math.sqrt(n)).toFixed(2) : null,
   };

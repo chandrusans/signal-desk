@@ -151,6 +151,9 @@ const cleanPosition = (p) => {
   if (p.underlying && TICKER_RE.test(String(p.underlying).toUpperCase())) out.underlying = String(p.underlying).toUpperCase();
   if (p.optionType === 'CALL' || p.optionType === 'PUT') out.optionType = p.optionType;
   if (typeof p.label === 'string') out.label = p.label.slice(0, 60);
+  // Swing-tab paper positions: the strategy selects their exit rules, the book routes the alert link
+  if (['breakout', 'pullback', 'meanrev', 'pead'].includes(p.strategy)) out.strategy = p.strategy;
+  if (p.book === 'swing') out.book = 'swing';
   for (const key of Object.keys(out)) if (out[key] === undefined) delete out[key];
   return out.qty > 0 && out.buyPrice > 0 ? out : null;
 };
@@ -241,9 +244,9 @@ export default async function handler(req, res) {
     let data = null;
     if (watch.length) {
       data = await fetchAlertData(watch, { base, slow });
-      if (slow) { state.slow = { earnings: data.earnings || {}, analyst: data.analyst || {}, insider: data.insider || {} }; state.slowAt = Date.now(); }
+      if (slow) { state.slow = { earnings: data.earnings || {}, analyst: data.analyst || {}, insider: data.insider || {}, gate: data.gate || null, next: data.next || null }; state.slowAt = Date.now(); }
       const s = state.slow || {};
-      fired.push(...evaluate(watch, { scan: data.scan, news: data.news, earnings: s.earnings || {}, analyst: s.analyst || {}, insider: s.insider || {} }, settings));
+      fired.push(...evaluate(watch, { scan: data.scan, news: data.news, earnings: s.earnings || {}, analyst: s.analyst || {}, insider: s.insider || {}, gate: s.gate || null, next: s.next || null }, settings));
     }
     if (pf.length) {
       const ctx = await fetchPositionContext(pf, { base });

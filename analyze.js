@@ -106,6 +106,7 @@ export function analyze(bars, extras = {}) {
   const closes = bars.map((b) => b.c);
   const price = closes[closes.length - 1];
 
+  const ma5   = sma(closes, 5);    // the mean-reversion exit line (first close back above it)
   const ma10  = sma(closes, 10);
   const ma20  = sma(closes, 20);
   const ma50  = sma(closes, 50);
@@ -349,7 +350,7 @@ export function analyze(bars, extras = {}) {
   return {
     price,
     indicators: {
-      ma10, ma20, ma50, ma200, ma20Slope, rsi14, rsi2, atr14, atrPct,
+      ma5, ma10, ma20, ma50, ma200, ma20Slope, rsi14, rsi2, atr14, atrPct,
       ret20, ret60, high52w, distFrom52w, distFrom20, vol5, vol20, volRatio,
       // Relative strength — the review's highest-value signal upgrade
       rs20, rs60, benchRet20, benchRet60,
