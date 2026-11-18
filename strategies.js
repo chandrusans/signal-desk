@@ -169,11 +169,11 @@ export function sizePosition({ capital, cash = null, riskPct = 1, entry, stop, s
 
 /**
  * Dollar accounting over a list of backtest trades for a given account size, so the same
- * strategy can be read at $500 with fractions, at $500 with whole shares, or at $10,000.
+ * strategy can be read at $1,000 with fractions, at $1,000 with whole shares, or at $10,000.
  * Trades are { entry, exit, R, rMultiple, exitDate }. Sized on the equity at the time, in
  * exit order (the engine's own convention); concurrent cash use is not modelled.
  */
-export function accountTrades(trades, { capital = 500, riskPct = 1, fractional = true, maxNamePct = 25 } = {}) {
+export function accountTrades(trades, { capital = 1000, riskPct = 1, fractional = true, maxNamePct = 25 } = {}) {
   const list = [...(trades || [])].filter((t) => t && t.R > 0 && t.entry > 0).sort((a, b) => a.exitDate - b.exitDate);
   let equity = capital, peak = capital, maxDd = 0, taken = 0, skipped = 0, wins = 0, sumR = 0;
   for (const t of list) {

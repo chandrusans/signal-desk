@@ -1086,7 +1086,7 @@
   <!-- the paper account -->
   <div class="acct" id="acct"></div>
   <div class="controls">
-    <label for="sw-capital">Paper capital $<input id="sw-capital" type="number" min="100" step="50" value="500" inputmode="numeric" /></label>
+    <label for="sw-capital">Paper capital $<input id="sw-capital" type="number" min="100" step="100" value="1000" inputmode="numeric" /></label>
     <label for="sw-risk">Risk per trade<select id="sw-risk"><option value="0.5">0.5%</option><option value="1" selected>1%</option><option value="2">2%</option></select></label>
     <label class="chk" for="sw-frac"><input id="sw-frac" type="checkbox" checked /> My broker allows fractional shares</label>
     <button class="refresh-btn" id="sw-reset" title="Clear the paper trades and journal on this device">Reset paper account</button>
@@ -1264,7 +1264,7 @@ import { getSettings, getHistory, getSwingWatch, setSwingWatch, getSwingBook, se
 
   // ---- settings ----
   const num = (k, d, lo) => { try { const v = parseFloat(localStorage.getItem(k)); return v >= lo ? v : d; } catch { return d; } };
-  let capital = num('sd-swing-capital', 500, 100);
+  let capital = num('sd-swing-capital', 1000, 100);
   let riskPct = num('sd-swing-risk', 1, 0.25);
   let fractional = (() => { try { return localStorage.getItem('sd-swing-fractional') !== '0'; } catch { return true; } })();
   $('sw-capital').value = capital; $('sw-risk').value = String(riskPct); $('sw-frac').checked = fractional;
