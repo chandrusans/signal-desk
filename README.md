@@ -79,6 +79,19 @@ as browser notifications and through the phone runner (the Alerts tab's sync
 includes the Swing list and book). `/swing?preview=open` forces the market
 gate open for trying the page. Nothing places an order. Handbook ch. 25.
 
+### Ten-year replay
+
+`npm run replay` runs a $1,000 cash account through the Swing rules every day
+since January 2016 and writes `data/replay.json`, which the Swing tab shows.
+It uses the live functions (`signalFor`, `applySpyTrend`, `regime`,
+`positionVerdict`, `sizePosition`, `riskBudget`) on the S&P 500 as it stood
+each day, rebuilt from Wikipedia's index change log, with earnings dates from
+SEC 8-K item 2.02 filings. It then reruns 22 variants with one assumption
+changed each. The first build: $1,000 → ~$1,048 against ~$4,319 for SPY with
+dividends; no variant beats the index. Bars are cached in `.cache/replay/`
+(gitignored) and never committed. About two minutes cold, twenty seconds warm;
+needs `NODE_EXTRA_CA_CERTS` on this Mac like the validators.
+
 ## What it does
 
 - **Live prices**: 1-year OHLC + volume via Yahoo Finance chart API (no auth key). Polls every 15s (Stocks) / 20s (Crypto) behind a 30s edge cache.
@@ -96,6 +109,7 @@ signal-desk/
 ├── today.html         START HERE — one page, three questions, all four markets
 ├── swing.html         Swing — $1,000 paper account, four strategies, buy and exit alerts
 ├── strategies.js      The swing strategies: entry signal, grade, small-account sizing (shared with alerts)
+├── replay.js          Ten-year replay simulator: a cash account through the live rules, day by day
 ├── alerts.html        Seven alert types + browser notifications (engine in alerts.js)
 ├── simulate.html      Paper auto-trading — the rulebook trades pretend money
 ├── index.html         Stocks UI (all inline CSS/JS)
@@ -109,6 +123,7 @@ signal-desk/
 ├── screen.js          Profile-driven ranking of the universe (percentile components, weights, filters)
 ├── views.js           Compare, dividend blueprint, allocation-plan and screen views
 ├── data/screen.json   Nightly screen file (built by tools/build-screen.mjs via screen.yml)
+├── data/replay.json   Ten-year replay results (built by `npm run replay`; aggregates only)
 ├── risk.js            Risk engine (book-level limits) + trade journal, shared by Today and Dashboard
 ├── dialog.js          In-page ask / confirm / notify dialogs (prompt() is blocked in embedded browsers)
 ├── handbook.html      Beginner reference + changelog (see CLAUDE.md — keep current)
@@ -140,6 +155,8 @@ signal-desk/
 ├── tools/
 │   ├── devserver.mjs  Local server routing /api/* to the handler modules
 │   ├── build-screen.mjs  Nightly screen builder (filings + scan + history + NASDAQ → data/screen.json)
+│   ├── replay.mjs     Ten-year replay: base case + 22 variants → data/replay.json
+│   ├── replay-data.mjs  Point-in-time membership, bars, SEC earnings dates, per-day scan rows (cached)
 │   └── lint.mjs       Undefined-function detector for inline scripts
 └── vercel.json        Static + serverless config
 ```
@@ -241,7 +258,7 @@ npm test
 
 Unit tests (node:test) for the pure modules — exit rulebook, risk engine and
 journal, UI escaping/formatting, analysis plan, forward DCF, indicators and
-statistical tests, the profile screen, the swing strategies and buy alerts — no network. 54 tests. CI runs them with
+statistical tests, the profile screen, the swing strategies, buy alerts and the replay simulator — no network. 64 tests. CI runs them with
 the lint and `npm audit` on every push.
 
 ### Security model

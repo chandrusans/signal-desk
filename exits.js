@@ -67,10 +67,13 @@ export function positionVerdict(pos, ctx = {}) {
   const gain = price - buy;
   const gainR = gain / R;
   const gainPct = (gain / buy) * 100;
-  const daysHeld = Math.max(0, Math.floor((Date.now() - Date.parse(pos.buyDate)) / DAY));
+  // ctx.today ('YYYY-MM-DD') lets the historical replay ask "what did the rules say on that day?";
+  // live callers leave it out and get today.
+  const nowMs = ctx.today ? Date.parse(ctx.today + 'T21:00:00Z') : Date.now();
+  const daysHeld = Math.max(0, Math.floor((nowMs - Date.parse(pos.buyDate)) / DAY));
   // The time stop counts TRADING sessions (weekdays), as the handbook says — 15 calendar
   // days is only ~11 sessions and sold positions four sessions early.
-  const sessionsHeld = pos.buyDate ? weekdaysBetween(String(pos.buyDate).slice(0, 10)) : 0;
+  const sessionsHeld = pos.buyDate ? weekdaysBetween(String(pos.buyDate).slice(0, 10), ctx.today || undefined) : 0;
   const timeStop = pos.timeStopDays || 15;
   const target = pos.target > 0 ? pos.target : pos.planTarget > 0 ? pos.planTarget : buy + 2.5 * R;
   const a = ctx.analysis && !ctx.analysis.insufficient ? ctx.analysis : null;
@@ -122,7 +125,10 @@ export function positionVerdict(pos, ctx = {}) {
   if (cls === 'stock' && ctx.earnings?.daysAway != null && ctx.earnings.daysAway >= 0 && ctx.earnings.daysAway <= 5) {
     return V(gainR >= 1 ? 'TRIM' : 'WATCH', 'high', `Earnings in ${ctx.earnings.daysAway} day${ctx.earnings.daysAway === 1 ? '' : 's'} (${ctx.earnings.date}). A gap fills through your stop, not at it — ${gainR >= 1 ? 'take at least half off before the print' : 'decide now whether you are holding through it, and size for a 10% gap if so'}.`, 'earnings_soon');
   }
-  if (a?.setup === 'BROKEN' && gainR < 0.5) {
+  // A dip bought for a bounce is usually under its 50-day average from the start, so "BROKEN" is
+  // its entry condition, not news; the stop and its 7-session clock decide. The ten-year replay
+  // showed this rule selling one mean-reversion trade in seven before the bounce it was bought for.
+  if (a?.setup === 'BROKEN' && gainR < 0.5 && pos.strategy !== 'meanrev') {
     // A fresh position that is not yet losing gets a warning, not a sell: the
     // stop decides. An established one, or one already underwater, is a sell.
     if (sessionsHeld < 3 && gainR > -0.5) return V('WATCH', 'medium', `Setup is BROKEN (price below its key moving averages) — the rulebook would not have entered here. The stop at $${fmt(stop)} decides; do not move it down.`, 'broken_fresh');

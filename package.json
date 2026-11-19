@@ -1,7 +1,7 @@
 {
   "name": "signal-desk",
   "version": "2.4.0",
-  "description": "Multi-user momentum-swing signals platform \u2014 Stocks, Options, Metals, Personal Dashboard",
+  "description": "Multi-user momentum-swing signals platform — Stocks, Options, Metals, Personal Dashboard",
   "private": true,
   "type": "module",
   "engines": {
@@ -18,7 +18,8 @@
     "validate:risk": "node tools/validate-risk.mjs",
     "validate:research": "sh tools/validate.sh research",
     "test": "node --test test/",
-    "screen:build": "node tools/build-screen.mjs"
+    "screen:build": "node tools/build-screen.mjs",
+    "replay": "node --max-old-space-size=6144 tools/replay.mjs"
   },
   "overrides": {
     "zod": "^4.6.6"

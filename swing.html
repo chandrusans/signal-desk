@@ -1029,6 +1029,31 @@
   .idea button { background: none; border: 1px solid var(--rule); color: var(--accent); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; padding: 5px 8px; cursor: pointer; white-space: nowrap; }
   .idea button:disabled { color: var(--ink-3); cursor: default; }
   .na { font-size: 12px; color: var(--ink-3); line-height: 1.6; margin: 8px 0 0; }
+  /* ten-year replay — series colours validated for both themes (blue = S&P 500, gold = the rules) */
+  #replay { --viz-spy: #2a78d6; --viz-rules: #B8863A; margin-top: 22px; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #replay { --viz-spy: #3987e5; --viz-rules: #c98500; } }
+  :root[data-theme="dark"] #replay { --viz-spy: #3987e5; --viz-rules: #c98500; }
+  .rp-verdict { background: var(--panel); border: 1px solid var(--rule); border-left: 3px solid var(--risk); border-radius: 10px; padding: 16px 18px; }
+  .rp-verdict h4 { margin: 0 0 6px; font-family: var(--serif); font-size: 20px; font-weight: 500; color: var(--ink); line-height: 1.3; }
+  .rp-verdict p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--ink-2); }
+  .rp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 14px 0; }
+  .rp-tile { border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; background: var(--panel); }
+  .rp-tile .k { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+  .rp-tile .v { font-family: var(--serif); font-size: 22px; color: var(--ink); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .rp-tile .s { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+  .rp-tile .sw { display: inline-block; width: 10px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+  .rp-chart { position: relative; border: 1px solid var(--rule); border-radius: 10px; background: var(--panel); padding: 10px 6px 4px; }
+  .rp-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .rp-chart .ax { font-family: var(--mono); font-size: 10px; fill: var(--ink-3); }
+  .rp-chart .lbl { font-size: 11.5px; fill: var(--ink-2); font-weight: 600; }
+  .rp-legend { display: flex; gap: 16px; font-size: 12px; color: var(--ink-2); padding: 0 10px 6px; flex-wrap: wrap; }
+  .rp-legend i { display: inline-block; width: 14px; height: 2px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+  .rp-tip { position: absolute; pointer-events: none; background: var(--ground); border: 1px solid var(--rule); border-radius: 8px; padding: 7px 10px; font-size: 12px; color: var(--ink); box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; display: none; font-variant-numeric: tabular-nums; }
+  .rp-tip .d { font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-bottom: 3px; }
+  .rp-tip i { display: inline-block; width: 10px; height: 2px; vertical-align: middle; margin-right: 6px; }
+  table.sw-t tr.grp td { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); padding-top: 14px; border-bottom: none; }
+  #replay details { margin-top: 14px; } #replay summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
+  #replay h5 { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; margin: 20px 0 6px; }
   @media (max-width: 640px) { .sw .acts { text-align: left; min-width: 0; } .addbar input { width: 100%; } .feed-list li { grid-template-columns: 1fr; } }
 </style>
 
@@ -1125,18 +1150,14 @@
   <div id="ideas"><div class="none"><strong>Scanning…</strong>Reading about 500 stocks.</div></div>
 
   <!-- 6 · scorecard -->
-  <div class="step"><span class="n">6</span><h3>Is it working?</h3><span class="sub">your paper record by strategy, next to two years of history at this account size</span></div>
+  <div class="step"><span class="n">6</span><h3>Is it working?</h3><span class="sub">your paper record by strategy, and ten years of history with every rule applied</span></div>
   <div id="score"></div>
-  <div class="controls" style="margin-top:12px;">
-    <button class="refresh-btn" id="sw-test">Test each strategy on two years of prices</button>
-    <span class="na" style="margin:0;" id="sw-test-st">30 liquid stocks, fills at the next open, fees charged, gaps honoured. Takes a few seconds.</span>
-  </div>
-  <div id="test"></div>
+  <div id="replay"><div class="none"><strong>Loading the ten-year replay…</strong>Ten years of the S&amp;P 500, run through these rules one day at a time.</div></div>
 
   <div class="disclosure" style="margin-top: 34px;">
     <strong>Paper trading only. Nothing here places an order, and none of it is advice.</strong> The signals are mechanical outputs of rules written in
-    the Handbook, applied to live prices. The measured edge of these rules is thin and has been negative over recent months; a small paper account is the
-    right place to find out whether they work in your hands. You can lose money following any of them with real money. Nothing here knows your situation.
+    the Handbook, applied to live prices. Run through ten years of the S&amp;P 500, they roughly broke even while simply holding the index
+    returned about 14% a year (section 6). A small paper account is the right place to find out whether they work in your hands. You can lose money following any of them with real money. Nothing here knows your situation.
   </div>
 
 </div>
@@ -1232,9 +1253,8 @@
 import { regime } from '/analyze.js';
 import { esc, parseNum, tradingDateISO, noteBuild } from '/ui.js';
 import { ask, confirmBox, notify as say } from '/dialog.js';
-import { STRATEGIES, STRATEGY_ORDER, signalFor, gradeFor, sizePosition, accountTrades, applySpyTrend } from '/strategies.js';
+import { STRATEGIES, STRATEGY_ORDER, signalFor, gradeFor, sizePosition, applySpyTrend } from '/strategies.js';
 import { riskBudget, closeTrade, journalStats, LIMITS } from '/risk.js';
-import { runBacktest } from '/backtest.js';
 import { getSettings, getHistory, getSwingWatch, setSwingWatch, getSwingBook, setSwingBook, watchUnion, bookUnion, recordAlerts, entryAlert, evaluatePositions, fetchPositionContext, notify, requestPermission, registerWorker } from '/alerts.js';
 
 (() => {
@@ -1565,48 +1585,113 @@ import { getSettings, getHistory, getSwingWatch, setSwingWatch, getSwingBook, se
   $('rules').innerHTML = STRATEGY_ORDER.map((id) => { const S = STRATEGIES[id]; return `<dt>${esc(S.name)}${S.tested ? '' : ' <span class="tag">not backtested</span>'}</dt><dd><b>Buy when</b>${esc(S.entry)}</dd><dd><b>Sell when</b>${esc(S.exit)}</dd>`; }).join('');
 
   // ---- 6 · scorecard ----
-  let testResult = null;
+  let replay = null;
   function renderScore() {
     const s = journalStats(journal);
-    const bt = (id) => testResult?.[id] || null;
+    const bt = (id) => replay?.variants?.find((v) => v.id === id) || null;
     const rowsHtml = STRATEGY_ORDER.map((id) => {
       const S = STRATEGIES[id]; const m = s.byStrategy?.[id]; const open = book.filter((p) => p.strategy === id).length; const t = bt(id);
-      return `<tr><td>${esc(S.name)}</td><td>${open}</td><td>${m ? m.n : 0}</td><td>${m ? m.winRate + '%' : '—'}</td><td class="${m ? (m.expectancyR >= 0 ? 'up' : 'down') : ''}">${m ? (m.expectancyR >= 0 ? '+' : '') + m.expectancyR.toFixed(2) + 'R' : '—'}</td><td class="${m ? (m.pl >= 0 ? 'up' : 'down') : ''}">${m ? money(m.pl) : '—'}</td><td>${t ? (t.expectancyR >= 0 ? '+' : '') + t.expectancyR.toFixed(2) + 'R' : S.tested ? 'run the test' : 'none'}</td></tr>`;
+      return `<tr><td>${esc(S.name)}</td><td>${open}</td><td>${m ? m.n : 0}</td><td>${m ? m.winRate + '%' : '—'}</td><td class="${m ? (m.expectancyR >= 0 ? 'up' : 'down') : ''}">${m ? (m.expectancyR >= 0 ? '+' : '') + m.expectancyR.toFixed(2) + 'R' : '—'}</td><td class="${m ? (m.pl >= 0 ? 'up' : 'down') : ''}">${m ? money(m.pl) : '—'}</td><td class="${t ? (t.expectancyR >= 0 ? 'up' : 'down') : ''}">${t ? (t.expectancyR >= 0 ? '+' : '') + t.expectancyR.toFixed(2) + 'R' : replay ? 'not replayable' : '…'}</td></tr>`;
     }).join('');
-    $('score').innerHTML = `<div class="tbl-wrap"><table class="sw-t"><thead><tr><th>Strategy</th><th>Open</th><th>Closed</th><th>Win rate</th><th>Your expectancy</th><th>Your P&amp;L</th><th>2-yr test</th></tr></thead><tbody>${rowsHtml}
+    $('score').innerHTML = `<div class="tbl-wrap"><table class="sw-t"><thead><tr><th>Strategy</th><th>Open</th><th>Closed</th><th>Win rate</th><th>Your expectancy</th><th>Your P&amp;L</th><th>10-yr replay</th></tr></thead><tbody>${rowsHtml}
       <tr><td><strong>All paper trades</strong></td><td>${book.length}</td><td>${s.n}</td><td>${s.winRate != null ? s.winRate.toFixed(0) + '%' : '—'}</td><td class="${s.expectancyR == null ? '' : s.expectancyR >= 0 ? 'up' : 'down'}">${s.expectancyR != null ? (s.expectancyR >= 0 ? '+' : '') + s.expectancyR.toFixed(2) + 'R' : '—'}</td><td class="${s.totalPL >= 0 ? 'up' : 'down'}">${money(s.totalPL)}</td><td></td></tr></tbody></table></div>
       <p class="na">R is profit divided by what the trade risked at entry. Expectancy is the average R per closed trade; positive means the rules made money in your hands. Fewer than about 30 closed trades per strategy cannot tell a good strategy from a lucky one${s.n ? `; you have ${s.n}` : ''}.</p>
       ${journal.length ? `<div class="tbl-wrap"><table class="sw-t"><thead><tr><th>Closed trade</th><th>Strategy</th><th>In → out</th><th>Days</th><th>P&amp;L</th><th>R</th><th>Why it was sold</th></tr></thead><tbody>${[...journal].reverse().slice(0, 25).map((t) => `<tr><td>${esc(t.exitDate)} · <strong>${esc(t.ticker)}</strong></td><td>${esc(STRATEGIES[t.strategy]?.name || 'manual')}</td><td>${px(t.buyPrice)} → ${px(t.exitPrice)}</td><td>${t.daysHeld}</td><td class="${t.pl >= 0 ? 'up' : 'down'}">${money(t.pl)}</td><td class="${t.r >= 0 ? 'up' : 'down'}">${t.r >= 0 ? '+' : ''}${t.r.toFixed(2)}</td><td>${esc(t.rule || 'discretionary')}</td></tr>`).join('')}</tbody></table></div>` : ''}`;
   }
-  const TEST_STOCKS = ['NVDA', 'PLTR', 'CRWD', 'HOOD', 'ASML', 'AMD', 'META', 'MSFT', 'GOOGL', 'TSLA', 'AAPL', 'AMZN', 'NFLX', 'COIN', 'ORCL', 'AVGO', 'MU', 'MRVL', 'SNOW', 'NET', 'PANW', 'PYPL', 'SQ', 'SHOP', 'SOFI', 'RIVN', 'SMCI', 'LLY', 'JPM', 'BAC'];
-  async function runTest() {
-    const btn = $('sw-test'); btn.disabled = true; btn.textContent = 'Testing…';
-    try {
-      $('sw-test-st').textContent = 'Loading two years of daily prices…';
-      const d = await j(`/api/quotes?tickers=${encodeURIComponent([...TEST_STOCKS, 'SPY', '^VIX'].join(','))}&range=2y`);
-      const q = d.quotes || {}; const by = {}; for (const t of TEST_STOCKS) if (q[t]?.bars?.length > 250) by[t] = q[t].bars;
-      const plan = [['breakout', 'breakout', {}], ['pullback', 'pullback', {}], ['meanrev', 'mean-reversion', { mrExit: true }]];
-      const out = {};
-      for (const [id, strat, extra] of plan) {
-        $('sw-test-st').textContent = `Testing ${STRATEGIES[id].name.toLowerCase()}…`;
-        await new Promise((r) => setTimeout(r, 30));           // let the label paint
-        const r = runBacktest(by, { strategy: strat, timeStopDays: STRATEGIES[id].timeStopDays, riskPctPerTrade: riskPct, maxConcurrent: 5, startEquity: capital, ...extra }, q['^VIX']?.bars || null, q.SPY?.bars || null);
-        const trades = r.trades || [];
-        out[id] = { n: trades.length, expectancyR: trades.length ? +(trades.reduce((s, t) => s + t.rMultiple, 0) / trades.length).toFixed(2) : 0,
-          frac: accountTrades(trades, { capital, riskPct, fractional: true }), whole: accountTrades(trades, { capital, riskPct, fractional: false }), big: accountTrades(trades, { capital: 10000, riskPct, fractional: false }),
-          bench: r.metrics?.benchReturn != null ? r.metrics.benchReturn * 100 : null };
-      }
-      testResult = out;
-      const line = (id) => { const t = out[id]; const c = (x) => `<td class="${x.returnPct >= 0 ? 'up' : 'down'}">${money(x.final)} (${pct(x.returnPct)})</td>`;
-        return `<tr><td>${esc(STRATEGIES[id].name)}</td><td>${t.n}</td><td>${t.frac.winRate ?? '—'}%</td><td class="${t.expectancyR >= 0 ? 'up' : 'down'}">${t.expectancyR >= 0 ? '+' : ''}${t.expectancyR.toFixed(2)}R</td>${c(t.frac)}<td>${t.frac.maxDdPct}%</td>${c(t.whole)}<td>${t.whole.skipped} of ${t.n}</td><td class="${t.big.returnPct >= 0 ? 'up' : 'down'}">${pct(t.big.returnPct)}</td></tr>`; };
-      const spy = out.breakout.bench;
-      $('test').innerHTML = `<div class="tbl-wrap"><table class="sw-t"><thead><tr><th>Strategy · 2 years · 30 stocks</th><th>Trades</th><th>Win rate</th><th>Expectancy</th><th>${money(capital, 0)} with fractions</th><th>Worst drop</th><th>${money(capital, 0)} whole shares only</th><th>Trades it could not afford</th><th>Same rules on $10,000</th></tr></thead><tbody>${['breakout', 'pullback', 'meanrev'].map(line).join('')}
-        <tr><td>Post-earnings drift</td><td colspan="8" style="text-align:left;color:var(--ink-3)">No test here: past earnings dates are not in the price history this app reads. The paper scorecard above is its only record.</td></tr></tbody></table></div>
-        <p class="na">Each strategy is run alone: entries at the next day's open, 7 basis points charged each side, stops filled at the open when a stock gaps through them, at most five positions at once, ${riskPct}% of the account risked per trade and no name above 25% of it.${spy != null ? ` Holding the S&P 500 over the same two years returned ${pct(spy)}.` : ''} A result below that line means the strategy did not beat doing nothing. This is history on 30 large, liquid stocks, not a forecast, and it does not include the market gate, the earnings gate or the macro calendar that the live signals apply.</p>`;
-      $('sw-test-st').textContent = 'Done. Change the capital or risk above and run it again to compare.';
-      renderScore();
-    } catch (e) { $('sw-test-st').textContent = `The test could not run: ${e.message}`; }
-    finally { btn.disabled = false; btn.textContent = 'Test each strategy on two years of prices'; }
+  // ---- 6b · the ten-year replay (data/replay.json, built by `npm run replay`) ----
+  const GROUPS = { bias: 'Survivorship bias', gates: 'Gates switched off', strategy: 'One strategy at a time', sensitivity: 'Small changes to the rules', execution: 'Account and execution', period: 'Each half on its own' };
+  async function loadReplay() {
+    try { replay = await j('/data/replay.json'); renderReplay(); renderScore(); }
+    catch (e) { $('replay').innerHTML = `<div class="none"><strong>The ten-year replay is not available.</strong>${esc(e.message)}</div>`; renderScore(); }
+  }
+  // Geometry shared by the drawing and the hover layer; the chart is drawn at its container's width so text stays legible on a phone.
+  function chartGeom(curve, width) {
+    const W = Math.round(Math.max(320, Math.min(760, width || 720))), H = W < 520 ? 210 : 240, L = 50, R = W < 520 ? 74 : 96, T = 12, B = 26, n = curve.length;
+    const hi = Math.max(...curve.map((c) => Math.max(c.eq, c.spy))), lo = Math.min(...curve.map((c) => Math.min(c.eq, c.spy)));
+    const step = hi - lo > 3000 ? 1000 : hi - lo > 1200 ? 500 : 250, y0 = Math.floor(lo / step) * step, y1 = Math.ceil(hi / step) * step;
+    return { W, H, L, R, T, B, n, step, y0, y1, x: (i) => L + (i / (n - 1)) * (W - L - R), y: (v) => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B) };
+  }
+  function replayChart(curve, width) {
+    const { W, H, L, R, T, B, n, step, y0, y1, x, y } = chartGeom(curve, width);
+    const grid = []; for (let v = y0; v <= y1 + 1e-9; v += step) grid.push(`<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="1"/><text class="ax" x="${L - 8}" y="${y(v) + 3}" text-anchor="end">${money(v, 0)}</text>`);
+    const every = W < 520 ? 4 : 2;
+    const years = []; let lastY = null; curve.forEach((c, i) => { const yr = c.d.slice(0, 4); if (yr !== lastY && (yr % every === 0)) years.push(`<text class="ax" x="${x(i)}" y="${H - 6}" text-anchor="middle">${yr}</text>`); lastY = yr; });
+    const path = (k) => curve.map((c, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(c[k]).toFixed(1)}`).join('');
+    const e = curve[n - 1];
+    let ly1 = y(e.spy), ly2 = y(e.eq); if (Math.abs(ly1 - ly2) < 28) { if (ly1 < ly2) ly2 = ly1 + 28; else ly1 = ly2 + 28; }
+    return `<div class="rp-legend"><span><i style="background:var(--viz-rules)"></i>The Swing rules, $1,000</span><span><i style="background:var(--viz-spy)"></i>S&amp;P 500 (SPY, dividends reinvested), $1,000</span></div>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Account value over time: the Swing rules ended at ${money(e.eq, 0)}, the S&P 500 at ${money(e.spy, 0)}">${grid.join('')}${years.join('')}
+      <path d="${path('spy')}" fill="none" stroke="var(--viz-spy)" stroke-width="2" stroke-linejoin="round"/>
+      <path d="${path('eq')}" fill="none" stroke="var(--viz-rules)" stroke-width="2" stroke-linejoin="round"/>
+      <text class="lbl" x="${W - R + 8}" y="${ly1 - 2}">S&amp;P 500</text><text class="ax" x="${W - R + 8}" y="${ly1 + 11}">${money(e.spy, 0)}</text>
+      <text class="lbl" x="${W - R + 8}" y="${ly2 - 2}">${W < 520 ? 'Rules' : 'Swing rules'}</text><text class="ax" x="${W - R + 8}" y="${ly2 + 11}">${money(e.eq, 0)}</text>
+      <g class="hover" style="display:none"><line y1="${T}" y2="${H - B}" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="3 3"/><circle r="4" fill="var(--viz-spy)" stroke="var(--panel)" stroke-width="2" class="p1"/><circle r="4" fill="var(--viz-rules)" stroke="var(--panel)" stroke-width="2" class="p2"/></g>
+      <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" class="hit"/></svg><div class="rp-tip"></div>`;
+  }
+  function drawChart(box, curve) {
+    box.innerHTML = replayChart(curve, box.clientWidth - 12);
+    const svg = box.querySelector('svg'), tip = box.querySelector('.rp-tip'), g = svg.querySelector('.hover'), hit = svg.querySelector('.hit');
+    const { W, n, x, y } = chartGeom(curve, box.clientWidth - 12);
+    const show = (ev) => {
+      const r = svg.getBoundingClientRect(), sx = ((ev.clientX - r.left) / r.width) * W;
+      let i = 0; for (let k = 1; k < n; k++) if (Math.abs(x(k) - sx) < Math.abs(x(i) - sx)) i = k;
+      const c = curve[i], xx = x(i);
+      g.style.display = ''; g.querySelector('line').setAttribute('x1', xx); g.querySelector('line').setAttribute('x2', xx);
+      g.querySelector('.p1').setAttribute('cx', xx); g.querySelector('.p1').setAttribute('cy', y(c.spy)); g.querySelector('.p2').setAttribute('cx', xx); g.querySelector('.p2').setAttribute('cy', y(c.eq));
+      tip.innerHTML = `<div class="d">${esc(c.d)}</div><div><i style="background:var(--viz-rules)"></i>Swing rules ${money(c.eq, 0)}</div><div><i style="background:var(--viz-spy)"></i>S&amp;P 500 ${money(c.spy, 0)}</div>`;
+      tip.style.display = 'block';
+      const bx = box.getBoundingClientRect(), px2 = (xx / W) * r.width + (r.left - bx.left);
+      tip.style.left = `${Math.min(Math.max(8, px2 + 12), bx.width - tip.offsetWidth - 8)}px`; tip.style.top = '34px';
+    };
+    hit.addEventListener('pointermove', show); hit.addEventListener('pointerdown', show);
+    hit.addEventListener('pointerleave', () => { g.style.display = 'none'; tip.style.display = 'none'; });
+  }
+  let chartW = 0;
+  window.addEventListener('resize', () => { const box = document.querySelector('#replay .rp-chart'); if (replay && box && Math.abs(box.clientWidth - chartW) > 40) { chartW = box.clientWidth; drawChart(box, replay.curve); } });
+  function renderReplay() {
+    const R = replay, b = R.base, rob = R.robustness, cov = R.coverage;
+    const spyFinal = b.capital * (1 + b.spyReturnPct / 100), beat = b.cagrPct > b.spyCagrPct;
+    const since = new Date(b.from + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    const sign = (x, d = 2) => `${x >= 0 ? '+' : ''}${Number(x).toFixed(d)}`;
+    const verdict = beat
+      ? `<h4>Over ${b.years.toFixed(1)} years the rules beat holding the index: ${money(b.final, 0)} against ${money(spyFinal, 0)}.</h4><p>Check the variants below before trusting it: an edge that disappears under a small change to the rules is luck.</p>`
+      : `<h4>Since ${since}, the rules turned $1,000 into ${money(b.final, 0)}. Holding the S&amp;P 500 turned it into ${money(spyFinal, 0)}.</h4>
+         <p>That is ${b.cagrPct.toFixed(1)}% a year against ${b.spyCagrPct.toFixed(1)}%. The average trade made ${sign(b.expectancyR)}R, roughly break-even, across ${b.trades.toLocaleString('en-US')} trades. ${rob.positive} of ${rob.checked} changes to the settings still showed a small positive average trade, and ${rob.beatSpy ? `only ${rob.beatSpy}` : 'none'} beat holding the index.
+         On this record the rules have <strong>no edge worth trading real money for</strong>. Use this tab to practise on paper; long-term money belongs in an index fund.</p>`;
+    const tile = (k, v, s, sw) => `<div class="rp-tile"><div class="k">${sw ? `<span class="sw" style="background:${sw}"></span>` : ''}${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+    const yr = b.byYear.map((y) => `<tr><td>${y.year}${y.year === +b.to.slice(0, 4) ? ' (to date)' : ''}</td><td class="${y.returnPct >= 0 ? 'up' : 'down'}">${pct(y.returnPct)}</td><td>${pct(y.spyPct)}</td><td>${y.trades}</td><td class="${(y.expectancyR ?? 0) >= 0 ? 'up' : 'down'}">${y.expectancyR != null ? sign(y.expectancyR) + 'R' : '—'}</td></tr>`).join('');
+    let lastG = null;
+    const vrow = (v) => `<tr><td>${esc(v.label)}</td><td class="${v.returnPct >= 0 ? 'up' : 'down'}">${money(v.final, 0)}</td><td>${pct(v.cagrPct, 1)}</td><td>${pct(v.spyCagrPct, 1)}</td><td>${v.trades.toLocaleString('en-US')}</td><td class="${v.expectancyR >= 0 ? 'up' : 'down'}">${sign(v.expectancyR)}R</td><td>${v.maxDdPct}%</td></tr>`;
+    const vars = [{ ...b, label: 'As the app runs today', group: 'base', final: b.final }, ...R.variants].map((v) => {
+      const head = v.group !== lastG && GROUPS[v.group] ? `<tr class="grp"><td colspan="7">${GROUPS[v.group]}</td></tr>` : ''; lastG = v.group; return head + vrow(v);
+    }).join('');
+    const surv = R.variants.find((v) => v.id === 'survivors');
+    const st = b.stats || {};
+    $('replay').innerHTML = `<div class="rp-verdict">${verdict}</div>
+      <div class="rp-tiles">
+        ${tile('The rules', money(b.final, 0), `${pct(b.returnPct)} · ${b.cagrPct.toFixed(1)}% a year`, 'var(--viz-rules)')}
+        ${tile('S&amp;P 500, held', money(spyFinal, 0), `${pct(b.spyReturnPct)} · ${b.spyCagrPct.toFixed(1)}% a year`, 'var(--viz-spy)')}
+        ${tile('Worst drop', `${b.maxDdPct}%`, `index: ${b.spyMaxDdPct}%`)}
+        ${tile('Trades', b.trades.toLocaleString('en-US'), `${b.winRate}% won · ${sign(b.expectancyR)}R average`)}
+        ${tile('Money at work', `${b.exposurePct}%`, `of days with a position open`)}
+      </div>
+      <div class="rp-chart"></div>
+      <h5>Year by year</h5>
+      <div class="tbl-wrap"><table class="sw-t"><thead><tr><th>Year</th><th>The rules</th><th>S&amp;P 500</th><th>Trades</th><th>Average trade</th></tr></thead><tbody>${yr}</tbody></table></div>
+      <h5>What changes the answer</h5>
+      <div class="tbl-wrap"><table class="sw-t"><thead><tr><th>The same ten years, with one thing changed</th><th>$1,000 became</th><th>A year</th><th>S&amp;P 500 a year</th><th>Trades</th><th>Average trade</th><th>Worst drop</th></tr></thead><tbody>${vars}</tbody></table></div>
+      <p class="na">${surv ? `Testing only on today's members, the usual shortcut, would have shown ${money(surv.final, 0)} instead of ${money(b.final, 0)}: today's list leaves out every company that shrank out of the index, so it flatters any stock-picking rule. ` : ''}The market gate held back ${(st.heldByGate || 0).toLocaleString('en-US')} setups and the earnings gate ${(st.heldByEarnings || 0).toLocaleString('en-US')}; ${(st.skippedFull || 0).toLocaleString('en-US')} buy signals came when the risk limits were full.</p>
+      <details><summary>How the replay works, and what it cannot see</summary>
+        <p class="na"><strong>Account.</strong> ${esc(R.assumptions.account)}</p>
+        <p class="na"><strong>Fills.</strong> ${esc(R.assumptions.fills)}</p>
+        <p class="na"><strong>Entries.</strong> ${esc(R.assumptions.entries)}</p>
+        <p class="na"><strong>Exits.</strong> ${esc(R.assumptions.exits)}</p>
+        <p class="na"><strong>Gates.</strong> ${esc(R.assumptions.gates)}</p>
+        <p class="na"><strong>Universe.</strong> ${cov.namesEverInIndex} companies were in the S&amp;P 500 at some point in the window, rebuilt day by day from the index's change log. ${cov.withPrices} have price history; ${cov.withoutPrices} do not, mostly companies that were bought out or went bust, which is ${cov.missingMemberDaysPct}% of all member-days. Their absence still flatters the result a little: the worst outcomes (bankruptcies such as SVB Financial) are missing. Earnings dates come from SEC filings for ${cov.withEarningsDates} of the ${cov.withPrices}.</p>
+        <p class="na"><strong>Not replayed.</strong> ${R.assumptions.notReplayed.map(esc).join(' ')}</p>
+        <p class="na">Built ${esc(new Date(R.builtAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }))} with <code>npm run replay</code>. Prices from Yahoo Finance for personal research; only these totals are published. History is not a forecast.</p>
+      </details>`;
+    const box = $('replay').querySelector('.rp-chart'); chartW = box.clientWidth; drawChart(box, R.curve);
   }
 
   // ---- actions ----
@@ -1671,7 +1756,7 @@ import { getSettings, getHistory, getSwingWatch, setSwingWatch, getSwingBook, se
   });
   $('sw-notif').addEventListener('click', async () => { await requestPermission(); await registerWorker(); renderNotifStatus(); });
   $('refresh-now').addEventListener('click', async () => { slowAt = 0; await loadGate(); await refresh(); });
-  $('sw-test').addEventListener('click', runTest);
+  loadReplay();
   window.addEventListener('storage', (e) => { if (e.key && e.key.startsWith('sd-swing-')) refresh(); if (e.key === 'sd-sync-key-v1') renderNotifStatus(); });
 
   // ---- boot ----

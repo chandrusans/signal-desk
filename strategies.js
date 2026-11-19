@@ -71,9 +71,11 @@ export function signalFor(row, ctx = {}) {
   const ne = ctx.nextEarnings;
 
   // 1. What the chart says, before any gate.
+  // ctx.minScore overrides the score bars; only the historical replay's sensitivity check uses it.
+  const minBo = ctx.minScore?.breakout ?? 65, minPb = ctx.minScore?.pullback ?? 60;
   const raw = [];
-  if (row.su === 'BREAKOUT' && (row.sc || 0) >= 65) raw.push('breakout');
-  if (row.su === 'PULLBACK' && (row.sc || 0) >= 60) raw.push('pullback');
+  if (row.su === 'BREAKOUT' && (row.sc || 0) >= minBo) raw.push('breakout');
+  if (row.su === 'PULLBACK' && (row.sc || 0) >= minPb) raw.push('pullback');
   const le = ctx.lastEarnings;
   if (le && le.dateReported && le.surprisePct >= 5) {
     const since = weekdaysBetween(le.dateReported, today);

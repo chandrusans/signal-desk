@@ -485,12 +485,12 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.22</div>
+      <div class="kicker">Signal Desk · Handbook · v3.23</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
       <div id="hb-topnav"><a href="/today">← today</a> · <a href="/alerts">alerts</a> · <a href="/simulate">simulate</a> · <a href="/">stocks</a> · <a href="/crypto">crypto</a> · <a href="/metals">metals →</a></div>
-      <div>LAST UPDATED · 2026-10-23</div>
+      <div>LAST UPDATED · 2026-11-19</div>
       <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
     </div>
   </header>
@@ -846,6 +846,7 @@
         <li><strong>Sector-relative strength</strong> — each batch fetches the SPDR sector ETFs it needs (XLK, XLV, XLF, XLY, XLC, XLI, XLP, XLE, XLU, XLRE, XLB) over the same window as the tickers being scored.</li>
         <li><strong>Market breadth</strong> — percentage of the full S&amp;P 500 above its own 50-day MA, computed from the scan rather than from a handful of polled names.</li>
         <li><strong>Economic calendar</strong> — <code>/api/intel?op=macro</code>, from the FairEconomy JSON feed that powers ForexFactory's own calendar widget. Drives the macro event gate.</li>
+        <li><strong>Ten-year replay inputs</strong> (offline, <code>npm run replay</code>, Chapter 25) — S&amp;P 500 membership by date rebuilt from Wikipedia's constituent table and its index change log; ten years of daily bars from the Yahoo chart API for every name that was a member; past earnings dates from SEC EDGAR 8-K filings carrying item 2.02 ("Results of Operations"). Only the aggregate results are published (<code>data/replay.json</code>); the bars stay on the machine that built it.</li>
         <li><strong>Congressional trades</strong> — <code>/api/intel?op=congress</code>, parsed from Periodic Transaction Reports published by the Clerk of the House (the primary STOCK Act filings behind sites like CapitolTrades). <strong>Context badge only — deliberately not scored</strong>, see Chapter 16.</li>
       </ul>
       <h3>Still mock or static</h3>
@@ -1279,7 +1280,7 @@
       <table class="cadence">
         <thead><tr><th>Verdict</th><th>Stocks · metals · crypto</th><th>Options</th></tr></thead>
         <tbody>
-          <tr><td><strong>SELL</strong></td><td>Stop hit · regime CRISIS, or STRESS while losing · setup BROKEN while losing · time-stop (15 days flat)</td><td>Premium at or below the stop (half your money) · under 7 days to expiry · expired</td></tr>
+          <tr><td><strong>SELL</strong></td><td>Stop hit · regime CRISIS, or STRESS while losing · setup BROKEN while losing (not for mean-reversion trades, which are bought below the 50-day on purpose) · time-stop (15 days flat)</td><td>Premium at or below the stop (half your money) · under 7 days to expiry · expired</td></tr>
           <tr><td><strong>TRIM</strong></td><td>Target (+2.5R) reached — sell half, trail the rest · overbought or EXTENDED on a +2R winner · 20-day average rolling over on a winner · earnings inside 5 days on a winner</td><td>+50% on the premium — sell half · +100% — sell the rest</td></tr>
           <tr><td><strong>WATCH</strong></td><td>Within 0.3R of the stop · near the target · earnings inside 5 days · bought into a BROKEN setup (fresh, not yet losing)</td><td>Under 10 days to expiry · near the stop</td></tr>
           <tr><td><strong>HOLD</strong></td><td>At +1R: move the stop to breakeven. At +2R: move it to +1R. Otherwise let it work.</td><td>Hold; sell half at +50%</td></tr>
@@ -1437,9 +1438,9 @@
         <tr><td><strong>Mean reversion</strong></td><td>Above the 200-day average with the 2-day RSI below 10: a sharp, short dip inside a long uptrend.</td><td>First close back above the 5-day average, or 7 sessions, or the stop. No profit target; the bounce is the trade.</td><td>Backtested with its own exit.</td></tr>
         <tr><td><strong>Post-earnings drift</strong></td><td>Reported 2–10 sessions ago with EPS at least 5% above consensus, still above the 50-day and up over 20 days.</td><td>ATR stop, 2.5R target, 20-session time stop.</td><td><strong>None.</strong> Past earnings dates are not in the price history, so it is sized at half risk and only the paper scorecard measures it. It is checked only for stocks on your list.</td></tr>
       </tbody></table></div>
-      <p>When more than one fires on the same stock the tested ones win, in the order breakout, pullback, post-earnings drift, mean reversion. A paper trade remembers its strategy, and the exit rulebook (Chapter 20) applies that strategy's rules to it. Two rules are stricter here than on the Dashboard: a mean-reversion trade is a sell the moment price is back above its 5-day average, and no trade that is not at least +1R is carried into the last two days before earnings.</p>
+      <p>When more than one fires on the same stock the tested ones win, in the order breakout, pullback, post-earnings drift, mean reversion. A paper trade remembers its strategy, and the exit rulebook (Chapter 20) applies that strategy's rules to it. Two rules are stricter here than on the Dashboard: a mean-reversion trade is a sell the moment price is back above its 5-day average, and no trade that is not at least +1R is carried into the last two days before earnings. One rule is looser: a mean-reversion trade is never sold as a "broken trend". It is usually bought under its 50-day average, which is what BROKEN means, so that rule would sell the dip before the bounce it was bought for; its stop and 7-session clock decide instead.</p>
       <h3>$1,000 and fractional shares</h3>
-      <p>At 1% risk a $1,000 account risks $10 a trade. With a 5% stop that is about $200 of stock: roughly 0.47 of a $420 share, or 5.8 of a $34 one. Without fractional shares many signals still cannot be taken — one whole share of a $420 stock with a 5% stop risks $21, twice the budget — and the page then says how much capital one whole share at that risk would need; the two-year test shows the difference in a column of its own. Five trades at $200 is the whole account, which is why the cash cap exists and why the book stops at 5% total risk. The starting figure is only a default: change "Paper capital" on the tab and every size, limit and test follows it.</p>
+      <p>At 1% risk a $1,000 account risks $10 a trade. With a 5% stop that is about $200 of stock: roughly 0.47 of a $420 share, or 5.8 of a $34 one. Without fractional shares many signals still cannot be taken — one whole share of a $420 stock with a 5% stop risks $21, twice the budget — and the page then says how much capital one whole share at that risk would need; the ten-year replay has a "whole shares only" row for the difference. Five trades at $200 is the whole account, which is why the cash cap exists and why the book stops at 5% total risk. The starting figure is only a default: change "Paper capital" on the tab and every size, limit and test follows it.</p>
       <h3>Alerts</h3>
       <ul>
         <li><strong>Buy signal</strong> (new alert type). Raised once per stock per strategy per day when a listed stock meets an entry rule with every gate open. It carries the entry, the stop with its percentage, the target or exit line, the time stop and the first warning. It is not raised when the gate data is missing: a buy issued blind to the market is worse than silence.</li>
@@ -1447,8 +1448,17 @@
         <li><strong>Where they show.</strong> In the tab's feed; as browser notifications while any Signal Desk tab is open; and on your phone, because the Alerts tab's sync now sends the Swing list and paper trades along with its own, and the server runner (Chapter 21) checks them with the same engine. Phone delivery needs the one-time Telegram setup on the Alerts tab.</li>
         <li>The Alerts tab shows buy signals for its own watchlist too, and has a switch for the type.</li>
       </ul>
-      <h3>Is it working?</h3>
-      <p>Every paper sell goes to a scorecard split by strategy: closed trades, win rate, expectancy in R, dollars. Beside it, "Test each strategy on two years of prices" runs each strategy alone over 30 liquid stocks at your account size — with fractions, with whole shares only, and on $10,000 — and prints what holding the S&amp;P 500 returned over the same window. When this chapter was written every tested strategy had a <em>negative</em> two-year expectancy on that set (breakout −0.12R, pullback −0.18R, mean reversion −0.02R) while the index made +12%. The test leaves out the market, earnings and macro gates that the live signals apply, so it is a lower bound, but it is the honest starting point: the paper account is there to find out whether the gated rules do better, not to assume it.</p>
+      <h3>Is it working? The ten-year replay</h3>
+      <p>Every paper sell goes to a scorecard split by strategy: closed trades, win rate, expectancy in R, dollars. Below it is the replay: the question "if I had followed this tab every day since January 2016 with $1,000, what would have happened?" answered with the app's own code, not a re-implementation of it. Each evening of those ten years, every stock that was in the S&amp;P 500 <em>on that day</em> is scored exactly as <code>/api/scan</code> scores it today; the buy rules, the market gate, the earnings gate, the exit rulebook, the position sizing and the risk limits are the same functions the live tab calls. Orders are decided on the close and filled at the next open with 7 basis points charged a side; a stop is filled at the open when a stock gaps through it.</p>
+      <p><strong>The result, as built on 2026-11-19:</strong> $1,000 became about <strong>$1,048</strong> (+0.4% a year) over 1,118 trades averaging +0.01R. The same $1,000 in the S&amp;P 500 with dividends became about <strong>$4,319</strong> (+14.4% a year). The rules made money in some years (2017, 2019, 2020, 2024) and lost it back in others; they did fall less than the index in 2022 (−5% against −18%), which is what a book that sits in cash behind a market gate should do.</p>
+      <h4>Why the replay is harder to fool than the old test</h4>
+      <ul>
+        <li><strong>No survivorship bias from the list.</strong> Membership is rebuilt day by day from the index's change log, so the stocks that shrank out of the index are traded while they were in it. Testing on today's members only, the usual shortcut, turned the same $1,000 into about $1,530: a flattering +3.6 points a year that came entirely from knowing in advance which companies would survive.</li>
+        <li><strong>What it still cannot see.</strong> 110 of the 725 companies that passed through the index have no price history in the free feed — mostly takeovers, plus failures such as SVB Financial. They are 7.6% of all member-days. Missing failures flatter the result, so the true figure is probably a little worse.</li>
+        <li><strong>Every gate on.</strong> The VIX regime with breadth, the S&amp;P 500 50-day trend and the 5-day earnings gate (from SEC filing dates) all apply. Not replayed: the macro calendar (no free history of it), post-earnings drift (needs past consensus estimates) and the conviction grade (needs past filings scores); candidates are ranked by score instead.</li>
+        <li><strong>One change at a time.</strong> The table under the chart reruns the ten years with a single assumption moved: each strategy alone, the score bars ±10, the stop at 1 or 2 ATR, the target at 2R or 3R, the time stop at 10 or 20 sessions, fills at the close, 20 bp costs, whole shares, 0.5% or 2% risk, $10,000, and each half of the decade on its own. Most variants land between −0.03R and +0.05R per trade and <em>none</em> beats holding the index. Costs of 20 bp a side, or filling at the close, turn the result negative, and 2021 to date is negative on its own. That is what no edge looks like: results that wander around zero as the settings move.</li>
+      </ul>
+      <p><strong>What to do with that.</strong> On this record the Swing rules are a way to practise process — sizing, stops, gates, a journal — on paper, not a way to beat an index fund. Rebuild the replay with <code>npm run replay</code> after changing any rule; a change is only an improvement if it lifts the base case <em>and</em> survives the variants.</p>
       <h3>Preview on a closed day</h3>
       <p><code>/swing?preview=open</code> forces the market gate open so the cards, sizing and paper buttons can be tried when the real gate is shut. A banner states the real verdict and no buy alert is raised in preview.</p>
       <h3>Where it is stored</h3>
@@ -1458,6 +1468,19 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 26</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.23<br/>2026-11-19</div>
+        <div class="what">
+          <h4>Ten-year replay of the Swing rules, and a mean-reversion exit fix (Chapter 25)</h4>
+          <ul>
+            <li>New: the Swing tab's "Is it working?" section shows a ten-year replay — a $1,000 cash account run day by day since January 2016 through the live buy rules, gates, exit rulebook, sizing and risk limits, on the S&amp;P 500 as it stood on each day. Result: $1,000 → about $1,048 (+0.4% a year) against about $4,319 (+14.4% a year) for the index held with dividends. 22 variants show how much each assumption matters; none beats the index.</li>
+            <li>Removed: "Test each strategy on two years of prices". It tested 30 hand-picked stocks that are in the index today, which is the survivorship bias the replay measures (+3.6 points a year on its own).</li>
+            <li>Fixed: the exit rulebook sold mean-reversion trades as "trend broken" because they were under their 50-day average — the condition they are bought in. The replay caught it selling one such trade in seven before its bounce. Those trades now leave on their 5-day-average exit, their stop or their 7-session clock. This affects Swing-tab positions and their alerts.</li>
+            <li>Under the hood: <code>replay.js</code> (the simulator, tested), <code>tools/replay.mjs</code> and <code>tools/replay-data.mjs</code> (data and variants), <code>positionVerdict</code> accepts a replay date, <code>signalFor</code> accepts score bars for the sensitivity check. Live behaviour is unchanged by either.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.22<br/>2026-11-18</div>

@@ -102,6 +102,16 @@ test('exit rulebook: a mean-reversion position sells above its 5-day average and
   assert.equal(old.rule, 'time_stop');
   // the same price action on a breakout position is not a sell
   assert.notEqual(positionVerdict({ ...pos, strategy: 'breakout', timeStopDays: 15, buyDate: new Date().toISOString().slice(0, 10) }, { price: 102, analysis: an(101) }).rule, 'meanrev_exit');
+  // under the 50-day is the dip it was bought for: not a "broken trend" sell (a breakout in the same spot is)
+  const broken = { setup: 'BROKEN', indicators: { ma5: 101, rsi14: 30 } };
+  assert.equal(positionVerdict(pos, { price: 98, analysis: broken, today: '2026-11-13' }).action, 'HOLD');
+  assert.equal(positionVerdict({ ...pos, strategy: 'breakout', timeStopDays: 15 }, { price: 98, analysis: broken, today: '2026-11-13' }).rule, 'broken');
+});
+
+test('exit rulebook: ctx.today replays the clock as of that day', () => {
+  const pos = { id: 'y', ticker: 'TEST', qty: 1, buyPrice: 100, buyDate: '2020-03-02', stop: 95, initialStop: 95, timeStopDays: 15, assetClass: 'stock' };
+  assert.equal(positionVerdict(pos, { price: 100.5, today: '2020-03-23' }).rule, 'time_stop');
+  assert.equal(positionVerdict(pos, { price: 100.5, today: '2020-03-05' }).sessionsHeld, 3);
 });
 
 test('exit rulebook: the swing book sells a non-winner two days before earnings; other books only warn', () => {
