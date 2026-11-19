@@ -7,8 +7,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildDates, estimateNext, calKey } from '../earnings-calendar.js';
-import { earningsDates, cikFor, yahooSym } from './replay-data.mjs';
+import { buildDates, estimateNext, carryForward, calKey } from '../earnings-calendar.js';
+import { earningsDates, cikFor, yahooSym, membership } from './replay-data.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36';
@@ -42,19 +42,27 @@ console.error(`calendar: ${days.length} weekdays, ${populated} with reports, ${f
 const universe = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'screen.json'), 'utf8')).rows.map((r) => r.t);
 const onCal = new Set(rows.map((r) => calKey(r.symbol)));
 const need = universe.filter((t) => !onCal.has(calKey(t)));
-const estimates = {}; let i = 0, noFilings = 0;
+// If the SEC cannot be reached at all, yesterday's file carries the estimates: see carryForward().
+let prev = {};
+try { prev = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'earnings.json'), 'utf8')).dates || {}; } catch { /* first build */ }
+// Company ids come with Wikipedia's constituent table; the SEC lookup file is only the second choice.
+let wikiCik = {}; try { wikiCik = (await membership(today)).cik || {}; } catch { /* fall back to the SEC lookup */ }
+const estimates = {}; let i = 0, noFilings = 0, fromSec = 0, carried = 0, secMisses = 0;
 const since = iso(Date.parse(today) - 800 * DAY);
 async function worker() {
   while (i < need.length) {
     const t = need[i++];
-    try {
-      const cik = await cikFor(yahooSym(t));
-      const est = cik ? estimateNext(await earningsDates(cik, since), today) : null;
-      if (est) estimates[t] = est; else noFilings++;
-    } catch { noFilings++; }
+    let est = null;
+    if (secMisses < 25 || fromSec > 0) {            // 25 straight misses with no hit: the SEC is not answering us tonight
+      try { const cik = wikiCik[yahooSym(t)] || await cikFor(yahooSym(t)); const past = cik ? await earningsDates(cik, since) : null; est = past ? estimateNext(past, today) : null; } catch { /* fall through */ }
+      if (est) fromSec++; else secMisses++;
+    }
+    if (!est) { est = carryForward(prev[calKey(t)], today); if (est) carried++; }
+    if (est) estimates[t] = est; else noFilings++;
   }
 }
 await Promise.all([worker(), worker()]);
+console.error(`estimates: ${fromSec} from SEC filings, ${carried} carried from the previous file${fromSec === 0 && need.length ? ' (SEC not reachable from here)' : ''}`);
 const dates = buildDates(rows, estimates);
 const covered = universe.filter((t) => dates[calKey(t)]).length;
 console.error(`S&P 500: ${universe.length - need.length} on the calendar, ${Object.keys(estimates).length} estimated, ${noFilings} without a usable filing history → ${covered}/${universe.length} covered`);

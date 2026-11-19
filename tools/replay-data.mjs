@@ -128,16 +128,31 @@ export async function bars(sym, fromISO, { refresh = false } = {}) {
 }
 
 // ── Earnings dates (SEC) ──────────────────────────────────────────────────
+// Ticker → SEC company id. The SEC's own lookup file (www.sec.gov) is refused from some networks
+// (shared CI runners) even though its filings API answers there, so a committed map of the names
+// this replay needs (tools/cik-fallback.json, written whenever the lookup does succeed) stands in.
 let tickerCik = null;
+const CIK_FALLBACK = path.join(ROOT, 'tools', 'cik-fallback.json');
 export async function cikFor(t) {
   if (!tickerCik) {
     const file = path.join(CACHE, 'sec', 'company_tickers.json');
     let j = cached(file, 7, false);
     if (!j) { j = await getJSON('https://www.sec.gov/files/company_tickers.json', { 'User-Agent': UA_SEC }); if (!j.__status) fs.writeFileSync(file, JSON.stringify(j)); }
     tickerCik = {};
-    for (const v of Object.values(j || {})) if (v?.ticker) tickerCik[yahooSym(v.ticker)] = String(v.cik_str).padStart(10, '0');
+    if (j && !j.__status) for (const v of Object.values(j)) if (v?.ticker) tickerCik[yahooSym(v.ticker)] = String(v.cik_str).padStart(10, '0');
+    if (!Object.keys(tickerCik).length) {
+      try { tickerCik = JSON.parse(fs.readFileSync(CIK_FALLBACK, 'utf8')); log(`SEC ticker lookup unavailable — using the committed map (${Object.keys(tickerCik).length} names)`); } catch { /* none */ }
+      tickerCik.__fallback = true;
+    }
   }
   return tickerCik[t] || null;
+}
+/** Refresh the committed map with the ids just resolved from the live lookup (a no-op when running on the fallback). */
+export function saveCikFallback(map) {
+  if (!tickerCik || tickerCik.__fallback) return;
+  let old = {}; try { old = JSON.parse(fs.readFileSync(CIK_FALLBACK, 'utf8')); } catch { /* first write */ }
+  const next = Object.fromEntries(Object.entries({ ...old, ...map }).filter(([, v]) => v).sort(([x], [y]) => (x < y ? -1 : 1)));
+  if (JSON.stringify(next) !== JSON.stringify(old)) fs.writeFileSync(CIK_FALLBACK, JSON.stringify(next, null, 0) + '\n');
 }
 export async function earningsDates(cik, fromISO) {
   const file = path.join(CACHE, 'sec', `${cik}.json`);
@@ -234,11 +249,14 @@ export async function loadReplayData({ from = '2016-01-01', refresh = false, lim
   let edone = 0;
   const withBars = Object.keys(out);
   const earnings = {};
+  const ciks = {};
   await pool(withBars, 2, async (t) => {
     const c = mem.cik[t] || (await cikFor(t));
+    ciks[t] = c;
     earnings[t] = c ? await earningsDates(c, warmFrom) : null;
     if (++edone % 100 === 0) log(`  earnings ${edone}/${withBars.length}`);
   });
+  saveCikFallback(ciks);
   coverage.earningsKnown = withBars.filter((t) => earnings[t]?.length).length;
 
   const spy = { c: new Float32Array(days.map((d) => spyB[spyIdx.get(d)].c)), a: new Float64Array(days.map((d) => spyB[spyIdx.get(d)].a)),

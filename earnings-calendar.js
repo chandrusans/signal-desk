@@ -66,6 +66,19 @@ export function calendarEntry(cal, sym, nowMs = Date.now()) {
   return { date: e[0], daysAway: Math.round((Date.parse(e[0]) - Date.parse(today)) / DAY), estimated: e[1] !== 'c', when: e[2] || null, source: e[1] === 'c' ? 'NASDAQ earnings calendar' : 'estimated from past SEC filings' };
 }
 
+/**
+ * Fallback when the SEC cannot be reached: keep the estimate from the previous file. A date
+ * that is still ahead is carried as it is; one that has passed was that quarter's report, so
+ * the next is a quarter later (the report dates themselves arrive through the calendar, so
+ * this keeps itself going without the SEC). Returns 'YYYY-MM-DD' or null.
+ */
+export function carryForward(prevEntry, today) {
+  const d = prevEntry && prevEntry[0];
+  if (!d) return null;
+  if (d >= today) return d;
+  return estimateNext([d], today);
+}
+
 /** Merge calendar rows and estimates into the file's `dates` map. Calendar wins; earliest date per symbol. */
 export function buildDates(calendarRows, estimates = {}) {
   const dates = {};

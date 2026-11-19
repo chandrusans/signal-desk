@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calKey, quarterlyReports, estimateNext, calendarEntry, buildDates } from '../earnings-calendar.js';
+import { calKey, quarterlyReports, estimateNext, calendarEntry, buildDates, carryForward } from '../earnings-calendar.js';
 import { signalFor } from '../strategies.js';
 
 test('one key for every spelling of a share class', () => {
@@ -45,4 +45,10 @@ test('the earnings gate reads the calendar entry, and says when the date is an e
   assert.equal(near.action, 'AVOID'); assert.match(near.reason, /expected in about 4 days \(around 2026-11-23, estimated from past reports\)/);
   const far = signalFor(row, { regime: rg, nextEarnings: { date: '2027-01-20', daysAway: 62, estimated: true }, today: '2026-11-19' });
   assert.equal(far.action, 'BUY'); assert.ok(!far.caveats.some((c) => /no next-earnings date/.test(c)), 'a dated name carries no "unknown" warning');
+});
+
+test('without the SEC, yesterday\'s estimate is carried; a date that has passed rolls a quarter on', () => {
+  assert.equal(carryForward(['2027-01-20', 'e', null], '2026-11-19'), '2027-01-20');
+  assert.equal(carryForward(['2026-11-17', 'c', 'pre'], '2026-11-19'), '2027-02-16', 'reported two days ago: 91 days later');
+  assert.equal(carryForward(undefined, '2026-11-19'), null);
 });

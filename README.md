@@ -274,7 +274,7 @@ npm test
 
 Unit tests (node:test) for the pure modules — exit rulebook, risk engine and
 journal, UI escaping/formatting, analysis plan, forward DCF, indicators and
-statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar — no network. 71 tests. CI runs them with
+statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar — no network. 72 tests. CI runs them with
 the lint and `npm audit` on every push.
 
 ### Security model
