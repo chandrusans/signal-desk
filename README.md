@@ -183,6 +183,7 @@ signal-desk/
 │   ├── devserver.mjs  Local server routing /api/* to the handler modules
 │   ├── build-screen.mjs  Nightly screen builder (filings + scan + history + NASDAQ → data/screen.json)
 │   ├── replay.mjs     Ten-year replay: base case + 22 variants → data/replay.json
+│   ├── experiments.mjs  Rule experiments on the replay (index timing, stricter entries, fewer strategies), each judged on both halves
 │   ├── build-earnings.mjs  Nightly earnings calendar (NASDAQ by-date calendar + SEC estimates → data/earnings.json)
 │   ├── check-health.mjs  Reads /api/intel?op=health; exit 1 when a critical source is down (health.yml, 4×/day)
 │   ├── replay-data.mjs  Point-in-time membership, bars, SEC earnings dates, per-day scan rows (cached)
@@ -287,7 +288,7 @@ npm test
 
 Unit tests (node:test) for the pure modules — exit rulebook, risk engine and
 journal, UI escaping/formatting, analysis plan, forward DCF, indicators and
-statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar, encrypted sync (against the real vault handler), Web Push and the Alpaca paper broker (against a pretend API) — no network. 92 tests. CI runs them with
+statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar, encrypted sync (against the real vault handler), Web Push and the Alpaca paper broker (against a pretend API) — no network. 93 tests. CI runs them with
 the lint and `npm audit` on every push.
 
 ```bash

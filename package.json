@@ -23,7 +23,8 @@
     "replay": "node --max-old-space-size=6144 tools/replay.mjs",
     "earnings:build": "node tools/build-earnings.mjs",
     "health": "node tools/check-health.mjs",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "experiments": "node --max-old-space-size=6144 tools/experiments.mjs"
   },
   "overrides": {
     "zod": "^4.6.6"

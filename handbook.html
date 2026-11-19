@@ -495,7 +495,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.30</div>
+      <div class="kicker">Signal Desk · Handbook · v3.31</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -1498,6 +1498,14 @@
         <li><strong>One change at a time.</strong> The table under the chart reruns the ten years with a single assumption moved: each strategy alone, the score bars ±10, the stop at 1 or 2 ATR, the target at 2R or 3R, the time stop at 10 or 20 sessions, fills at the close, 20 bp costs, whole shares, 0.5% or 2% risk, $10,000, and each half of the decade on its own. Most variants land between −0.03R and +0.05R per trade and <em>none</em> beats holding the index. Costs of 20 bp a side, or filling at the close, turn the result negative, and 2021 to date is negative on its own. That is what no edge looks like: results that wander around zero as the settings move.</li>
       </ul>
       <p><strong>What to do with that.</strong> On this record the Swing rules are a way to practise process — sizing, stops, gates, a journal — on paper, not a way to beat an index fund. Rebuild the replay with <code>npm run replay</code> after changing any rule; a change is only an improvement if it lifts the base case <em>and</em> survives the variants.</p>
+      <h3>What has been tried to improve the rules, and dropped</h3>
+      <p>Each idea below was run through the ten-year replay (<code>npm run experiments</code>) over the whole decade and over each half on its own. An idea had to beat the current rules in both halves to count. As of 2026-11-19:</p>
+      <ul>
+        <li><strong>Using the market gate on the index itself</strong> — hold an S&amp;P 500 fund while the gate allows new longs, cash otherwise. Result: about <strong>+4.7% a year against +14.4%</strong> for simply holding, with a worst drop of −24% instead of −34%. The 50-day test flips too often (about 190 switches) and misses the sharp recoveries. Slower versions (index above its 100, 150 or 200-day average) kept about +10% a year with a worst drop near −22%: a third less pain for roughly four points a year less return. None beat holding.</li>
+        <li><strong>Stricter entries</strong> — score bars raised by 10, 20 and 25 points, alone and with a longer time stop. Raising them by 10 with a 20-session time stop was the only change better in both halves (+2.1% a year against +0.4%), and raising them further made things worse, which is the pattern of noise, not of an edge.</li>
+        <li><strong>Fewer strategies</strong> — pullbacks only, and breakouts plus pullbacks without mean reversion, at several score bars. None was better in both halves; pullbacks alone doubled the worst drop.</li>
+      </ul>
+      <p><strong>What that leaves.</strong> No version of these rules tested so far comes near holding the index, so the rules are unchanged. The gate does what it is for, smaller losses in bad markets, and costs more than it saves over a decade that mostly went up. Any future change has to clear the same bar before it ships.</p>
       <h3>Letting the rules trade a paper account by themselves</h3>
       <p>Section 7 of the Swing tab can connect an <strong>Alpaca paper-trading account</strong>: a free account with pretend money. When it is switched on, every buy alert for a stock on your watchlist is sent there as an order by the server's scheduled check, and the positions it opens are managed by the exit rulebook, with nobody pressing a button. The point is evidence: the rules build their own track record on live prices while you watch.</p>
       <ul>
@@ -1515,6 +1523,17 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 26</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.31<br/>2026-11-19</div>
+        <div class="what">
+          <h4>Three attempts to improve the rules, tested and not adopted (Chapter 25)</h4>
+          <ul>
+            <li>Tested on the ten-year replay, each on both halves of the decade: holding the index only while the market gate is open; stricter score bars with a longer time stop; and trading fewer strategies. None came near simply holding the index, and only one small change beat the current rules in both halves, by a margin that looks like noise. The rules are unchanged; the results are written up in Chapter 25.</li>
+            <li>The experiments can be rerun with <code>npm run experiments</code>.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.30<br/>2026-11-19</div>

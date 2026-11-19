@@ -50,6 +50,26 @@ export function nextEarningsFrom(dates, d) {
   return { date: dates[lo], daysAway: daysBetween(d, dates[lo]) };
 }
 
+/**
+ * The market gate on every day of the data, exactly as the live pages compute it: the VIX regime,
+ * breadth (the share of that day's index members above their 50-day) and the S&P 500 against its
+ * own 50-day. Returns an array aligned to data.days; each entry is the regime object the app shows.
+ */
+export function gateSeries(data, { universe = 'pit', k0 = 0, kEnd = data.days.length - 1 } = {}) {
+  const { days, spy, vix, tickers } = data, names = Object.keys(tickers), last = days.length - 1;
+  const out = new Array(days.length).fill(null);
+  for (let k = k0; k <= kEnd; k++) {
+    let n = 0, up = 0;
+    for (const T of names) {
+      if ((universe === 'today' ? tickers[T].member[last] : tickers[T].member[k]) !== 1) continue;
+      const a = tickers[T].cols.a50[k]; if (a === a) { n++; if (a === 1) up++; }
+    }
+    const rg = regime(vix[k] > 0 ? vix[k] : null, n > 50 ? { pctAbove50: (up / n) * 100 } : null);
+    out[k] = applySpyTrend(rg, spy.c[k] > spy.ma50[k]);
+  }
+  return out;
+}
+
 export function simulate(data, opts = {}) {
   const cfg = { ...REPLAY_DEFAULTS, ...opts };
   const { days, spy, vix, tickers, earnings } = data;
@@ -63,18 +83,8 @@ export function simulate(data, opts = {}) {
   const buyFill = (px) => px * (1 + cfg.costBps / 1e4), sellFill = (px) => px * (1 - cfg.costBps / 1e4);
   const limits = { ...LIMITS, riskPerTradePct: cfg.riskPct };
 
-  // Breadth for the regime: share of the day's members above their 50-day (the live Swing tab's number).
-  const breadth = new Float32Array(days.length).fill(NaN);
-  for (let k = k0; k <= kEnd; k++) {
-    let n = 0, up = 0;
-    for (const T of names) { if (!isMember(T, k)) continue; const a = C(T, 'a50', k); if (a === a) { n++; if (a === 1) up++; } }
-    if (n > 50) breadth[k] = (up / n) * 100;
-  }
-  const gateOn = (k) => {
-    if (!cfg.gates) return null;
-    const rg = regime(vix[k] > 0 ? vix[k] : null, breadth[k] === breadth[k] ? { pctAbove50: breadth[k] } : null);
-    return applySpyTrend(rg, spy.c[k] > spy.ma50[k]);
-  };
+  const gates = cfg.gates ? gateSeries(data, { universe: cfg.universe, k0, kEnd }) : null;
+  const gateOn = (k) => (gates ? gates[k] : null);
   const ne = (T, d) => (cfg.earningsGate ? nextEarningsFrom(earnings[T], d) : undefined);
 
   const rowAt = (T, k) => {
@@ -206,6 +216,24 @@ export function simulate(data, opts = {}) {
   // Mark anything still open at the last close and report it apart from the closed record.
   const open = book.map((p) => ({ t: p.T, strategy: p.strategy, entryDate: p.buyDate, entry: p.buy, last: lastClose[p.T], rNow: +(((lastClose[p.T] - p.buy) * p.qty + p.pl) / (p.R * p.qty0)).toFixed(2) }));
   return { cfg, trades, open, curve, stats, metrics: metrics({ curve, trades, spy, days, k0, kEnd, capital: cfg.capital }) };
+}
+
+/**
+ * Index timing: hold the index (total-return series `adj`) while `signal` is on, cash otherwise.
+ * The position carried from close k to close k+1 is the signal at close k − lag: lag 1 (default) acts
+ * a day late, lag 0 acts on the close that produced the signal. It never reads a later signal.
+ * `signal` may be fractional (0…1) for partial exposure. Cash earns nothing; `costBps` per unit switched.
+ */
+export function indexTiming(adj, signal, { lag = 1, costBps = 5, from = 0, to = adj.length - 1, capital = 1000 } = {}) {
+  let eq = capital, pos = 0, switches = 0, inDays = 0, peak = capital, dd = 0;
+  for (let k = from; k < to; k++) {
+    const want = k - lag >= from ? signal[k - lag] : 0;
+    if (want !== pos) { eq *= 1 - (Math.abs(want - pos) * costBps) / 1e4; switches++; pos = want; }
+    eq *= 1 + pos * (adj[k + 1] / adj[k] - 1);
+    if (pos > 0) inDays++;
+    peak = Math.max(peak, eq); dd = Math.min(dd, eq / peak - 1);
+  }
+  return { final: eq, maxDdPct: dd * 100, inMarketPct: to > from ? (inDays / (to - from)) * 100 : 0, switches };
 }
 
 /** Headline numbers, the yearly table, and the same for SPY held throughout with dividends reinvested. */

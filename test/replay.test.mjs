@@ -92,3 +92,18 @@ test('nextEarningsFrom returns the first filing on or after the day, or null wit
   assert.equal(nextEarningsFrom([], '2020-01-01'), null);
   assert.equal(nextEarningsFrom(['2019-01-01'], '2020-01-01'), null);
 });
+
+test('index timing never sees the future: a jump the signal only knew about afterwards is missed', async () => {
+  const { indexTiming } = await import('../replay.js');
+  //            close 0   1    2 (the jump)  3    4
+  const adj =    [100,  100,  200,          200, 220];
+  const signal = [0,    0,    1,            1,   1];      // turns on at close 2, i.e. after the jump has happened
+  const late = indexTiming(adj, signal, { lag: 1, costBps: 0 });
+  assert.equal(late.final, 1100, 'in from close 3: only the 200 → 220 move');
+  const sameClose = indexTiming(adj, signal, { lag: 0, costBps: 0 });
+  assert.equal(sameClose.final, 1100, 'acting on close 2 still buys at 200, after the jump');
+  assert.equal(indexTiming(adj, [1, 1, 1, 1, 1], { lag: 0, costBps: 0 }).final, 2200, 'held throughout: the whole move');
+  assert.ok(indexTiming(adj, signal, { lag: 1, costBps: 10 }).final < 1100, 'a switch costs something');
+  const half = indexTiming(adj, [0.5, 0.5, 0.5, 0.5, 0.5], { lag: 0, costBps: 0 });
+  assert.ok(half.final > 1000 && half.final < 2200); assert.equal(half.inMarketPct, 100);
+});
