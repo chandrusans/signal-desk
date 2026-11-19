@@ -1220,9 +1220,10 @@ import { ask, confirmBox, notify } from './dialog.js';
     const head = $('reality-headline');
     const body = $('reality-body');
     if (!backtest) return;
-    if (backtest.error) {
+    // An answer with no sweep in it (the source failed without saying so) is the same as an error.
+    if (backtest.error || !Array.isArray(backtest.sweep) || !backtest.sweep.length) {
       head.textContent = 'Backtest unavailable right now.';
-      body.innerHTML = `<p>${backtest.error}. The rankings below still reflect live data; the measured edge figures will return on the next refresh.</p>`;
+      body.innerHTML = `<p>${backtest.error || 'The backtest returned no result'}. The rankings below still reflect live data; the measured edge figures will return on the next refresh.</p>`;
       return;
     }
 
@@ -1621,6 +1622,7 @@ import { ask, confirmBox, notify } from './dialog.js';
     const rowsEl = document.getElementById('pf-rows');
     if (!bodyEl || !rowsEl) return;
 
+    if (pfData && !pfData.error && !pfData.stats) pfData = { error: 'no data returned' };       // an empty answer is a failed one
     if (!pfData || pfData.error) {
       statusEl.textContent = pfData?.error ? 'unavailable' : 'loading…';
       bodyEl.innerHTML = `<p>${pfData?.error ? 'pump.fun data unavailable right now.' : 'Sampling live pump.fun pairs…'}</p>`;

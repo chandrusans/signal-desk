@@ -1426,7 +1426,7 @@ import { getSettings, getHistory, getSwingWatch, setSwingWatch, getSwingBook, se
       <div style="min-width:0;">
         <div class="kind">${S ? esc(S.name) : esc(r.su || 'no setup')}${r.sc != null ? ` · score ${r.sc}` : ''}</div>
         <div class="name">${esc(t)} <small>· ${px(r.p)} ${r.c != null ? pct(r.c, 2) : ''}</small>
-          <span class="pill ${sig.action}">${isHeld ? 'held' : sig.action === 'BUY' ? 'buy signal' : sig.action}</span>${g ? `<span class="tag ${g.grade}" title="${g.points} of ${g.max} checks">grade ${g.grade}</span>` : ''}</div>
+          <span class="pill ${sig.action}">${isHeld ? 'Held' : sig.action === 'BUY' ? 'Buy signal' : sig.action === 'WAIT' ? 'Wait' : 'Avoid'}</span>${g ? `<span class="tag ${g.grade}" title="${g.points} of ${g.max} checks">Grade ${g.grade}</span>` : ''}</div>
         <p class="plain">${esc(sig.reason)}${isHeld ? ' <strong>You already hold this in the paper book.</strong>' : ''}</p>
         ${plan}
       </div>

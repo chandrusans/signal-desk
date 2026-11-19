@@ -6,3 +6,5 @@ node_modules/
 .claude/
 .env*
 .cache/
+test-results/
+playwright-report/

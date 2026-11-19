@@ -19,3 +19,24 @@ jobs:
       - run: npm test
       - run: npm run lint
       - run: npm audit --omit=dev --audit-level=high
+
+  # Browser tests: the real pages in a real browser, with market data answered from fixtures
+  # (e2e/fixtures.mjs), so the run needs no data source and fails only on our own bugs.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
