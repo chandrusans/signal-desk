@@ -157,3 +157,26 @@ test('sync: set up on one device, join on another, and the data arrives', async 
   await expect(a.locator('#sync-state')).toHaveText('Off');
   await A.close(); await B.close();
 });
+
+test('Alerts: the push panel offers to turn push on, and explains installing first on an iPhone in Safari', async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  await mockApi(page);
+  await page.goto('/alerts');
+  await expect(page.locator('#wp-st')).toHaveText(/notifications are blocked/);      // a fresh headless browser blocks them: the panel says so
+  // a browser that has not been asked yet (headless always reports "denied", so say "default" for it)
+  await page.addInitScript(() => Object.defineProperty(Notification, 'permission', { get: () => 'default' }));
+  await page.reload();
+  await expect(page.locator('#wp-st')).toHaveText(/push is off on this device/);
+  await expect(page.locator('#wp-enable')).toBeVisible();
+  expect(errors, errors.join('\n')).toEqual([]);
+
+  // Safari on an iPhone, not installed: there is no PushManager until the app is on the Home Screen
+  const ctx = await browser.newContext({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1', viewport: { width: 390, height: 844 } });
+  const phone = await ctx.newPage();
+  await phone.addInitScript(() => { delete window.PushManager; });
+  await mockApi(phone);
+  await phone.goto('/alerts');
+  await expect(phone.locator('#wp-st')).toHaveText(/install the app first/);
+  await expect(phone.locator('#wp-note')).toContainText('Add to Home Screen');
+  await ctx.close();
+});

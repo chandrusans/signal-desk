@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@vercel/blob": "^2.8.2",
-    "unpdf": "^1.7.0"
+    "unpdf": "^1.7.0",
+    "web-push": "^4.0.0"
   },
   "scripts": {
     "validate": "sh tools/validate.sh",

@@ -495,7 +495,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.27</div>
+      <div class="kicker">Signal Desk · Handbook · v3.28</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -1327,6 +1327,14 @@
     <section id="phone">
       <h2><span class="chnum">Chapter 21</span>Alerts on your phone — Telegram, WhatsApp, ntfy</h2>
       <p>Until now alerts only reached you while an Alerts tab was open. Now the <strong>same engine</strong> runs on the server every 5 minutes in market hours and every 30 minutes around the clock, and sends what fires to your phone — browser closed.</p>
+      <h3>Push to the installed app — the simplest route</h3>
+      <p>Since v3.28 the app can receive alerts directly, with nothing to set up outside it: no bot, no token.</p>
+      <ol>
+        <li><strong>Install the app.</strong> On iPhone or iPad (iOS 16.4 or later): open the site in Safari, tap <em>Share → Add to Home Screen</em>, then open Signal Desk from its new icon. On Android or a computer, Chrome or Edge works without installing.</li>
+        <li><strong>Alerts → Push to this device → Turn on push here</strong>, and allow notifications when asked.</li>
+        <li>The first device also needs the one-time server step below (it asks for the owner key once).</li>
+      </ol>
+      <p>From then on the server's scheduled check sends buy signals, exit signals and the other alert types to that device as ordinary notifications, with the app closed. Tapping one opens the relevant page. Up to six devices can be registered; a device that removes the app or withdraws permission is dropped automatically. Telegram, WhatsApp and ntfy below still work alongside it.</p>
       <h3>One-time server step (whoever owns the Vercel project)</h3>
       <p>The runner needs somewhere to keep your watchlist, positions and dedup state. In the Vercel dashboard: <strong>Storage → Create → Blob → connect to signal-desk</strong>. Also set a <code>RUN_KEY</code> environment variable matching the repo secret. The Alerts tab tells you if either is missing.</p>
       <h3>Telegram — recommended, free, official, three minutes</h3>
@@ -1498,6 +1506,18 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 26</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.28<br/>2026-11-19</div>
+        <div class="what">
+          <h4>Push alerts to the installed app (Chapter 21)</h4>
+          <ul>
+            <li>New: <strong>Alerts → Push to this device</strong>. The installed app receives buy and exit alerts from the server as normal notifications, even when it is closed. No Telegram bot or token is needed. On iPhone, add the site to the Home Screen first.</li>
+            <li>The page tells you what to do when push is not available: install first (iPhone in Safari), or notifications blocked for the site.</li>
+            <li>Under the hood: the server makes its own signing keys on first use and keeps them with the alert settings; it only accepts subscription addresses that belong to Apple, Google, Mozilla or Microsoft's push services.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.27<br/>2026-11-19</div>

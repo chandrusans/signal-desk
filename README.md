@@ -278,7 +278,7 @@ npm test
 
 Unit tests (node:test) for the pure modules — exit rulebook, risk engine and
 journal, UI escaping/formatting, analysis plan, forward DCF, indicators and
-statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar and encrypted sync (against the real vault handler) — no network. 81 tests. CI runs them with
+statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar, encrypted sync (against the real vault handler) and Web Push — no network. 86 tests. CI runs them with
 the lint and `npm audit` on every push.
 
 ```bash
@@ -291,7 +291,7 @@ journal; the market gate on Today, Swing and Stocks; a Swing paper buy and
 sell; the shared watchlist; the earnings gate; an unreadable macro calendar;
 the replay panel; and two-device sync. Market data comes from made-up fixtures
 (`e2e/fixtures.mjs`), so a run needs no network; sync uses the real vault
-handler over a scratch folder. 24 tests, about ten seconds. CI runs them on
+handler over a scratch folder. 25 tests, about ten seconds. CI runs them on
 every push. First run locally: `npx playwright install chromium`.
 
 ### Security model

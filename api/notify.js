@@ -1,4 +1,4 @@
-// Vercel serverless: /api/notify?op=sync|run|test|status
+// Vercel serverless: /api/notify?op=sync|run|test|status|pushkey|subscribe|unsubscribe
 //
 // Phone delivery for the Alerts engine. Until now every alert was computed in
 // the browser and could only reach a phone while a tab was open. This runs
@@ -13,6 +13,8 @@
 //                 persists dedup state. Idempotent: nothing is sent twice.
 //   test    POST  { syncKey } — sends a test message to every configured channel.
 //   status  GET   ?syncKey= — what is configured, when it last ran, what it sent.
+//   pushkey GET   this server's public push key, for a browser to subscribe with.
+//   subscribe / unsubscribe  POST { syncKey, subscription | endpoint } — add or remove a device for Web Push.
 //
 // STORAGE: Vercel Blob (private). One JSON document holds everything. If the
 // store is not connected yet (no BLOB_READ_WRITE_TOKEN), every op says so
@@ -23,11 +25,13 @@
 //                            activates it by messaging the bot once)
 //   ntfy.sh                  topic name (free, no account; install the ntfy app)
 //   Telegram                 bot token + chat id (free, official)
+//   Web Push                 the installed app itself (see _push.js); nothing to type, works with the app closed
 //
 // SECRETS the user types (CallMeBot key, Telegram token) live only in the
 // private blob; they are never echoed back by status.
 
 import { put, get } from '@vercel/blob';
+import { cleanSubscription, addDevice, removeDevice, vapidKeys, pushAll } from './_push.js';
 import { evaluate, evaluatePositions, fetchAlertData, fetchPositionContext, useStore, memoryStore, TYPES, DEFAULT_SETTINGS } from '../alerts.js';
 
 const BLOB_PATH = 'signal-desk/alerts-state.json';
@@ -78,9 +82,14 @@ async function sendTelegram(ch, text) {
   const d = await r.json().catch(() => ({}));
   return { ok: !!d.ok, detail: d.ok ? 'sent' : (d.description || `http ${r.status}`) };
 }
-function channelsOf(state) {
+function channelsOf(state, dead = null) {
   const c = state.channels || {};
   const out = [];
+  if (state.push?.length && state.vapid?.privateKey) out.push({ name: 'push', send: async (title, text, prio, alert) => {
+    const r = await pushAll(state.push, state.vapid, APP_URL, { title, body: alert ? alert.body : text, url: alert?.link, urgent: prio === 'high' });
+    if (dead) for (const e of r.dead) dead.add(e);
+    return { ok: r.ok, detail: r.ok ? `sent to ${r.sent} device${r.sent === 1 ? '' : 's'}` : 'no device accepted it' };
+  } });
   if (c.callmebot?.phone && c.callmebot?.apikey) out.push({ name: 'whatsapp', send: (title, text, prio) => sendCallMeBot(c.callmebot, `${title}\n${text}`) });
   if (c.ntfy?.topic) out.push({ name: 'ntfy', send: (title, text, prio) => sendNtfy(c.ntfy, title, text, prio) });
   if (c.telegram?.token && c.telegram?.chatId) out.push({ name: 'telegram', send: (title, text) => sendTelegram(c.telegram, `${title}\n${text}`) });
@@ -92,8 +101,8 @@ const fmtAlert = (a) => ({
   prio: a.severity === 'high' ? 'high' : 'default',
 });
 
-async function deliver(state, alerts) {
-  const chans = channelsOf(state);
+async function deliver(state, alerts, dead = null) {
+  const chans = channelsOf(state, dead);
   const report = {};
   if (!chans.length || !alerts.length) return report;
   // Highest severity first; cap per run so an unusually busy minute does not flood a phone
@@ -104,7 +113,7 @@ async function deliver(state, alerts) {
     let sent = 0, failed = 0, lastDetail = '';
     for (const a of head) {
       const m = fmtAlert(a);
-      try { const r = await ch.send(m.title, m.text, m.prio); if (r.ok) sent++; else { failed++; lastDetail = redact(r.detail); } }
+      try { const r = await ch.send(m.title, m.text, m.prio, a); if (r.ok) sent++; else { failed++; lastDetail = redact(r.detail); } }
       catch (e) { failed++; lastDetail = redact(e.message); }
       await new Promise((r) => setTimeout(r, ch.name === 'whatsapp' ? 1500 : 200));   // CallMeBot is rate-limited
     }
@@ -204,12 +213,39 @@ export default async function handler(req, res) {
     return;
   }
 
+  if (op === 'pushkey') {
+    const state = await loadState();
+    const [vapid, created] = vapidKeys(state);
+    if (created) await saveState({ ...(await loadState()), vapid });
+    res.status(200).json({ ok: true, publicKey: vapid.publicKey });
+    return;
+  }
+
+  if ((op === 'subscribe' || op === 'unsubscribe') && req.method === 'POST') {
+    const body = await readBody(req);
+    const state = await loadState();
+    if (!state.syncKey || !(await same(body.syncKey, state.syncKey))) { res.status(403).json({ ok: false, error: 'sync first' }); return; }
+    if (op === 'subscribe') {
+      const sub = cleanSubscription(body.subscription);
+      if (!sub) { res.status(400).json({ ok: false, error: 'that does not look like a push subscription from a supported browser' }); return; }
+      const [vapid] = vapidKeys(state);
+      await saveState({ ...state, vapid, push: addDevice(state.push, sub) });
+      res.status(200).json({ ok: true, devices: addDevice(state.push, sub).length });
+    } else {
+      const next = removeDevice(state.push, String(body.endpoint || ''));
+      await saveState({ ...state, push: next });
+      res.status(200).json({ ok: true, devices: next.length });
+    }
+    return;
+  }
+
   if (op === 'status') {
     const state = await loadState();
     if (state.syncKey && !(await same(req.query.syncKey, state.syncKey))) { res.status(403).json({ ok: false, error: 'syncKey mismatch' }); return; }
     const c = state.channels || {};
     res.status(200).json({ ok: true, storage: 'connected', synced: !!state.syncKey, syncedAt: state.syncedAt || null, watch: (state.watch || []).length, positions: (state.portfolio || []).length,
       channels: { whatsapp: c.callmebot?.phone ? { phone: mask(c.callmebot.phone), apikey: !!c.callmebot.apikey } : null, ntfy: c.ntfy?.topic ? { topic: c.ntfy.topic } : null, telegram: c.telegram?.chatId ? { chatId: mask(c.telegram.chatId), token: !!c.telegram.token } : null },
+      push: (state.push || []).length,
       lastRun: state.lastRun || null, runnerConfigured: !!process.env.RUN_KEY });
     return;
   }
@@ -252,11 +288,13 @@ export default async function handler(req, res) {
       const ctx = await fetchPositionContext(pf, { base });
       fired.push(...evaluatePositions(pf, ctx, settings));
     }
-    const report = await deliver(state, fired);
+    const dead = new Set();
+    const report = await deliver(state, fired, dead);
     // A sync may have landed while this run was fetching (up to 60 s). Re-read and write
     // only the runner's own fields so the user's watchlist / channels are never reverted.
     const fresh = await loadState();
     fresh.engine = mem.data;
+    if (dead.size) fresh.push = (fresh.push || []).filter((d) => !dead.has(d.endpoint));       // devices the push service says are gone
     if (slow) { fresh.slow = state.slow; fresh.slowAt = state.slowAt; }
     fresh.lastRun = { at: Date.now(), ms: Date.now() - t0, watch: watch.length, positions: pf.length, fired: fired.length, delivered: report, sourcesDown: data?.failed || 0 };
     await saveState(fresh);

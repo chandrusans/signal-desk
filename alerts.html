@@ -1032,12 +1032,20 @@
         </details>
       </div>
 
+      <h3>Push to this device</h3>
+      <div class="push" id="wp-panel">
+        <div class="st off" id="wp-st">checking…</div>
+        <button class="primary" id="wp-enable" hidden>Turn on push here</button>
+        <button id="wp-disable" hidden>Turn off push here</button>
+        <p id="wp-note">Alerts arrive as notifications from the installed app, even when it is closed. Nothing to type: no bot, no token.</p>
+      </div>
+
       <h3>Browser notifications</h3>
       <div class="push">
         <div class="st off" id="push-st">checking…</div>
         <button class="primary" id="push-enable">Enable notifications</button>
         <button id="push-test">Send a test</button>
-        <p id="push-note">Notifications show while this tab is open anywhere in your browser, including in the background. With the browser fully closed nothing fires — that needs a push server this app does not have yet. On iPhone, add the site to your Home Screen first.</p>
+        <p id="push-note">Notifications show while this tab is open anywhere in your browser, including in the background. With the browser fully closed nothing fires from this setting; for that, use "Push to this device" above. On iPhone, add the site to your Home Screen first.</p>
       </div>
 
       <h3>Alert types</h3>
@@ -1252,7 +1260,7 @@ import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is al
         : (isEdge ? 'Edge' : isBrave ? 'Brave' : 'Chrome') + ': click the lock / tune icon left of the address → Site settings → Notifications → Allow, then reload this page.' + (isMac ? ' If the prompt never appeared at all, check macOS System Settings → Notifications → ' + (isEdge ? 'Microsoft Edge' : isBrave ? 'Brave' : 'Google Chrome') + ' is allowed.' : '');
       note.innerHTML = `<strong style="color:var(--risk)">The browser has remembered a Block for this site — the app cannot ask again until you clear it.</strong><br/>${steps}`;
     } else {
-      note.textContent = 'Notifications show while this tab is open anywhere in your browser, including in the background. With the browser fully closed nothing fires — that needs a push server this app does not have yet. On iPhone, add the site to your Home Screen first.';
+      note.textContent = 'Notifications show while this tab is open anywhere in your browser, including in the background. With the browser fully closed nothing fires from this setting; for that, use "Push to this device" above. On iPhone, add the site to your Home Screen first.';
     }
   }
 
@@ -1333,6 +1341,49 @@ import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is al
   }
   const scheduleSync = () => { clearTimeout(syncTimer); syncTimer = setTimeout(() => syncToServer().then(refreshPhoneStatus), 1500); };
 
+  // ---- Web Push: the installed app receives alerts from the server runner, app closed or not ----
+  const b64uToBytes = (t) => { const pad = '='.repeat((4 - (t.length % 4)) % 4); return Uint8Array.from(atob((t + pad).replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)); };
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isInstalled = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  async function pushSubscription() { try { const reg = await navigator.serviceWorker.getRegistration('/sw.js'); return reg ? await reg.pushManager.getSubscription() : null; } catch { return null; } }
+  async function renderWebPush(message) {
+    const st = $('wp-st'), on = $('wp-enable'), off = $('wp-disable'), note = $('wp-note');
+    on.hidden = true; off.hidden = true;
+    const supported = 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
+    if (!supported) {
+      if (isIOS && !isInstalled) { st.textContent = '○ install the app first'; st.className = 'st off'; note.innerHTML = 'On iPhone and iPad, push works from the installed app: in Safari tap <strong>Share → Add to Home Screen</strong>, open Signal Desk from its icon, and come back to this page.'; }
+      else { st.textContent = '✕ this browser does not support push'; st.className = 'st no'; }
+      return;
+    }
+    if (Notification.permission === 'denied') { st.textContent = '✕ notifications are blocked for this site'; st.className = 'st no'; note.textContent = 'Allow notifications for this site in your browser or system settings, then reload this page.'; return; }
+    const sub = await pushSubscription();
+    if (sub) { st.textContent = message || '● push is on for this device'; st.className = 'st on'; off.hidden = false; note.textContent = 'The server checks your watchlist and positions on its schedule and sends what fires here. "Send a test to my phone" above reaches this device too.'; }
+    else { st.textContent = message || '○ push is off on this device'; st.className = 'st off'; on.hidden = false; }
+  }
+  $('wp-enable').addEventListener('click', async () => {
+    try {
+      if ((await Notification.requestPermission()) !== 'granted') { renderWebPush(); return; }
+      $('wp-st').textContent = 'setting up…';
+      await registerWorker();
+      const reg = await navigator.serviceWorker.ready;
+      const key = await (await fetch('/api/notify?op=pushkey')).json();
+      if (!key.ok) throw new Error(key.error || 'the server has no push key');
+      const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(key.publicKey) }));
+      // The server keeps one owner's settings; a device that has never synced claims or joins them first.
+      if (!syncKey()) { const s = await syncToServer({}, { interactive: true }); if (!s.ok) { await sub.unsubscribe(); throw new Error(s.error || 'sync with the server first'); } }
+      const d = await (await fetch('/api/notify?op=subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ syncKey: syncKey(), subscription: sub.toJSON() }) })).json();
+      if (!d.ok) { await sub.unsubscribe(); throw new Error(d.error || 'the server did not accept this device'); }
+      await syncToServer(); refreshPhoneStatus();
+      renderWebPush(`● push is on for this device (${d.devices} in all)`);
+    } catch (e) { await renderWebPush(); $('wp-st').textContent = `✕ could not turn push on: ${e.message}`; $('wp-st').className = 'st no'; }
+  });
+  $('wp-disable').addEventListener('click', async () => {
+    const sub = await pushSubscription();
+    if (sub) { try { await fetch('/api/notify?op=unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ syncKey: syncKey(), endpoint: sub.endpoint }) }); } catch { /* the server drops dead devices on its own */ } await sub.unsubscribe(); }
+    renderWebPush();
+  });
+
+
   async function refreshPhoneStatus() {
     const st = $('phone-st'); const note = $('phone-note');
     if (!syncKey()) { st.textContent = '○ not set up on this device — add a Telegram token and chat id, then Save & sync'; st.className = 'st off'; return; }
@@ -1344,7 +1395,8 @@ import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is al
       const wa = d.channels?.whatsapp; const any = wa || d.channels?.ntfy || d.channels?.telegram;
       const last = d.lastRun ? ` · last run ${Math.round((Date.now() - d.lastRun.at) / 60000)}m ago, ${d.lastRun.fired} fired` : ' · runner has not run yet';
       st.textContent = any ? `● ${d.channels?.telegram ? 'Telegram ' + d.channels.telegram.chatId + ' ' : ''}${wa ? 'WhatsApp ' + wa.phone + ' ' : ''}${d.channels?.ntfy ? 'ntfy ' : ''}· ${d.watch} tickers, ${d.positions} positions synced${last}` : `○ synced (${d.watch} tickers, ${d.positions} positions) — no phone channel yet`;
-      st.className = 'st ' + (any ? 'on' : 'off');
+      if (d.push) st.textContent += ` · push to ${d.push} device${d.push === 1 ? '' : 's'}`;
+      st.className = 'st ' + (any || d.push ? 'on' : 'off');
       if (!d.runnerConfigured) st.textContent += ' · RUN_KEY not set on Vercel';
       if (wa) $('cb-phone').value = $('cb-phone').value || '';
     } catch (e) { st.textContent = '✕ server unreachable'; st.className = 'st no'; }
@@ -1470,6 +1522,7 @@ import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is al
     if (!watch || !watch.length) { $('feed-label').textContent = 'building watchlist…'; watch = await defaultWatch(); setWatch(watch); }
     renderWatch();
     refreshPhoneStatus();                           // before the (slow) first check, so the panel never sits on "checking server…"
+    renderWebPush();
     await check();
     scheduleSync();                                 // keep the server's copy current every visit
     setInterval(check, POLL_MS);

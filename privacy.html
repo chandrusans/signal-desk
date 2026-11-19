@@ -144,8 +144,8 @@
       <tbody>
         <tr><td>Positions, trade journal, paper trades, watchlists, capital and risk settings, theme</td><td>Your browser's local storage on your device</td><td>You, and anyone with access to that browser</td></tr>
         <tr><td><strong>Sync (optional).</strong> The same data, encrypted in your browser with a key made from your passphrase</td><td>Our storage at Vercel, as scrambled data filed under a label derived from your sync code</td><td>Only devices that have your sync code and passphrase. We cannot read it, and we never receive the code or the passphrase</td></tr>
-        <tr><td><strong>Phone alerts (optional).</strong> Your alert watchlist, positions, alert settings, and the details of the channel you chose (for example a Telegram bot token and chat id)</td><td>Our storage at Vercel, so the server can check the rules on a schedule and send you messages</td><td>The operator of this app. It is not encrypted against us, because the server has to read it to work</td></tr>
-        <tr><td>Alert messages</td><td>Sent through the channel you set up: Telegram, WhatsApp via CallMeBot, or ntfy</td><td>You and that messaging service, under its own privacy terms</td></tr>
+        <tr><td><strong>Phone alerts (optional).</strong> Your alert watchlist, positions, alert settings, and the details of the channel you chose (a Telegram bot token and chat id, or the push address your browser issues for this device)</td><td>Our storage at Vercel, so the server can check the rules on a schedule and send you messages</td><td>The operator of this app. It is not encrypted against us, because the server has to read it to work</td></tr>
+        <tr><td>Alert messages</td><td>Sent through the channel you set up: push to the installed app (delivered by Apple's, Google's, Mozilla's or Microsoft's push service, encrypted for your device), Telegram, WhatsApp via CallMeBot, or ntfy</td><td>You; and, for Telegram, WhatsApp and ntfy, that messaging service under its own privacy terms. Push services carry the message but cannot read it</td></tr>
         <tr><td>Ordinary web requests: your IP address, browser type, and the pages and ticker symbols requested</td><td>Server logs at our host, Vercel</td><td>The operator and Vercel, for running and securing the service. Kept for <span class="fill">[log retention period, per the hosting plan]</span></td></tr>
       </tbody>
     </table>
@@ -162,7 +162,7 @@
       <li><strong>See or move your data:</strong> Dashboard → Export downloads it as a file.</li>
       <li><strong>Delete it from a device:</strong> clear this site's data in your browser settings, or use the reset and clear buttons in the app.</li>
       <li><strong>Stop sync:</strong> Dashboard → Sync → "Turn off on this device", or "Delete the cloud copy" to remove the stored copy for every device.</li>
-      <li><strong>Stop phone alerts:</strong> remove the channel details on the Alerts page and save. To have the stored alert data deleted, write to <span class="fill">[contact email]</span>.</li>
+      <li><strong>Stop phone alerts:</strong> Alerts → "Turn off push here", or remove the channel details on the Alerts page and save. To have the stored alert data deleted, write to <span class="fill">[contact email]</span>.</li>
     </ul>
     <p>Depending on where you live (for example the EU, the UK or California) you may have legal rights to access, correct or delete personal information and to complain to a regulator. Because the app has no accounts, the practical route is the controls above; for anything else, write to us and we will respond within <span class="fill">[response period, e.g. 30 days]</span>.</p>
 
