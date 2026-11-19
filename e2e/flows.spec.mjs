@@ -151,7 +151,9 @@ test('sync: set up on one device, join on another, and the data arrives', async 
   await b.locator('#sync-now').click();
   await expect(b.locator('#sync-state')).toHaveText('In step');
   await a.reload();
-  await expect.poll(() => a.evaluate(() => localStorage.getItem('sd-capital'))).toBe('4321');
+  // A pulls the change and reloads itself once; a read that lands mid-reload is simply retried.
+  await expect.poll(() => a.evaluate(() => localStorage.getItem('sd-capital')).catch(() => null)).toBe('4321');
+  await expect(a.locator('#sync-state')).toHaveText('On');
 
   await a.locator('#sync-wipe').click(); await answerDialog(a);
   await expect(a.locator('#sync-state')).toHaveText('Off');
