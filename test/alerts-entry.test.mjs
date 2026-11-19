@@ -65,3 +65,15 @@ test('a buy raised while the economic calendar is unreadable says the macro gate
   assert.ok(sig.caveats.some((c) => /economic calendar could not be read/.test(c)));
   assert.ok(!signalFor(row(), { regime: regime(17), macroLevel: 'clear', nextEarnings: far.KMI }).caveats.some((c) => /economic calendar/.test(c)));
 });
+
+test('one watchlist: the Swing tab sees its stocks, coins stay put, and an old separate Swing list is merged in once', async () => {
+  const { getWatch, setWatch, getSwingWatch } = await import('../alerts.js');
+  const m = memoryStore({ 'sd-alerts-watch-v1': ['BTC', 'AAPL'], 'sd-swing-watch-v1': ['KMI', 'AAPL'] }); useStore(m);
+  assert.deepEqual(getSwingWatch(), ['AAPL', 'KMI'], 'stocks only, old list folded in');
+  assert.deepEqual(getWatch(), ['BTC', 'AAPL', 'KMI']);
+  setSwingWatch(['KMI', 'dis', 'ETH']);
+  assert.deepEqual(getSwingWatch(), ['KMI', 'DIS'], 'AAPL removed from the Swing tab is removed from the list; a coin cannot be added as a stock');
+  assert.deepEqual(getWatch(), ['KMI', 'DIS', 'BTC'], 'the coin the Alerts tab watches survives a Swing edit');
+  setWatch(['BTC', 'KMI', 'DIS', 'MSFT']);
+  assert.deepEqual(getSwingWatch(), ['KMI', 'DIS', 'MSFT'], 'a stock added on the Alerts tab appears on the Swing tab');
+});

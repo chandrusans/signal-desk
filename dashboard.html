@@ -882,6 +882,8 @@
   .sync-acts button:hover { background: var(--fill-hover); }
   .sync-acts button.primary { background: var(--accent); color: #fff; }
   .sync-acts button.quiet { background: transparent; color: var(--ink-3); }
+  .paper-note { margin: -6px 0 14px; font-size: 13.5px; color: var(--ink-2); background: var(--panel); border-radius: 14px; padding: 10px 14px; }
+  .paper-note a { color: var(--accent); text-decoration: none; font-weight: 500; }
 </style>
 <link rel="stylesheet" href="/apple.css">
 
@@ -891,14 +893,19 @@
     <div class="tabbar-tabs">
       <a href="/today" class="tab" data-view="today">Today</a>
       <a href="/swing" class="tab" data-view="swing">Swing</a>
-      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
-      <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
       <a href="/dashboard" class="tab on" data-view="dashboard" aria-current="page">Dashboard</a>
-      <a href="/" class="tab" data-view="stocks">Stocks</a>
-      <a href="/options" class="tab" data-view="options">Options</a>
-      <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
-      <a href="/metals" class="tab" data-view="metals">Metals</a>
+      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
       <a href="/research" class="tab" data-view="research">Research</a>
+      <div class="tab-more">
+        <button type="button" class="tab more-btn" aria-haspopup="true" aria-expanded="false">More</button>
+        <div class="more-menu" hidden>
+          <a href="/" class="tab" data-view="stocks">Stocks</a>
+          <a href="/options" class="tab" data-view="options">Options</a>
+          <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
+          <a href="/metals" class="tab" data-view="metals">Metals</a>
+          <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
+        </div>
+      </div>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -1024,6 +1031,7 @@ AAPL 30 @ 218.75"></textarea>
     <h2>Positions · action verdicts</h2>
     <span class="aside" id="pos-count">0 positions</span>
   </div>
+  <p class="paper-note" id="paper-note" hidden></p>
 
   <div class="positions" id="positions">
     <div class="empty-state">
@@ -1054,6 +1062,7 @@ AAPL 30 @ 218.75"></textarea>
     <h4>Not investment advice</h4>
     <p>The verdicts on each position (SELL / TRIM / HOLD / WATCH) are mechanical outputs of the same momentum-swing framework used on the Stocks page, applied to your specific entry price. They are decision-support, not orders. You are still the one clicking the sell button. Positions and the journal are stored in your browser's localStorage; the positions (not the journal) are also copied to the phone-alert runner if you have set it up. Export the JSON regularly if you value your data. See the Handbook Dashboard chapter for how the verdicts are computed.</p>
   </div>
+  <p class="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 
 </div>
 
@@ -1662,6 +1671,16 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
   window.addEventListener('sd-sync', (e) => { syncNote = e.detail; renderSync(); });
   renderSync();
 
+  // The paper account lives on the Swing tab; say so here, so "where are my trades" has one answer.
+  (function paperNote() {
+    let book = [], closed = [];
+    try { book = JSON.parse(localStorage.getItem('sd-swing-book-v1') || '[]'); closed = JSON.parse(localStorage.getItem('sd-swing-journal-v1') || '[]'); } catch { /* none */ }
+    const el = document.getElementById('paper-note');
+    if (!el || (!book.length && !closed.length)) return;
+    el.hidden = false;
+    el.innerHTML = `This page is for positions you really hold. Your <strong>paper account</strong> has ${book.length} open trade${book.length === 1 ? '' : 's'}${book.length ? ` (${book.map((p) => escapeHtml(p.ticker)).slice(0, 6).join(', ')}${book.length > 6 ? '…' : ''})` : ''} and ${closed.length} closed. <a href="/swing">Open the paper account →</a>`;
+  })();
+
   // ---- Portfolio risk check: concentration, sector, class, correlation, the one vulnerability ----
   let universeMap = null;
   async function loadUniverseMap() {
@@ -2203,4 +2222,5 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
 })();
 </script>
 <script type="module" src="/sync.js"></script>
+<script type="module" src="/nav.js"></script>
 </html>

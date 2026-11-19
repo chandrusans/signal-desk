@@ -141,3 +141,16 @@ test('backtest: breakout and pullback run alone, and mean reversion uses its own
   for (const s of ['breakout', 'pullback']) { const r = runBacktest({ T: bars }, { strategy: s }); assert.ok(r.trades.every((t) => t.setup === s.toUpperCase())); }
   assert.equal(Object.keys(STRATEGIES).length, 4);
 });
+
+test('one market gate for every page: gateAllows and the S&P 500 trend helper', async () => {
+  const { gateAllows, spyAbove50From, applySpyTrend } = await import('../strategies.js');
+  const { regime } = await import('../analyze.js');
+  const bars = (c) => Array.from({ length: 60 }, () => ({ c }));
+  assert.equal(spyAbove50From(bars(100), 101), true); assert.equal(spyAbove50From(bars(100), 99), false);
+  assert.equal(spyAbove50From(bars(100).slice(0, 30), 101), null, 'fewer than 50 sessions: cannot tell');
+  const elevated = regime(22), calm = regime(14);
+  assert.equal(gateAllows(calm, 'BREAKOUT'), true);
+  assert.equal(gateAllows(elevated, 'BREAKOUT'), false, 'VIX 20–25: pullbacks only'); assert.equal(gateAllows(elevated, 'PULLBACK'), true);
+  assert.equal(gateAllows(applySpyTrend(calm, false), 'PULLBACK'), false, 'index under its 50-day: nothing');
+  assert.equal(gateAllows(null, 'BREAKOUT'), true, 'gate not loaded yet: do not invent a block');
+});

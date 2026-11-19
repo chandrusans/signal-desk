@@ -23,6 +23,8 @@ const PAGES = {
   '/metals': 'metals.html',
   '/handbook': 'handbook.html',
   '/research': 'research.html',
+  '/privacy': 'privacy.html',
+  '/terms': 'terms.html',
 };
 
 const TYPES = {

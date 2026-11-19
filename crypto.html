@@ -903,14 +903,19 @@
     <div class="tabbar-tabs">
       <a href="/today" class="tab" data-view="today">Today</a>
       <a href="/swing" class="tab" data-view="swing">Swing</a>
-      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
-      <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
       <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
-      <a href="/" class="tab" data-view="stocks">Stocks</a>
-      <a href="/options" class="tab" data-view="options">Options</a>
-      <a href="/crypto" class="tab on" data-view="crypto" aria-current="page">Crypto</a>
-      <a href="/metals" class="tab" data-view="metals">Metals</a>
+      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
       <a href="/research" class="tab" data-view="research">Research</a>
+      <div class="tab-more">
+        <button type="button" class="tab more-btn on" aria-haspopup="true" aria-expanded="false">Crypto</button>
+        <div class="more-menu" hidden>
+          <a href="/" class="tab" data-view="stocks">Stocks</a>
+          <a href="/options" class="tab" data-view="options">Options</a>
+          <a href="/crypto" class="tab on" data-view="crypto" aria-current="page">Crypto</a>
+          <a href="/metals" class="tab" data-view="metals">Metals</a>
+          <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
+        </div>
+      </div>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -1030,6 +1035,7 @@
     to buy or sell. Crypto is volatile and largely unregulated; you can lose your entire position. Past measured
     performance does not predict future results.
   </div>
+  <p class="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 
 </div>
 <div class="hb-backdrop" id="hb-backdrop" hidden></div>
@@ -1731,4 +1737,5 @@ import { ask, confirmBox, notify } from './dialog.js';
 })();
 </script>
 <script type="module" src="/sync.js"></script>
+<script type="module" src="/nav.js"></script>
 </html>

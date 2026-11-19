@@ -697,14 +697,19 @@
     <div class="tabbar-tabs">
       <a href="/today" class="tab" data-view="today">Today</a>
       <a href="/swing" class="tab" data-view="swing">Swing</a>
-      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
-      <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
       <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
-      <a href="/" class="tab" data-view="stocks">Stocks</a>
-      <a href="/options" class="tab" data-view="options">Options</a>
-      <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
-      <a href="/metals" class="tab on" data-view="metals" aria-current="page">Metals</a>
+      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
       <a href="/research" class="tab" data-view="research">Research</a>
+      <div class="tab-more">
+        <button type="button" class="tab more-btn on" aria-haspopup="true" aria-expanded="false">Metals</button>
+        <div class="more-menu" hidden>
+          <a href="/" class="tab" data-view="stocks">Stocks</a>
+          <a href="/options" class="tab" data-view="options">Options</a>
+          <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
+          <a href="/metals" class="tab on" data-view="metals" aria-current="page">Metals</a>
+          <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
+        </div>
+      </div>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -865,6 +870,7 @@
     <h4>Not investment advice</h4>
     <p>Range projections are statistical bands, not forecasts. A <code>1σ</code> band contains ~68% of outcomes — the other 32% break it, and those are exactly the days that matter. Metals trade around Fed / CPI / geopolitical catalysts that no ATR model can predict. Treat the projected range as a base-case scaffold, not a promise. See the disclosure on the main dashboard for the full risk statement.</p>
   </div>
+  <p class="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 
 </div>
 
@@ -1333,4 +1339,5 @@ import { ask, confirmBox, notify } from './dialog.js';
 })();
 </script>
 <script type="module" src="/sync.js"></script>
+<script type="module" src="/nav.js"></script>
 </html>

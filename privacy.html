@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Signal Desk">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Signal Desk — Privacy</title>
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('sd-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root {
+    --ground: #FFFFFF;
+    --ground-2: #E8E8ED;
+    --ink: #1D1D1F;
+    --ink-2: #424245;
+    --ink-3: #6E6E73;
+    --rule: #D2D2D7;
+    --panel: #F5F5F7;
+    --accent: #0071E3;
+    --accent-soft: #E8F2FF;
+    --signal: #248A3D;
+    --caution: #B25000;
+    --risk: #D70015;
+    --grid: rgba(0, 0, 0, 0.06);
+    --gold: #C89B3C;
+    --silver: #9BA1A6;
+
+    --serif: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --code: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #000000;
+      --ground-2: #161617;
+      --ink: #F5F5F7;
+      --ink-2: #C7C7CC;
+      --ink-3: #98989D;
+      --rule: #333336;
+      --panel: #1D1D1F;
+      --accent: #2997FF;
+      --accent-soft: #0A2A4D;
+      --signal: #30D158;
+      --caution: #FF9F0A;
+      --risk: #FF453A;
+      --grid: rgba(255, 255, 255, 0.06);
+      --gold: #E0B45C;
+      --silver: #C4CBD1;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#FFFFFF;--ground-2:#E8E8ED;--ink:#1D1D1F;--ink-2:#424245;--ink-3:#6E6E73;--rule:#D2D2D7;--panel:#F5F5F7;--accent:#0071E3;--accent-soft:#E8F2FF;--signal:#248A3D;--caution:#B25000;--risk:#D70015;--grid:rgba(0, 0, 0,0.06);--gold:#C89B3C;--silver:#9BA1A6;
+  }
+  :root[data-theme="dark"] {
+    --ground:#000000;--ground-2:#161617;--ink:#F5F5F7;--ink-2:#C7C7CC;--ink-3:#98989D;--rule:#333336;--panel:#1D1D1F;--accent:#2997FF;--accent-soft:#0A2A4D;--signal:#30D158;--caution:#FF9F0A;--risk:#FF453A;--grid:rgba(255, 255, 255,0.06);--gold:#E0B45C;--silver:#C4CBD1;
+  }
+
+
+  html { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); }
+  .shell { max-width: 1200px; margin: 0 auto; padding: 0 28px 80px; }
+  .tabbar { display: flex; justify-content: space-between; align-items: center; }
+  .tabbar-tabs { display: flex; overflow-x: auto; scrollbar-width: none; }
+  .tab { text-decoration: none; white-space: nowrap; }
+  .handbook-btn { display: inline-flex; align-items: center; text-decoration: none; }
+  .handbook-btn .hb-glyph { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+  .doc { max-width: 720px; margin: 0 auto; }
+  .doc h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; margin: 44px 0 10px; }
+  .doc h3 { font-size: 17px; font-weight: 600; margin: 26px 0 6px; }
+  .doc p, .doc li { font-size: 16px; line-height: 1.55; color: var(--ink-2); }
+  .doc ul { padding-left: 22px; } .doc li { margin: 6px 0; }
+  .doc a { color: var(--accent); text-decoration: none; } .doc a:hover { text-decoration: underline; }
+  .draft { background: var(--panel); border-radius: 18px; padding: 16px 20px; margin: 8px 0 8px; border-left: 3px solid var(--caution); }
+  .draft p { margin: 0; font-size: 14.5px; }
+  .fill { background: color-mix(in srgb, var(--caution) 18%, transparent); border-radius: 5px; padding: 0 5px; font-weight: 600; color: var(--ink); }
+  table.where { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 14.5px; }
+  table.where th, table.where td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--rule); color: var(--ink-2); line-height: 1.45; }
+  table.where th { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+  .legal-foot { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); }
+  .legal-foot a { color: var(--ink-3); }
+  @media (max-width: 640px) { .shell { padding: 0 14px 60px; } .doc p, .doc li { font-size: 15.5px; } table.where, table.where tbody, table.where tr, table.where td { display: block; } table.where thead { display: none; } table.where td { border: none; padding: 2px 0; } table.where tr { border-bottom: 1px solid var(--rule); padding: 10px 0; } table.where td:first-child { font-weight: 600; color: var(--ink); } }
+</style>
+<link rel="stylesheet" href="/apple.css">
+</head>
+<body>
+<div class="shell">
+  <nav class="tabbar" aria-label="Views">
+    <div class="tabbar-tabs">
+      <a href="/today" class="tab" data-view="today">Today</a>
+      <a href="/swing" class="tab" data-view="swing">Swing</a>
+      <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
+      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
+      <a href="/research" class="tab" data-view="research">Research</a>
+      <div class="tab-more">
+        <button type="button" class="tab more-btn" aria-haspopup="true" aria-expanded="false">More</button>
+        <div class="more-menu" hidden>
+          <a href="/" class="tab" data-view="stocks">Stocks</a>
+          <a href="/options" class="tab" data-view="options">Options</a>
+          <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
+          <a href="/metals" class="tab" data-view="metals">Metals</a>
+          <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
+        </div>
+      </div>
+    </div>
+    <a class="handbook-btn" href="/handbook"><span class="hb-glyph" aria-hidden="true"></span>Handbook</a>
+  </nav>
+  <header class="masthead">
+    <div>
+      <div class="kicker">Signal Desk · Privacy</div>
+      <h1 class="brand">What we keep, <em>and where.</em></h1>
+    </div>
+  </header>
+  <main class="doc">
+    <div class="draft"><p><strong>Draft for legal review.</strong> This page describes how the app works today, written plainly. It has not been reviewed by a lawyer. Before the app is offered to other people, the highlighted blanks need filling in and a qualified lawyer should review it for the places where it will be used.</p></div>
+    <p>Signal Desk is operated by <span class="fill">[operator name]</span> ("we"). This page says what information the app handles, where it is kept, and what you can do about it. Questions: <span class="fill">[contact email]</span>.</p>
+
+    <h2>The short version</h2>
+    <ul>
+      <li>There are no accounts. We do not ask for your name, email address or phone number.</li>
+      <li>What you enter (positions, journal, lists, settings) is kept in your own browser. It leaves your device only if you switch on one of two optional features: sync or phone alerts.</li>
+      <li>There is no advertising, no analytics and no tracking, and we do not sell or share information.</li>
+      <li>The app never asks for a broker login and never places an order.</li>
+    </ul>
+
+    <h2>What is kept, and where</h2>
+    <table class="where">
+      <thead><tr><th>What</th><th>Where it is kept</th><th>Who can read it</th></tr></thead>
+      <tbody>
+        <tr><td>Positions, trade journal, paper trades, watchlists, capital and risk settings, theme</td><td>Your browser's local storage on your device</td><td>You, and anyone with access to that browser</td></tr>
+        <tr><td><strong>Sync (optional).</strong> The same data, encrypted in your browser with a key made from your passphrase</td><td>Our storage at Vercel, as scrambled data filed under a label derived from your sync code</td><td>Only devices that have your sync code and passphrase. We cannot read it, and we never receive the code or the passphrase</td></tr>
+        <tr><td><strong>Phone alerts (optional).</strong> Your alert watchlist, positions, alert settings, and the details of the channel you chose (for example a Telegram bot token and chat id)</td><td>Our storage at Vercel, so the server can check the rules on a schedule and send you messages</td><td>The operator of this app. It is not encrypted against us, because the server has to read it to work</td></tr>
+        <tr><td>Alert messages</td><td>Sent through the channel you set up: Telegram, WhatsApp via CallMeBot, or ntfy</td><td>You and that messaging service, under its own privacy terms</td></tr>
+        <tr><td>Ordinary web requests: your IP address, browser type, and the pages and ticker symbols requested</td><td>Server logs at our host, Vercel</td><td>The operator and Vercel, for running and securing the service. Kept for <span class="fill">[log retention period, per the hosting plan]</span></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Market data and other services</h2>
+    <p>Prices, news, filings and calendars come from third parties: Yahoo Finance, NASDAQ, the US Securities and Exchange Commission, FairEconomy, the Clerk of the US House of Representatives and Coinbase. Your browser does not contact them. It asks our server, and our server asks them, so they see our server's address and the ticker symbol, not you.</p>
+    <p>The site is hosted by Vercel and its scheduled jobs run on GitHub Actions. Neither receives the data you enter, apart from the storage described in the table above.</p>
+
+    <h2>Cookies</h2>
+    <p>The app sets no cookies. It uses your browser's local storage to remember what you enter, which stays on your device unless you turn on sync or phone alerts.</p>
+
+    <h2>Your choices</h2>
+    <ul>
+      <li><strong>See or move your data:</strong> Dashboard → Export downloads it as a file.</li>
+      <li><strong>Delete it from a device:</strong> clear this site's data in your browser settings, or use the reset and clear buttons in the app.</li>
+      <li><strong>Stop sync:</strong> Dashboard → Sync → "Turn off on this device", or "Delete the cloud copy" to remove the stored copy for every device.</li>
+      <li><strong>Stop phone alerts:</strong> remove the channel details on the Alerts page and save. To have the stored alert data deleted, write to <span class="fill">[contact email]</span>.</li>
+    </ul>
+    <p>Depending on where you live (for example the EU, the UK or California) you may have legal rights to access, correct or delete personal information and to complain to a regulator. Because the app has no accounts, the practical route is the controls above; for anything else, write to us and we will respond within <span class="fill">[response period, e.g. 30 days]</span>.</p>
+
+    <h2>Security</h2>
+    <p>All traffic uses HTTPS. Synced data is encrypted on your device before it is sent. Nothing protects data on a device that someone else can unlock, and a sync passphrase cannot be recovered if you forget it. No system is perfectly secure; do not store anything here that you could not afford to have exposed.</p>
+
+    <h2>Children</h2>
+    <p>The app is for adults. It is not directed at anyone under 18.</p>
+
+    <h2>Changes</h2>
+    <p>If this page changes in a way that matters, the date below changes and the Handbook's changelog says what changed.</p>
+
+    <p class="legal-foot"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/handbook">Handbook</a> · Last updated 19 November 2026</p>
+  </main>
+</div>
+<script type="module" src="/nav.js"></script>
+</body>
+</html>

@@ -1025,16 +1025,21 @@
 <div class="wrap">
   <nav class="tabbar" role="tablist" aria-label="Views">
     <div class="tabbar-tabs">
-      <a href="/today" class="tab" data-view="today" role="tab" aria-selected="false">Today</a>
+      <a href="/today" class="tab" data-view="today">Today</a>
       <a href="/swing" class="tab" data-view="swing">Swing</a>
-      <a href="/alerts" class="tab" data-view="alerts" role="tab" aria-selected="false">Alerts</a>
-      <a href="/simulate" class="tab" data-view="simulate" role="tab" aria-selected="false">Simulate</a>
-      <a href="/dashboard" class="tab" data-view="dashboard" role="tab" aria-selected="false">Dashboard</a>
-      <a href="/" class="tab" data-view="stocks" role="tab" aria-selected="false">Stocks</a>
-      <a href="/options" class="tab" data-view="options" role="tab" aria-selected="false">Options</a>
-      <a href="/crypto" class="tab" data-view="crypto" role="tab" aria-selected="false">Crypto</a>
-      <a href="/metals" class="tab" data-view="metals" role="tab" aria-selected="false">Metals</a>
-      <a href="/research" class="tab on" data-view="research" role="tab" aria-selected="true">Research</a>
+      <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
+      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
+      <a href="/research" class="tab on" data-view="research" aria-current="page">Research</a>
+      <div class="tab-more">
+        <button type="button" class="tab more-btn" aria-haspopup="true" aria-expanded="false">More</button>
+        <div class="more-menu" hidden>
+          <a href="/" class="tab" data-view="stocks">Stocks</a>
+          <a href="/options" class="tab" data-view="options">Options</a>
+          <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
+          <a href="/metals" class="tab" data-view="metals">Metals</a>
+          <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
+        </div>
+      </div>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -1074,6 +1079,7 @@
   <div class="disclosure" style="margin-top: 34px;">
     <strong>Rules applied to filed numbers, not opinion.</strong> Every verdict word on this page comes from a threshold written in the Handbook (chapter 23) and every figure can be traced to an SEC filing or a quoted price. Where the free data stops — earnings-call transcripts, customer concentration, segment detail — the page says so and hands you a prompt pre-filled with the numbers instead of guessing.
   </div>
+  <p class="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 </div>
 <div class="hb-backdrop" id="hb-backdrop" hidden></div>
 <aside class="hb-drawer" id="hb-drawer" hidden aria-modal="true" role="dialog" aria-labelledby="hb-title">
@@ -1635,5 +1641,6 @@ import { ask, showCopy } from '/dialog.js';
 })();
 </script>
 <script type="module" src="/sync.js"></script>
+<script type="module" src="/nav.js"></script>
 </body>
 </html>

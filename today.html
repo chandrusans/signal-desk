@@ -989,14 +989,19 @@
     <div class="tabbar-tabs">
       <a href="/today" class="tab on" data-view="today" aria-current="page">Today</a>
       <a href="/swing" class="tab" data-view="swing">Swing</a>
-      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
-      <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
       <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
-      <a href="/" class="tab" data-view="stocks">Stocks</a>
-      <a href="/options" class="tab" data-view="options">Options</a>
-      <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
-      <a href="/metals" class="tab" data-view="metals">Metals</a>
+      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
       <a href="/research" class="tab" data-view="research">Research</a>
+      <div class="tab-more">
+        <button type="button" class="tab more-btn" aria-haspopup="true" aria-expanded="false">More</button>
+        <div class="more-menu" hidden>
+          <a href="/" class="tab" data-view="stocks">Stocks</a>
+          <a href="/options" class="tab" data-view="options">Options</a>
+          <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
+          <a href="/metals" class="tab" data-view="metals">Metals</a>
+          <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
+        </div>
+      </div>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -1055,6 +1060,7 @@
     written down in the Handbook. It is a starting point for your own decision. You can lose money on any of it; on crypto
     and pump.fun the measured edge is negative or unmeasurable. Nothing here knows your situation.
   </div>
+  <p class="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 
 </div>
 <div class="hb-backdrop" id="hb-backdrop" hidden></div>
@@ -1149,6 +1155,7 @@
 import { analyze, regime, cryptoRegime } from '/analyze.js';
 import { loadJournal, riskBudget } from '/risk.js';
 import { esc, parseNum, noteBuild, tradingDateISO } from '/ui.js';
+import { applySpyTrend, gateAllows, spyAbove50From } from '/strategies.js';
 import { ask, confirmBox, notify } from '/dialog.js';
 
 (() => {
@@ -1202,6 +1209,11 @@ import { ask, confirmBox, notify } from '/dialog.js';
     return 'HOLD';
   }
   const bad = (r) => !!r && ['stress', 'crisis', 'divergent'].includes(r.level);
+  // The stock gate is the Swing tab's gate: VIX regime + breadth, and the S&P 500 against its 50-day average.
+  let spyAbove50 = null;
+  const stockGate = () => (stockRegime ? applySpyTrend(stockRegime, spyAbove50) : null);
+  const indexDown = () => !PREVIEW && spyAbove50 === false;
+  let heldByGate = 0;
 
   // Plain-English reason per setup — the card should read like a sentence, not a chart
   const WHY = {
@@ -1292,11 +1304,14 @@ import { ask, confirmBox, notify } from '/dialog.js';
     } else if (stocksBad && cryptoBad) {
       cls = 'stop'; title = 'No new trades today.';
       text = `Both the stock and crypto regimes are risk-off. ${stockRegime.note}`;
+    } else if (indexDown()) {
+      cls = cryptoBad ? 'stop' : 'half'; title = 'No new stock buys today.';
+      text = `The S&P 500 is below its 50-day average, and good charts fail in a falling market, so stock and call-option entries wait until it reclaims it. ${cryptoBad ? 'Crypto is closed by its own regime too.' : 'Metals and crypto below follow their own gates.'}`;
     } else if (half && Math.round(sizeMult() * 100) < 100) {
       cls = 'half'; title = `Trade — but at ${Math.round(sizeMult() * 100)}% of normal size.`;
       text = macro && macro.level === 'caution'
         ? `${macro.note} Every position below is already sized for that.`
-        : `Volatility is elevated. Every position below is already sized down for it.`;
+        : `Volatility is elevated. Every position below is already sized down for it${stockRegime && stockRegime.allow && !stockRegime.allow.includes('BREAKOUT') ? ', and stocks are pullbacks only: no breakouts until the VIX is back under 20' : ''}.`;
     } else {
       cls = 'go'; title = 'Clear to trade at full size.';
       text = 'No major release inside 48 hours and volatility is normal. The candidates below are sized at full risk.'
@@ -1312,6 +1327,7 @@ import { ask, confirmBox, notify } from '/dialog.js';
     $('light-why').textContent = [
       macro ? `macro ${macro.level.toUpperCase()}` : null,
       stockRegime ? `stocks ${stockRegime.level.toUpperCase()}${stockRegime.vix != null ? ' · VIX ' + stockRegime.vix.toFixed(1) : ''}` : null,
+      spyAbove50 == null ? null : `S&P 500 ${spyAbove50 ? 'above' : 'BELOW'} its 50-day`,
       cryptoReg ? `crypto ${cryptoReg.level.toUpperCase()}` : null,
       stocksBad && !cryptoBad ? 'stocks closed, crypto open' : (!stocksBad && cryptoBad ? 'crypto closed, stocks open' : null),
     ].filter(Boolean).join('  ·  ');
@@ -1376,9 +1392,12 @@ import { ask, confirmBox, notify } from '/dialog.js';
     const out = [];
 
     // Stocks + metals share the equity rulebook
+    heldByGate = 0;
     for (const r of stocks) {
       if (macroBlocked || stocksBad) break;
       if (verdict(r.su, r.sc, false) !== 'BUY') continue;
+      // Same market gate as the Swing tab: pullbacks only when volatility is elevated, nothing while the index is under its 50-day.
+      if (r.kind === 'Stock' && !PREVIEW && !gateAllows(stockGate(), r.su)) { heldByGate++; continue; }
       const risk = riskDollars(mult);
       const perShare = r.p - r.stop;
       const shares = perShare > 0 ? Math.floor(risk / perShare) : 0;
@@ -1401,6 +1420,8 @@ import { ask, confirmBox, notify } from '/dialog.js';
     // Options — its own BUY rule from the Options tab
     for (const o of options) {
       if (macroBlocked || stocksBad) break;
+      // A call is a leveraged long: it waits on the same index gate as stock buys. Puts are not held back by it.
+      if (indexDown() && o.direction === 'CALL') { heldByGate++; continue; }
       const risk = riskDollars(mult);
       const contracts = o.maxLoss > 0 ? Math.floor(risk / o.maxLoss) : 0;
       const t1 = o.exitTargets?.[0], t2 = o.exitTargets?.[1];
@@ -1470,6 +1491,7 @@ import { ask, confirmBox, notify } from '/dialog.js';
   // ═══ STEP 3 · leave these alone ═══
   function renderAvoid() {
     const items = [];
+    if (heldByGate) items.push(`<strong>${heldByGate} stock and call-option setup${heldByGate > 1 ? 's' : ''} held back by the market gate.</strong> ${spyAbove50 === false ? 'The S&P 500 is below its 50-day average, so no new stock buys until it reclaims it.' : 'Volatility is elevated, so only pullbacks qualify; breakouts wait for a calmer market.'} The Swing tab lists them and can alert you the day they become buys.`);
     const ext = stocks.filter(r => r.su === 'EXTENDED').length;
     if (ext) items.push(`<strong>${ext} strong stocks that have run too far.</strong> They score well but are more than 6% above their 20-day average. Chasing here has poor odds — the rulebook says wait for them to pull back, then they may show up above.`);
     const eg = Object.entries(earningsSoon);
@@ -1496,6 +1518,7 @@ import { ask, confirmBox, notify } from '/dialog.js';
       const [mc, q] = await Promise.allSettled([j('/api/intel?op=macro&hours=96'), j('/api/quotes?tickers=SPY,%5EVIX&range=3mo')]);
       if (mc.status === 'fulfilled') macro = mc.value.macroRisk;
       const vix = q.status === 'fulfilled' ? q.value.quotes?.['^VIX']?.price : null;
+      if (q.status === 'fulfilled' && q.value.quotes?.SPY?.bars) spyAbove50 = spyAbove50From(q.value.quotes.SPY.bars, q.value.quotes.SPY.price);
       if (vix != null && stockRegime) stockRegime = Object.assign(regime(vix, stockRegime.breadth || null), { vix, breadth: stockRegime.breadth || null });
       renderLight(); computeRisk(); renderRiskBox();
     } catch {}
@@ -1513,6 +1536,7 @@ import { ask, confirmBox, notify } from '/dialog.js';
     const quotes = q.status === 'fulfilled' ? (q.value.quotes || {}) : {};
     const vix = quotes['^VIX']?.price ?? null;
     const spyBars = quotes['SPY']?.bars || null;
+    spyAbove50 = spyAbove50From(spyBars, quotes['SPY']?.price);
     renderLight();
 
     // 2. stocks — full S&P 500, server-scored
@@ -1616,4 +1640,5 @@ import { ask, confirmBox, notify } from '/dialog.js';
 })();
 </script>
 <script type="module" src="/sync.js"></script>
+<script type="module" src="/nav.js"></script>
 </html>

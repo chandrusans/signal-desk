@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Signal Desk">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Signal Desk — Terms</title>
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('sd-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root {
+    --ground: #FFFFFF;
+    --ground-2: #E8E8ED;
+    --ink: #1D1D1F;
+    --ink-2: #424245;
+    --ink-3: #6E6E73;
+    --rule: #D2D2D7;
+    --panel: #F5F5F7;
+    --accent: #0071E3;
+    --accent-soft: #E8F2FF;
+    --signal: #248A3D;
+    --caution: #B25000;
+    --risk: #D70015;
+    --grid: rgba(0, 0, 0, 0.06);
+    --gold: #C89B3C;
+    --silver: #9BA1A6;
+
+    --serif: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --code: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #000000;
+      --ground-2: #161617;
+      --ink: #F5F5F7;
+      --ink-2: #C7C7CC;
+      --ink-3: #98989D;
+      --rule: #333336;
+      --panel: #1D1D1F;
+      --accent: #2997FF;
+      --accent-soft: #0A2A4D;
+      --signal: #30D158;
+      --caution: #FF9F0A;
+      --risk: #FF453A;
+      --grid: rgba(255, 255, 255, 0.06);
+      --gold: #E0B45C;
+      --silver: #C4CBD1;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#FFFFFF;--ground-2:#E8E8ED;--ink:#1D1D1F;--ink-2:#424245;--ink-3:#6E6E73;--rule:#D2D2D7;--panel:#F5F5F7;--accent:#0071E3;--accent-soft:#E8F2FF;--signal:#248A3D;--caution:#B25000;--risk:#D70015;--grid:rgba(0, 0, 0,0.06);--gold:#C89B3C;--silver:#9BA1A6;
+  }
+  :root[data-theme="dark"] {
+    --ground:#000000;--ground-2:#161617;--ink:#F5F5F7;--ink-2:#C7C7CC;--ink-3:#98989D;--rule:#333336;--panel:#1D1D1F;--accent:#2997FF;--accent-soft:#0A2A4D;--signal:#30D158;--caution:#FF9F0A;--risk:#FF453A;--grid:rgba(255, 255, 255,0.06);--gold:#E0B45C;--silver:#C4CBD1;
+  }
+
+
+  html { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); }
+  .shell { max-width: 1200px; margin: 0 auto; padding: 0 28px 80px; }
+  .tabbar { display: flex; justify-content: space-between; align-items: center; }
+  .tabbar-tabs { display: flex; overflow-x: auto; scrollbar-width: none; }
+  .tab { text-decoration: none; white-space: nowrap; }
+  .handbook-btn { display: inline-flex; align-items: center; text-decoration: none; }
+  .handbook-btn .hb-glyph { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+  .doc { max-width: 720px; margin: 0 auto; }
+  .doc h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; margin: 44px 0 10px; }
+  .doc h3 { font-size: 17px; font-weight: 600; margin: 26px 0 6px; }
+  .doc p, .doc li { font-size: 16px; line-height: 1.55; color: var(--ink-2); }
+  .doc ul { padding-left: 22px; } .doc li { margin: 6px 0; }
+  .doc a { color: var(--accent); text-decoration: none; } .doc a:hover { text-decoration: underline; }
+  .draft { background: var(--panel); border-radius: 18px; padding: 16px 20px; margin: 8px 0 8px; border-left: 3px solid var(--caution); }
+  .draft p { margin: 0; font-size: 14.5px; }
+  .fill { background: color-mix(in srgb, var(--caution) 18%, transparent); border-radius: 5px; padding: 0 5px; font-weight: 600; color: var(--ink); }
+  table.where { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 14.5px; }
+  table.where th, table.where td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--rule); color: var(--ink-2); line-height: 1.45; }
+  table.where th { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+  .legal-foot { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); }
+  .legal-foot a { color: var(--ink-3); }
+  @media (max-width: 640px) { .shell { padding: 0 14px 60px; } .doc p, .doc li { font-size: 15.5px; } table.where, table.where tbody, table.where tr, table.where td { display: block; } table.where thead { display: none; } table.where td { border: none; padding: 2px 0; } table.where tr { border-bottom: 1px solid var(--rule); padding: 10px 0; } table.where td:first-child { font-weight: 600; color: var(--ink); } }
+</style>
+<link rel="stylesheet" href="/apple.css">
+</head>
+<body>
+<div class="shell">
+  <nav class="tabbar" aria-label="Views">
+    <div class="tabbar-tabs">
+      <a href="/today" class="tab" data-view="today">Today</a>
+      <a href="/swing" class="tab" data-view="swing">Swing</a>
+      <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
+      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
+      <a href="/research" class="tab" data-view="research">Research</a>
+      <div class="tab-more">
+        <button type="button" class="tab more-btn" aria-haspopup="true" aria-expanded="false">More</button>
+        <div class="more-menu" hidden>
+          <a href="/" class="tab" data-view="stocks">Stocks</a>
+          <a href="/options" class="tab" data-view="options">Options</a>
+          <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
+          <a href="/metals" class="tab" data-view="metals">Metals</a>
+          <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
+        </div>
+      </div>
+    </div>
+    <a class="handbook-btn" href="/handbook"><span class="hb-glyph" aria-hidden="true"></span>Handbook</a>
+  </nav>
+  <header class="masthead">
+    <div>
+      <div class="kicker">Signal Desk · Terms of use</div>
+      <h1 class="brand">A research tool, <em>not advice.</em></h1>
+    </div>
+  </header>
+  <main class="doc">
+    <div class="draft"><p><strong>Draft for legal review.</strong> This page describes how the app works today, written plainly. It has not been reviewed by a lawyer. Before the app is offered to other people, the highlighted blanks need filling in and a qualified lawyer should review it for the places where it will be used.</p></div>
+    <p>These terms cover your use of Signal Desk, operated by <span class="fill">[operator name]</span> ("we"). By using the app you agree to them. If you do not agree, do not use it.</p>
+
+    <h2>What Signal Desk is</h2>
+    <p>Signal Desk is a research and practice tool. It applies a published set of mechanical rules (written out in the <a href="/handbook">Handbook</a>) to market data and shows the result: scores, setups, example entry and exit levels, position sizes worked out from the numbers you type in, and alerts.</p>
+
+    <h2>What it is not</h2>
+    <ul>
+      <li><strong>It is not investment advice.</strong> Nothing in the app is a recommendation to buy, sell or hold anything. The same rules produce the same output for every user; the app does not know your finances, goals or circumstances and does not take them into account. Words such as "buy signal" describe a rule being met, not a judgement that you should trade.</li>
+      <li><strong>We are not your adviser or broker.</strong> We are not registered as an investment adviser or broker-dealer, we owe you no fiduciary duty, and no adviser-client relationship is created by using the app.</li>
+      <li><strong>It places no orders.</strong> "Paper" trades are pretend entries in your own browser. The app cannot move money or trade on your behalf.</li>
+    </ul>
+
+    <h2>The record of these rules</h2>
+    <p>We publish how the rules performed. Run day by day over ten years of the S&amp;P 500, the Swing rules roughly broke even while simply holding the index returned about 14% a year (see the Swing page). Past results, tested or real, do not predict future results. You can lose some or all of the money you put into any investment, including by following these rules exactly.</p>
+
+    <h2>Data</h2>
+    <p>Market data comes from third parties and can be late, incomplete or wrong. Earnings dates marked as estimates are estimates. The app can be unavailable, and alerts can arrive late or not at all. Check anything that matters against your broker or the original source before acting on it. Third-party data is provided for personal, non-commercial use under those providers' own terms.</p>
+
+    <h2>Your responsibilities</h2>
+    <ul>
+      <li>You are responsible for your own investment decisions and for checking that using the app is lawful where you live.</li>
+      <li>Do not misuse the service: no attempts to break, overload or scrape it, and no use of it to break the law.</li>
+      <li>Keep your sync code and passphrase to yourself. Anyone who has both can read your synced data.</li>
+    </ul>
+
+    <h2>No warranty</h2>
+    <p>The app is provided "as is" and "as available", without warranties of any kind, whether express or implied, including accuracy, fitness for a particular purpose and uninterrupted availability, to the fullest extent the law allows.</p>
+
+    <h2>Limit of liability</h2>
+    <p>To the fullest extent the law allows, we are not liable for trading losses, lost profits, lost data, or any indirect or consequential loss arising from your use of the app or reliance on anything it shows. Where liability cannot be excluded, it is limited to <span class="fill">[amount, e.g. the fees you paid in the last 12 months or a fixed sum]</span>. Nothing in these terms limits liability that cannot be limited by law.</p>
+
+    <h2>Changes and ending</h2>
+    <p>We may change or withdraw the app, or these terms, at any time. The date below shows the latest version. You can stop using the app whenever you like; your data stays on your device until you delete it.</p>
+
+    <h2>Law</h2>
+    <p>These terms are governed by the laws of <span class="fill">[jurisdiction]</span>, and disputes go to the courts of <span class="fill">[venue]</span>, unless the law where you live gives you rights that say otherwise.</p>
+
+    <h2>Contact</h2>
+    <p><span class="fill">[operator name and contact email]</span></p>
+
+    <p class="legal-foot"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/handbook">Handbook</a> · Last updated 19 November 2026</p>
+  </main>
+</div>
+<script type="module" src="/nav.js"></script>
+</body>
+</html>

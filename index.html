@@ -1858,14 +1858,19 @@
     <div class="tabbar-tabs">
       <a href="/today" class="tab" data-view="today">Today</a>
       <a href="/swing" class="tab" data-view="swing">Swing</a>
-      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
-      <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
       <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
-      <a href="/" class="tab on" data-view="stocks" aria-current="page">Stocks</a>
-      <a href="/options" class="tab" data-view="options">Options</a>
-      <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
-      <a href="/metals" class="tab" data-view="metals">Metals</a>
+      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
       <a href="/research" class="tab" data-view="research">Research</a>
+      <div class="tab-more">
+        <button type="button" class="tab more-btn on" aria-haspopup="true" aria-expanded="false">Stocks</button>
+        <div class="more-menu" hidden>
+          <a href="/" class="tab on" data-view="stocks" aria-current="page">Stocks</a>
+          <a href="/options" class="tab" data-view="options">Options</a>
+          <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
+          <a href="/metals" class="tab" data-view="metals">Metals</a>
+          <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
+        </div>
+      </div>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -2126,6 +2131,7 @@
     backtest — most months miss. You are responsible for your own due diligence, position
     sizing, and stop discipline. Never risk capital you cannot afford to lose.</p>
   </div>
+  <p class="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 
   <div class="colophon">
     <span>SIGNAL DESK · A COMPOSITE RANKING SANDBOX</span>
@@ -2402,6 +2408,7 @@ import { analyze, regime, computeBreadth } from './analyze.js';
 import { trackGate } from './risk.js';
 import { esc, safeHref, parseNum, noteBuild, tradingDateISO } from './ui.js';
 import { ask, confirmBox, notify } from './dialog.js';
+import { applySpyTrend, gateAllows, spyAbove50From } from './strategies.js';
 import { runBacktest, walkForward } from './backtest.js';
 (function () {
   // ------- Theme toggle -------
@@ -2662,8 +2669,10 @@ import { runBacktest, walkForward } from './backtest.js';
     if (setup === 'BROKEN' && s < 30) return 'SELL';                // trend gone, take exit
     if (setup === 'BROKEN' || setup === 'AVOID') return 'AVOID';    // no trade
     if (setup === 'EXTENDED') return 'HOLD';                        // wait for pullback
-    if (setup === 'BREAKOUT' && s >= 65) return 'BUY';              // A+ momentum
-    if (setup === 'PULLBACK' && s >= 60) return 'BUY';              // buy the dip
+    // The market gate, as on Today and Swing: pullbacks only when volatility is elevated, no new
+    // longs while the S&P 500 is under its 50-day. A setup the gate holds back is a HOLD, not a BUY.
+    if (setup === 'BREAKOUT' && s >= 65) return gateAllows(currentRegime, setup) ? 'BUY' : 'HOLD';   // A+ momentum
+    if (setup === 'PULLBACK' && s >= 60) return gateAllows(currentRegime, setup) ? 'BUY' : 'HOLD';   // buy the dip
     if (setup === 'EARLY' && s >= 50) return 'HOLD';                // watchlist
     if (s >= 70) return 'BUY';                                       // strong score, any setup
     return 'HOLD';
@@ -2795,7 +2804,7 @@ import { runBacktest, walkForward } from './backtest.js';
     ];
     const detailEl = document.getElementById('detail');
     const a = p.analysis;
-    const regimeAllowed = a && currentRegime.allow.length ? currentRegime.allow.includes(a.setup) : true;
+    const regimeAllowed = a && (a.setup === 'BREAKOUT' || a.setup === 'PULLBACK') ? gateAllows(currentRegime, a.setup) : true;
     const gated = a && !regimeAllowed;
 
     // Build the regime + setup callout (replaces old "Primary trigger" chatter)
@@ -3497,7 +3506,7 @@ import { runBacktest, walkForward } from './backtest.js';
         const above = withMa.filter(r => r.a50).length;
         currentBreadth = { pctAbove50: (above / withMa.length) * 100, above, total: withMa.length };
         if (currentRegime?.vix != null) {
-          currentRegime = Object.assign(regime(currentRegime.vix, currentBreadth), { vix: currentRegime.vix });
+          currentRegime = applySpyTrend(Object.assign(regime(currentRegime.vix, currentBreadth), { vix: currentRegime.vix }), currentSpyAbove50);
         }
         renderPulseLive(lastQuotes || {});
       }
@@ -3783,7 +3792,8 @@ import { runBacktest, walkForward } from './backtest.js';
     }
   }
 
-  let currentRegime = { level: 'unknown', sizeMult: 1, allow: [], note: 'connecting…' };
+  let currentRegime = { level: 'unknown', sizeMult: 1, allow: ['BREAKOUT', 'PULLBACK'], note: 'connecting…' };
+  let currentSpyAbove50 = null;
 
   function applyQuotes(quotes, news = {}) {
     lastQuotes = quotes;
@@ -3856,8 +3866,8 @@ import { runBacktest, walkForward } from './backtest.js';
     // Regime from VIX + breadth (breadth catches the divergence VIX misses)
     const vixQ = quotes['^VIX'];
     if (vixQ && vixQ.price != null) {
-      currentRegime = regime(vixQ.price, currentBreadth);
-      currentRegime.vix = vixQ.price;
+      currentSpyAbove50 = spyAbove50From(quotes['SPY']?.bars, quotes['SPY']?.price);
+      currentRegime = applySpyTrend(Object.assign(regime(vixQ.price, currentBreadth), { vix: vixQ.price }), currentSpyAbove50);
     }
 
     // Live pulse strip — overwrite the hardcoded seed values with real quotes
@@ -4140,4 +4150,5 @@ import { runBacktest, walkForward } from './backtest.js';
 })();
 </script>
 <script type="module" src="/sync.js"></script>
+<script type="module" src="/nav.js"></script>
 </html>

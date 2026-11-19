@@ -495,7 +495,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.26</div>
+      <div class="kicker">Signal Desk · Handbook · v3.27</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -765,6 +765,7 @@
     <section id="regime">
       <h2><span class="chnum">Chapter 06</span>Regime filter · VIX</h2>
       <p>The VIX (CBOE Volatility Index) measures expected market volatility. The desk pulls it live and uses it to gate what setups it will trade.</p>
+      <p><strong>One gate, every page.</strong> Today, Stocks, Swing and the buy alerts all ask the same function whether a stock setup may be bought: the VIX level below, market breadth, and a third condition — <strong>the S&amp;P 500 must be above its own 50-day average</strong>. While the index is under that line no stock or call-option entry is offered anywhere in the app; the setups are listed as held back, and the Swing tab can alert you the day they become buys. (Until v3.27 only the Swing tab applied the index rule and the "pullbacks only" rule, so Today could offer a breakout that Swing refused.)</p>
       <ul>
         <li><strong>VIX &lt; 15 · Calm.</strong> Full sizing. All setup types allowed.</li>
         <li><strong>VIX 15–20 · Normal.</strong> Full sizing but only A+ setups (BREAKOUT and PULLBACK).</li>
@@ -1497,6 +1498,20 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 26</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.27<br/>2026-11-19</div>
+        <div class="what">
+          <h4>One gate, fewer tabs, one watchlist; privacy and terms pages</h4>
+          <ul>
+            <li><strong>One market gate</strong> (Chapter 6). Today and Stocks now apply the same gate as Swing: pullbacks only when the VIX is 20–25, and no stock or call-option entries while the S&amp;P 500 is below its 50-day average. Found on the live-market check, where Today offered a breakout that Swing refused.</li>
+            <li><strong>Fewer tabs.</strong> The bar shows Today, Swing, Dashboard, Alerts and Research; Stocks, Options, Crypto, Metals and Simulate are under "More". On a phone every page stays in the scrolling row, with those five first.</li>
+            <li><strong>One watchlist.</strong> The Swing tab and the Alerts tab share a list. A stock added on either appears on both; coins stay on Alerts only. An existing Swing list is merged in automatically.</li>
+            <li><strong>One place for each book.</strong> The Dashboard is for positions you really hold and now points to the paper account on the Swing tab when it has trades.</li>
+            <li><strong>Privacy and Terms pages</strong>, linked from the foot of every page. They describe what the app actually keeps and where. Both are drafts awaiting a lawyer's review and have blanks for the operator's details.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.26<br/>2026-11-19</div>
@@ -2276,6 +2291,7 @@
       <h4>Not investment advice</h4>
       <p>Signal Desk is a research and educational tool. Everything shown — the score, the setup call, the trade plan, the sizing suggestion — is a mechanical output of the framework, not a recommendation to trade. Historical backtests do not predict future returns. Momentum strategies can and do lose money, especially in regime transitions. You are responsible for your own due diligence, position sizing, and stop discipline. Never risk capital you cannot afford to lose.</p>
     </div>
+  <p class="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 
   </main>
 </div>

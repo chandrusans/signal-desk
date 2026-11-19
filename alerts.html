@@ -971,14 +971,19 @@
     <div class="tabbar-tabs">
       <a href="/today" class="tab" data-view="today">Today</a>
       <a href="/swing" class="tab" data-view="swing">Swing</a>
-      <a href="/alerts" class="tab on" data-view="alerts" aria-current="page">Alerts</a>
-      <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
       <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
-      <a href="/" class="tab" data-view="stocks">Stocks</a>
-      <a href="/options" class="tab" data-view="options">Options</a>
-      <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
-      <a href="/metals" class="tab" data-view="metals">Metals</a>
+      <a href="/alerts" class="tab on" data-view="alerts" aria-current="page">Alerts</a>
       <a href="/research" class="tab" data-view="research">Research</a>
+      <div class="tab-more">
+        <button type="button" class="tab more-btn" aria-haspopup="true" aria-expanded="false">More</button>
+        <div class="more-menu" hidden>
+          <a href="/" class="tab" data-view="stocks">Stocks</a>
+          <a href="/options" class="tab" data-view="options">Options</a>
+          <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
+          <a href="/metals" class="tab" data-view="metals">Metals</a>
+          <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
+        </div>
+      </div>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -1078,6 +1083,7 @@
     None of them is a buy or sell signal on its own — run anything interesting through the Today tab, which applies the
     gates and the rulebook. Analyst and insider data come from free public sources with the limits stated above. Not investment advice.
   </div>
+  <p class="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 
 </div>
 <div class="hb-backdrop" id="hb-backdrop" hidden></div>
@@ -1472,4 +1478,5 @@ import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is al
 })();
 </script>
 <script type="module" src="/sync.js"></script>
+<script type="module" src="/nav.js"></script>
 </html>

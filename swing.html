@@ -1074,14 +1074,19 @@
     <div class="tabbar-tabs">
       <a href="/today" class="tab" data-view="today">Today</a>
       <a href="/swing" class="tab on" data-view="swing" aria-current="page">Swing</a>
-      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
-      <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
       <a href="/dashboard" class="tab" data-view="dashboard">Dashboard</a>
-      <a href="/" class="tab" data-view="stocks">Stocks</a>
-      <a href="/options" class="tab" data-view="options">Options</a>
-      <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
-      <a href="/metals" class="tab" data-view="metals">Metals</a>
+      <a href="/alerts" class="tab" data-view="alerts">Alerts</a>
       <a href="/research" class="tab" data-view="research">Research</a>
+      <div class="tab-more">
+        <button type="button" class="tab more-btn" aria-haspopup="true" aria-expanded="false">More</button>
+        <div class="more-menu" hidden>
+          <a href="/" class="tab" data-view="stocks">Stocks</a>
+          <a href="/options" class="tab" data-view="options">Options</a>
+          <a href="/crypto" class="tab" data-view="crypto">Crypto</a>
+          <a href="/metals" class="tab" data-view="metals">Metals</a>
+          <a href="/simulate" class="tab" data-view="simulate">Simulate</a>
+        </div>
+      </div>
     </div>
     <button class="handbook-btn" id="open-handbook" aria-label="Open handbook" aria-haspopup="dialog">
       <span class="hb-glyph" aria-hidden="true"></span>
@@ -1130,7 +1135,7 @@
   <div class="risk-box" id="risk-box"><span class="stamp REDUCED">◌ risk</span><div class="msg">Reading the paper book…</div></div>
 
   <!-- 2 · my list -->
-  <div class="step"><span class="n">2</span><h3>My swing list</h3><span class="sub" id="list-sub">add the stocks you want watched; a buy signal raises an alert</span></div>
+  <div class="step"><span class="n">2</span><h3>My watchlist</h3><span class="sub" id="list-sub">the stocks you want watched, shared with the Alerts tab; a buy signal raises an alert</span></div>
   <form class="addbar" id="sw-add-form">
     <input id="sw-add" placeholder="add ticker, e.g. KMI" autocomplete="off" aria-label="Add a ticker to the swing list" maxlength="10" />
     <button class="refresh-btn" type="submit">+ Add</button>
@@ -1170,6 +1175,7 @@
     the Handbook, applied to live prices. Run through ten years of the S&amp;P 500, they roughly broke even while simply holding the index
     returned about 14% a year (section 6). A small paper account is the right place to find out whether they work in your hands. You can lose money following any of them with real money. Nothing here knows your situation.
   </div>
+  <p class="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 
 </div>
 <div class="hb-backdrop" id="hb-backdrop" hidden></div>
@@ -1787,4 +1793,5 @@ import { getSettings, getHistory, getSwingWatch, setSwingWatch, getSwingBook, se
 })();
 </script>
 <script type="module" src="/sync.js"></script>
+<script type="module" src="/nav.js"></script>
 </html>

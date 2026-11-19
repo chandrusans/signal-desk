@@ -44,7 +44,8 @@ const LS = {
   sent: 'sd-alerts-sentiment-v1',
   settings: 'sd-alerts-settings-v1',
   watch: 'sd-alerts-watch-v1',
-  swingWatch: 'sd-swing-watch-v1',   // the Swing tab's own list — buy signals are raised for these too
+  swingWatch: 'sd-swing-watch-v1',   // retired: the Swing list used to be separate; folded into `watch` on first read
+  coins: 'sd-coins-v1',              // last known crypto symbols, so a list can be split into stocks and coins without a fetch
   swingBook: 'sd-swing-book-v1',     // the Swing tab's paper positions — exit alerts are raised for these too
 };
 const MAX_HISTORY = 400;
@@ -78,18 +79,37 @@ export const DEFAULT_SETTINGS = { enabled: Object.fromEntries(Object.keys(TYPES)
 
 export function getSettings() { return { ...DEFAULT_SETTINGS, ...load(LS.settings, {}), enabled: { ...DEFAULT_SETTINGS.enabled, ...(load(LS.settings, {}).enabled || {}) } }; }
 export function setSettings(s) { save(LS.settings, s); }
-export function getWatch() { return load(LS.watch, null); }
+export function getWatch() { mergeOldSwingList(); return load(LS.watch, null); }
 export function setWatch(list) { save(LS.watch, [...new Set(list.map((t) => String(t).toUpperCase().trim()).filter(Boolean))]); }
 export function getHistory() { return load(LS.history, []); }
-// The Swing tab's list and paper book. Kept apart from the Alerts watchlist and the Dashboard
-// book so the tab stays a self-contained paper account, but read by this engine so its names
-// get buy signals and its positions get exit alerts — in the browser and from the phone runner.
+// ONE WATCHLIST. The Alerts tab and the Swing tab used to keep a list each; now there is one
+// (LS.watch). The Swing tab works with the stocks on it, the Alerts tab with all of it, coins
+// included. An old separate Swing list is merged in the first time either is read.
 const TICKER = /^[A-Z][A-Z0-9.\-]{0,9}$/;
-export function getSwingWatch() { const w = load(LS.swingWatch, []); return Array.isArray(w) ? w.filter((t) => TICKER.test(t)) : []; }
-export function setSwingWatch(list) { save(LS.swingWatch, [...new Set((list || []).map((t) => String(t).toUpperCase().trim()).filter((t) => TICKER.test(t)))].slice(0, 30)); }
+const DEFAULT_COINS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'LTC', 'BCH', 'DOT', 'MATIC', 'POL', 'SHIB', 'UNI', 'ATOM', 'XLM', 'NEAR', 'APT', 'ARB', 'OP', 'SUI', 'PEPE', 'BNB', 'TRX', 'TON', 'HBAR', 'ICP', 'FIL', 'ETC', 'AAVE', 'RENDER', 'INJ', 'SEI', 'TIA', 'WIF', 'BONK'];
+const knownCoins = () => { const c = load(LS.coins, null); return new Set(Array.isArray(c) && c.length ? c : DEFAULT_COINS); };
+function mergeOldSwingList() {
+  const old = load(LS.swingWatch, null);
+  if (!Array.isArray(old) || !old.length) return;
+  save(LS.watch, [...new Set([...(load(LS.watch, null) || []), ...old.filter((t) => TICKER.test(t))])]);
+  save(LS.swingWatch, []);
+}
+/** The stocks on the one watchlist: what the Swing tab lists and sizes. */
+export function getSwingWatch() {
+  mergeOldSwingList();
+  const coins = knownCoins();
+  return (load(LS.watch, null) || []).filter((t) => TICKER.test(t) && !coins.has(t)).slice(0, 30);
+}
+/** Replace the stock part of the watchlist; coins on it are left as they are. */
+export function setSwingWatch(list) {
+  mergeOldSwingList();
+  const coins = knownCoins();
+  const stocks = [...new Set((list || []).map((t) => String(t).toUpperCase().trim()).filter((t) => TICKER.test(t) && !coins.has(t)))].slice(0, 30);
+  save(LS.watch, [...stocks, ...(load(LS.watch, null) || []).filter((t) => coins.has(t))]);
+}
 export function getSwingBook() { const b = load(LS.swingBook, []); return Array.isArray(b) ? b.filter((p) => p && p.ticker && p.qty > 0 && p.buyPrice > 0) : []; }
 export function setSwingBook(book) { save(LS.swingBook, (book || []).slice(0, 40)); }
-/** Everything the alert engine should watch / hold: the Alerts list plus the Swing list, both books. */
+/** Everything the alert engine should watch: the watchlist plus whatever the paper book holds. */
 export function watchUnion(watch = getWatch() || []) { return [...new Set([...(watch || []), ...getSwingWatch(), ...getSwingBook().map((p) => p.ticker)])]; }
 export function bookUnion(portfolio = []) { return [...(portfolio || []), ...getSwingBook()]; }
 /** Record alerts built elsewhere (the Swing tab builds its own buy signals) through the same
@@ -302,7 +322,7 @@ const jget = async (url, fetchFn = fetch) => { const r = await fetchFn(url, { ca
 let coinSet = null, coinAt = 0;
 export async function cryptoSymbols({ base = '', fetchFn = fetch } = {}) {
   if (coinSet && Date.now() - coinAt < 3600e3) return coinSet;
-  try { const d = await jget(`${base}/api/crypto?op=universe&limit=100`, fetchFn); coinSet = new Set((d.constituents || []).map((c) => c.symbol)); coinAt = Date.now(); }
+  try { const d = await jget(`${base}/api/crypto?op=universe&limit=100`, fetchFn); coinSet = new Set((d.constituents || []).map((c) => c.symbol)); coinAt = Date.now(); if (coinSet.size) { try { save(LS.coins, [...coinSet]); } catch { /* storage full or absent */ } } }
   catch { coinSet = coinSet || new Set(['BTC', 'ETH', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'LINK', 'DOT', 'LTC']); }
   return coinSet;
 }

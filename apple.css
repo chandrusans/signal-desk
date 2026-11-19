@@ -192,3 +192,22 @@ code { border-radius: 5px; }
 .step h3 { font-size: 24px; line-height: 1.17; }
 .step .n { font-size: 24px; color: var(--ink-3); }
 .step .sub { font-size: 13px; color: var(--ink-3); }
+.legal-links { margin: 14px 0 0; font-size: 12px; color: var(--ink-3); }
+.legal-links a { color: var(--ink-3); text-decoration: none; }
+.legal-links a:hover { color: var(--ink); text-decoration: underline; }
+
+/* ── "More" menu: five primary tabs, the rest one click away ──────────── */
+.tab-more { position: relative; display: inline-flex; }
+.more-btn { cursor: pointer; font-family: inherit; }
+.more-btn::after { content: ""; width: 6px; height: 6px; margin: -3px 0 0 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); opacity: 0.7; }
+.more-menu { position: absolute; top: calc(100% - 2px); left: 0; z-index: 70; min-width: 190px; display: flex; flex-direction: column; padding: 6px; background: var(--ground); border-radius: 14px; box-shadow: 0 14px 44px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--nav-rule); }
+.more-menu[hidden] { display: none; }
+.more-menu .tab { min-height: 38px; padding: 0 12px; border-radius: 9px; font-size: 14px; opacity: 1; }
+.more-menu .tab:hover:not(.on) { background: var(--fill); }
+@media (max-width: 640px) {
+  /* on a phone the row scrolls sideways, so every destination sits in it and the menu is not needed */
+  .tab-more, .more-menu, .more-menu[hidden] { display: contents; }
+  .more-btn { display: none; }
+  .more-menu .tab { min-height: 48px; padding: 0 9px; border-radius: 0; font-size: 14px; opacity: 0.72; background: none; box-shadow: none; }
+  .more-menu .tab.on { opacity: 1; }
+}

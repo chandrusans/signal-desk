@@ -54,6 +54,15 @@ export function applySpyTrend(rg, spyAbove50) {
     note: `The S&P 500 is below its 50-day average. No new longs until it reclaims it. ${rg.note || ''}`.trim() };
 }
 
+/** May a BREAKOUT / PULLBACK be bought under this market gate? One answer for Today, Stocks, Swing and the alerts. */
+export const gateAllows = (rg, setup) => !rg || (rg.allow || []).includes(setup);
+/** S&P 500 above its own 50-day average, from daily bars and the live price; null when it cannot be told. */
+export function spyAbove50From(bars, price) {
+  const c = (bars || []).slice(-50).map((b) => b.c);
+  const p = price ?? c[c.length - 1];
+  return c.length === 50 && p != null ? p > c.reduce((a, b) => a + b, 0) / 50 : null;
+}
+
 /**
  * Is this scan row a buy right now, and under which strategy?
  *
