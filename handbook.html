@@ -3,6 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Signal Desk">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F4EFE4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1116" media="(prefers-color-scheme: dark)">
 <title>Signal Desk — Handbook</title>
 <script>
   (function () {
@@ -485,7 +494,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.23</div>
+      <div class="kicker">Signal Desk · Handbook · v3.24</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -849,6 +858,15 @@
         <li><strong>Ten-year replay inputs</strong> (offline, <code>npm run replay</code>, Chapter 25) — S&amp;P 500 membership by date rebuilt from Wikipedia's constituent table and its index change log; ten years of daily bars from the Yahoo chart API for every name that was a member; past earnings dates from SEC EDGAR 8-K filings carrying item 2.02 ("Results of Operations"). Only the aggregate results are published (<code>data/replay.json</code>); the bars stay on the machine that built it.</li>
         <li><strong>Congressional trades</strong> — <code>/api/intel?op=congress</code>, parsed from Periodic Transaction Reports published by the Clerk of the House (the primary STOCK Act filings behind sites like CapitolTrades). <strong>Context badge only — deliberately not scored</strong>, see Chapter 16.</li>
       </ul>
+      <h3>Next-earnings dates</h3>
+      <p>The 5-day earnings gate reads <code>data/earnings.json</code>, rebuilt every weeknight. NASDAQ's per-stock "earnings date" endpoint, which this app used until v3.24, stopped carrying dates (it now answers that its vendor has not provided one), which is why every card used to say "earnings date unknown". The file has two kinds of date and says which is which:</p>
+      <ul>
+        <li><strong>On the calendar</strong> — the stock appears in NASDAQ's day-by-day earnings calendar for the next five weeks, with whether it reports before the open or after the close. About 500 to 1,000 US stocks at any time.</li>
+        <li><strong>Estimated</strong> — an S&amp;P 500 name not on the calendar yet. Its next report is estimated from its own rhythm of SEC 8-K "Results of Operations" filings: the same quarter last year plus 52 weeks. Shown as "around" a date and marked as an estimate. Companies rarely move more than a few days, but an estimate is not a confirmation: check the company's investor page before trading near one.</li>
+      </ul>
+      <p>A stock outside the S&amp;P 500 that is not on the five-week calendar still reads as unknown, and the card says so.</p>
+      <h3>Is everything answering? The health check</h3>
+      <p><code>/api/intel?op=health</code> asks, from the server the app runs on, whether each source is answering: prices and VIX, the index scan, the S&amp;P 500 list, the economic calendar, the two nightly data files (and how old they are), news, NASDAQ, SEC and Coinbase. A scheduled job calls it four times a day and fails when a critical one is down, which emails the repository owner. The nightly build fails the same way when one of its sources stops answering, and keeps the previous day's file rather than publishing a thin one.</p>
       <h3>Still mock or static</h3>
       <ul>
         <li><strong>Market cap and P/E</strong> in the screener table — live from NASDAQ (<code>/api/fundamentals</code>); P/E is GAAP trailing.</li>
@@ -1077,6 +1095,7 @@
         <li>Within <strong>48 hours</strong> → <code>CAUTION</code>, half size on new entries.</li>
         <li>Otherwise <code>CLEAR</code>, with the next major release named.</li>
       </ul>
+      <p><strong>When the calendar itself is unavailable</strong> the gate cannot be applied, and the app says so rather than reading silence as "nothing ahead": the Swing tab's market light turns amber with "the economic calendar is unavailable", and any buy signal or buy alert raised in that state carries a line telling you to check for a major release yourself.</p>
       <p>The releases that trigger it are the ones that move the whole index — NFP, CPI, PPI, PCE, FOMC, ISM, retail sales, GDP, jobless claims, and Fed chair appearances. This gate applies to Crypto too: BTC reacts to a CPI print about as hard as the S&amp;P does.</p>
       <div class="callout">
         <span class="callout-label">Why the feed and not the website</span>
@@ -1468,6 +1487,21 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 26</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.24<br/>2026-11-19</div>
+        <div class="what">
+          <h4>Earnings dates fixed, source alarms, monthly replay, install on iPhone</h4>
+          <ul>
+            <li><strong>Earnings dates work again</strong> (Chapter 10). The feed behind "next earnings date" had stopped carrying dates, so the earnings gate was blind and every card said "unknown". Dates now come from a nightly file: NASDAQ's day-by-day calendar for the next five weeks, plus an estimate from past SEC filings for S&amp;P 500 names not on it yet (501 of 503 covered on the first build). Estimates are labelled "around" and "(estimate)".</li>
+            <li><strong>Source alarms</strong> (Chapter 10). A health check runs four times a day and the nightly builds fail loudly: when a critical source stops answering, the repository owner gets an email instead of the app going quietly wrong.</li>
+            <li><strong>No more silent macro gate</strong> (Chapter 16). If the economic calendar cannot be read, the Swing light says so and buy signals carry a warning, instead of "no major release inside 48 hours".</li>
+            <li><strong>Nightly screen coverage.</strong> NASDAQ reads are throttled and retried for names that came back empty; the screen was getting yield and P/E for only about half the index.</li>
+            <li><strong>Ten-year replay refreshes monthly</strong> on the 2nd, and by hand after any rule change. A thin download keeps the previous result.</li>
+            <li><strong>Install on iPhone or Android.</strong> The site now carries an app manifest and icons. In Safari: Share → Add to Home Screen. It opens full screen from its own icon. The home-screen copy keeps its own data, separate from Safari's: move positions across with the Dashboard's export and import.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.23<br/>2026-11-19</div>

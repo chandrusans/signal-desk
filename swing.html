@@ -3,6 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Signal Desk">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F4EFE4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1116" media="(prefers-color-scheme: dark)">
 <title>Signal Desk — Swing</title>
 <script>
   (function () {
@@ -1320,7 +1329,7 @@ import { getSettings, getHistory, getSwingWatch, setSwingWatch, getSwingBook, se
     const prices = {}; for (const p of book) prices[p.ticker] = priceOf(p);
     return riskBudget({ capital: account().base, positions: book, prices, journal, limits: { ...LIMITS, riskPerTradePct: riskPct } });   // the tab's own risk-per-trade setting
   }
-  const ctxFor = (t) => ({ regime: gate.regime, macroLevel: PREVIEW ? 'clear' : gate.macro?.level || null, nextEarnings: next ? (t in next ? next[t] : null) : undefined, lastEarnings: last?.[t] || null });
+  const ctxFor = (t) => ({ regime: gate.regime, macroLevel: PREVIEW ? 'clear' : gate.macro?.level || (gate.macroFailed ? 'unknown' : null), nextEarnings: next ? (t in next ? next[t] : null) : undefined, lastEarnings: last?.[t] || null });
   const held = (t) => book.some((p) => p.ticker === t);
   function sizeFor(sig) {
     const a = account(), b = budget();
@@ -1337,11 +1346,12 @@ import { getSettings, getHistory, getSwingWatch, setSwingWatch, getSwingBook, se
       if (blocked) { cls = 'stop'; title = 'No new buys today.'; text = `${m.note || 'A high-impact US release is inside 48 hours.'} Manage what you hold; entries wait until it has printed.`; }
       else if (closed) { cls = 'stop'; title = 'No new buys today.'; text = `${/[.!?]$/.test(rg.note.trim()) ? rg.note.trim() : rg.note.trim() + '.'} Good charts fail in a bad market, so the list below will say WAIT even where a setup is present.`; }
       else if ((rg && (rg.sizeMult ?? 1) < 1) || (m && m.level === 'caution')) { cls = 'half'; title = 'Buy, but smaller.'; text = `${rg?.note || ''} ${m && m.level === 'caution' ? m.note || '' : ''} Sizes below are already cut.`.trim(); }
+      else if (!m && gate.macroFailed) { cls = 'half'; title = 'Clear on the market, but the economic calendar is unavailable.'; text = 'Volatility is normal and the index is above its 50-day average. The calendar feed could not be read, so the macro gate is not being applied: check for a major US release (inflation, jobs, a Fed decision) in the next two days before entering.'; }
       else { cls = 'go'; title = 'Clear to buy at full size.'; text = 'Volatility is normal, the index is above its 50-day average and no major release is inside 48 hours.'; }
     }
     if (PREVIEW) { text = `The real verdict right now is: ${title} ${text} Signals below are shown as if the gate were open, and no buy alert is raised. Remove ?preview=open from the address to return to the real gate.`; title = 'PREVIEW — market gate forced open so you can try the page.'; cls = 'half'; }
     $('light').className = `light ${cls}`; $('light-title').textContent = title; $('light-text').textContent = text;
-    $('light-why').textContent = [m ? `macro ${String(m.level).toUpperCase()}` : null, gate.vix != null ? `VIX ${gate.vix.toFixed(1)}` : null, rg ? `regime ${String(rg.level).toUpperCase()}` : null,
+    $('light-why').textContent = [m ? `macro ${String(m.level).toUpperCase()}` : gate.macroFailed ? 'macro calendar UNAVAILABLE' : null, gate.vix != null ? `VIX ${gate.vix.toFixed(1)}` : null, rg ? `regime ${String(rg.level).toUpperCase()}` : null,
       gate.spyAbove50 == null ? null : `S&P 500 ${gate.spyAbove50 ? 'above' : 'BELOW'} its 50-day`, breadth ? `${breadth.pctAbove50.toFixed(0)}% of stocks above their 50-day` : null].filter(Boolean).join('  ·  ');
   }
   function setRegime() {
@@ -1351,6 +1361,7 @@ import { getSettings, getHistory, getSwingWatch, setSwingWatch, getSwingBook, se
   async function loadGate() {
     const [mc, q] = await Promise.allSettled([j('/api/intel?op=macro&hours=96'), j('/api/quotes?tickers=SPY,%5EVIX&range=3mo')]);
     gate.macro = mc.status === 'fulfilled' ? mc.value.macroRisk : null;
+    gate.macroFailed = !gate.macro;                       // feed down or unreadable: say so, never imply "no release ahead"
     const quotes = q.status === 'fulfilled' ? q.value.quotes || {} : {};
     if (q.status === 'fulfilled') noteBuild(q.value.build);
     gate.vix = quotes['^VIX']?.price ?? null;

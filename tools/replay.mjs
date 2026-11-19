@@ -18,6 +18,12 @@ const refresh = process.argv.includes('--refresh');
 const FROM = '2016-01-01';
 const data = await replayData({ from: FROM, refresh });
 
+// A thin download (rate limits, a source down) must not overwrite a good result with a wrong one.
+if (!process.env.REPLAY_FORCE && (data.coverage.withBars < 560 || data.days.length < 2500 || data.coverage.earningsKnown < data.coverage.withBars * 0.85)) {
+  console.error(`coverage too low (prices for ${data.coverage.withBars} names, ${data.days.length} sessions, earnings dates for ${data.coverage.earningsKnown}) — keeping the previous data/replay.json`);
+  process.exit(2);
+}
+
 const VARIANTS = [
   { id: 'base', group: 'base', label: 'As the app runs today' },
   { id: 'survivors', group: 'bias', label: 'Only today\'s S&P 500 members, for all ten years', o: { universe: 'today' } },

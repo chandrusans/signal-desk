@@ -14,12 +14,13 @@
 //
 // Sources (both free, no API key):
 //   • NASDAQ /api/quote/{t}/summary   → market cap, 52w range, avg volume, yield
-//   • NASDAQ /api/analyst/{t}/earnings-date → next estimated earnings date
+//   • data/earnings.json (nightly: NASDAQ's day-by-day calendar + SEC-based estimates) → next earnings date
 //
 // Returns { NVDA: { marketCap, marketCapRaw, peRatio, avgVolume, yield,
 //                   fiftyTwoWeek: {high, low}, earningsDate, earningsInDays } }
 
 import { forensic } from './_forensic.js';
+import { calendarEntry } from '../earnings-calendar.js';
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
 const HEADERS = { 'User-Agent': UA, Accept: 'application/json' };
@@ -75,30 +76,20 @@ async function fetchSummary(sym) {
   } catch { return null; }
 }
 
-async function fetchEarningsDate(sym) {
+// Next earnings date. The nightly calendar file (data/earnings.json, see earnings-calendar.js) is
+// the source: NASDAQ's per-stock earnings-date endpoint no longer carries dates. The file is a
+// static asset of this same deployment, fetched once and kept for half an hour per instance.
+let calCache = { at: 0, cal: null };
+async function loadCalendar(req) {
+  if (calCache.cal && Date.now() - calCache.at < 30 * 60e3) return calCache.cal;
   try {
-    const res = await fetch(
-      `https://api.nasdaq.com/api/analyst/${encodeURIComponent(sym)}/earnings-date`,
-      { headers: HEADERS }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const text = data?.data?.reportText || '';
-    // "…estimated to report earnings on  08/26/2026. The upcoming earnings…"
-    const m = text.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-    if (!m) return null;
-    const [, mm, dd, yyyy] = m;
-    const iso = `${yyyy}-${mm}-${dd}`;
-    const ts = Date.parse(iso + 'T00:00:00Z');
-    if (isNaN(ts)) return null;
-    return {
-      date: iso,
-      daysAway: Math.round((ts - Date.now()) / 86400000),
-      // NASDAQ sources these from Zacks; before the company confirms they are
-      // algorithmic estimates. Flag that honestly rather than implying certainty.
-      estimated: /derived from an algorithm|estimated/i.test(text),
-    };
-  } catch { return null; }
+    const host = String(req.headers?.host || '');
+    if (!/^[A-Za-z0-9.-]+(:\d+)?$/.test(host)) return calCache.cal;
+    const proto = /^(localhost|127\.0\.0\.1)(:|$)/.test(host) ? 'http' : 'https';
+    const r = await fetch(`${proto}://${host}/data/earnings.json`);
+    if (r.ok) { const cal = await r.json(); if (cal && cal.dates) calCache = { at: Date.now(), cal }; }
+  } catch { /* keep whatever we had */ }
+  return calCache.cal;
 }
 
 export default async function handler(req, res) {
@@ -133,12 +124,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  const results = await Promise.all(
-    tickers.map(async (t) => {
-      const [summary, earnings] = await Promise.all([fetchSummary(t), fetchEarningsDate(t)]);
-      return [t, { ...(summary || {}), earnings }];
-    })
-  );
+  const cal = await loadCalendar(req);
+  // Eight NASDAQ reads in flight at most: forty at once is what gets a batch refused.
+  const results = new Array(tickers.length); let next = 0;
+  await Promise.all(Array.from({ length: Math.min(8, tickers.length) }, async () => {
+    while (next < tickers.length) { const k = next++, t = tickers[k]; results[k] = [t, { ...((await fetchSummary(t)) || {}), earnings: calendarEntry(cal, t) }]; }
+  }));
 
   const out = {};
   for (const [t, v] of results) {
@@ -146,5 +137,5 @@ export default async function handler(req, res) {
   }
 
   res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200'); // fundamentals move slowly
-  res.status(200).json({ asOf: Date.now(), fundamentals: out });
+  res.status(200).json({ asOf: Date.now(), fundamentals: out, earningsCalendar: cal ? { builtAt: cal.builtAt, through: cal.calendarThrough } : null });
 }

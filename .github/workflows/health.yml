@@ -1,0 +1,27 @@
+name: Data source health
+
+# Asks the deployed app whether every source the signals depend on is answering
+# (/api/intel?op=health), four times a day. A critical source down fails the run,
+# and GitHub emails the repo owner: that email is the alarm.
+
+on:
+  schedule:
+    - cron: '40 1,7,13,19 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check sources
+        env:
+          APP_URL: https://signal-desk-virid.vercel.app
+        run: node tools/check-health.mjs

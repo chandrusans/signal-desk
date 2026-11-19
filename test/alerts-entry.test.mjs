@@ -56,3 +56,12 @@ test('the Swing list and paper book join the alert engine: union for the watchli
   const fired = evaluatePositions(getSwingBook(), { p1: { price: 250 } }, S);       // below the stop
   assert.equal(fired.length, 1); assert.equal(fired[0].action, 'SELL'); assert.equal(fired[0].link, '/swing');
 });
+
+test('a buy raised while the economic calendar is unreadable says the macro gate was not applied', () => {
+  fresh();
+  const a = evaluate(['KMI'], data({ gate: { ...gateOpen, macroLevel: 'unknown' } }), S).find((x) => x.type === 'entry');
+  assert.ok(a, 'still alerts: the chart and the market gate are fine');
+  const sig = signalFor(row(), { regime: regime(17), macroLevel: 'unknown', nextEarnings: far.KMI });
+  assert.ok(sig.caveats.some((c) => /economic calendar could not be read/.test(c)));
+  assert.ok(!signalFor(row(), { regime: regime(17), macroLevel: 'clear', nextEarnings: far.KMI }).caveats.some((c) => /economic calendar/.test(c)));
+});

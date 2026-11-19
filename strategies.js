@@ -58,7 +58,7 @@ export function applySpyTrend(rg, spyAbove50) {
  * Is this scan row a buy right now, and under which strategy?
  *
  * @param row  a /api/scan row: { t, p, sc, su, rs, r20, a50, a200, rsi2, ma5, atr, stop, tgt }
- * @param ctx  { regime: { level, sizeMult, allow, note }, macroLevel: 'clear'|'caution'|'blocked',
+ * @param ctx  { regime: { level, sizeMult, allow, note }, macroLevel: 'clear'|'caution'|'blocked'|'unknown' (calendar unreadable),
  *               nextEarnings: { date, daysAway } | null (feed had none) | undefined (not checked),
  *               lastEarnings: { dateReported, surprisePct } | null, today: 'YYYY-MM-DD' }
  * @returns { action: 'BUY'|'WAIT'|'AVOID', strategy, all, reason, entry, stop, target, timeStopDays, sizeMult, caveats }
@@ -93,7 +93,7 @@ export function signalFor(row, ctx = {}) {
 
   // 2. Gates that override every chart.
   if (ctx.macroLevel === 'blocked') return none('WAIT', 'A setup is there, but a high-impact US release is inside 48 hours. No new entries until it has printed.', { all: raw });
-  if (ne && ne.daysAway != null && ne.daysAway >= 0 && ne.daysAway <= 5) return none('AVOID', `Earnings in ${ne.daysAway} day${ne.daysAway === 1 ? '' : 's'} (${ne.date}). No new entry; a gap goes through a stop, not to it.`, { all: raw });
+  if (ne && ne.daysAway != null && ne.daysAway >= 0 && ne.daysAway <= 5) return none('AVOID', `${ne.estimated ? 'Earnings expected in about' : 'Earnings in'} ${ne.daysAway} day${ne.daysAway === 1 ? '' : 's'} (${ne.estimated ? 'around ' : ''}${ne.date}${ne.estimated ? ', estimated from past reports' : ''}). No new entry; a gap goes through a stop, not to it.`, { all: raw });
 
   // 3. The market regime decides which strategies may trade today.
   const allow = rg ? rg.allow || [] : ['BREAKOUT', 'PULLBACK'];
@@ -116,7 +116,8 @@ export function signalFor(row, ctx = {}) {
   const caveats = [];
   if (ne === null) caveats.push('The feed has no next-earnings date for this name, so the 5-day earnings gate could not be applied. Confirm the report date before entering.');
   const holdCal = Math.ceil(S.timeStopDays * 1.45);     // sessions → calendar days
-  if (ne && ne.daysAway > 5 && ne.daysAway <= holdCal) caveats.push(`Reports on ${ne.date}, in ${ne.daysAway} days, inside the ${S.timeStopDays}-session holding window. Plan to be out, or at least half out, before the print.`);
+  if (ne && ne.daysAway > 5 && ne.daysAway <= holdCal) caveats.push(`${ne.estimated ? `Expected to report around ${ne.date} (estimated from past reports)` : `Reports on ${ne.date}`}, in ${ne.daysAway} days, inside the ${S.timeStopDays}-session holding window. Plan to be out, or at least half out, before the print.`);
+  if (ctx.macroLevel === 'unknown') caveats.push('The economic calendar could not be read, so the macro gate was not applied. Check for a major US release (inflation, jobs, a Fed decision) in the next two days before entering.');
   if (!S.tested) caveats.push('This strategy is not backtested in this app. It is sized at half risk; the paper scorecard is its only record.');
   if (sizeMult < S.riskMult) caveats.push(`Size cut to ${Math.round((sizeMult / S.riskMult) * 100)}% of normal by the market regime${ctx.macroLevel === 'caution' ? ' and the macro calendar' : ''}.`);
 
@@ -140,7 +141,7 @@ export function gradeFor(row, sig, fund, ctx = {}) {
     { ok: stopPct != null && stopPct <= 6, text: stopPct != null ? `Stop is ${stopPct.toFixed(1)}% away (tight is 6% or less)` : 'No stop distance' },
     { ok: fund?.cash === 'REAL', text: fund?.cash ? `Profits ${String(fund.cash).toLowerCase()} in the filings` : 'No filing data for the cash check' },
     { ok: fund?.risk != null && fund.risk <= 4, text: fund?.risk != null ? `Risk rating ${fund.risk}/10 (needs 4 or lower)` : 'No risk rating' },
-    { ok: !!ne && ne.daysAway != null && ne.daysAway > holdCal, text: ne ? (ne.daysAway > holdCal ? `Next earnings ${ne.date}, after the holding window` : `Earnings ${ne.date} fall inside the holding window`) : 'Earnings date unknown' },
+    { ok: !!ne && ne.daysAway != null && ne.daysAway > holdCal, text: ne ? (ne.daysAway > holdCal ? `Next earnings ${ne.estimated ? 'around ' : ''}${ne.date}${ne.estimated ? ' (estimate)' : ''}, after the holding window` : `Earnings ${ne.estimated ? 'around ' : ''}${ne.date}${ne.estimated ? ' (estimate)' : ''} fall inside the holding window`) : 'Earnings date unknown' },
   ];
   const points = checks.filter((c) => c.ok).length;
   return { grade: points >= 4 ? 'A' : points === 3 ? 'B' : 'C', points, max: checks.length, checks };

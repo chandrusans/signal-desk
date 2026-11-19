@@ -53,7 +53,18 @@ log(`drawdowns ${Object.keys(dd).length} · dividends ${Object.keys(ttmDiv).leng
 
 // 3. NASDAQ summary via the deployed endpoint (may be partial — it is rate-limited at times)
 const nas = {};
-await pool(chunk(symbols, 40), 3, async (b) => { const d = await j(`${BASE}/api/fundamentals?tickers=${encodeURIComponent(b.join(','))}`); Object.assign(nas, d.fundamentals || {}); });
+//    A row counts only when the summary itself answered (market cap present): the endpoint also
+//    returns earnings-date-only rows, which say nothing about NASDAQ. Names that came back empty are
+//    asked again in small, differently-grouped batches (a new URL, so not the cached partial answer).
+const takeNas = (d) => { for (const [t, v] of Object.entries(d.fundamentals || {})) if (v && v.marketCap != null) nas[t] = v; };
+await pool(chunk(symbols, 40), 2, async (b) => takeNas(await j(`${BASE}/api/fundamentals?tickers=${encodeURIComponent(b.join(','))}`)));
+for (let pass = 1; pass <= 3; pass++) {
+  const miss = symbols.filter((t) => !nas[t]);
+  if (miss.length < symbols.length * 0.03) break;
+  log(`nasdaq summaries ${Object.keys(nas).length}; retry ${pass} for ${miss.length}`);
+  await new Promise((r) => setTimeout(r, 8000 * pass));
+  await pool(chunk(miss, 12 - pass), 1, async (b) => takeNas(await j(`${BASE}/api/fundamentals?tickers=${encodeURIComponent(b.join(','))}`)));
+}
 log(`nasdaq summaries ${Object.keys(nas).length}`);
 
 // 4. filings — the forensic module, directly against SEC (one companyfacts read per name), with

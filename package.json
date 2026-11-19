@@ -19,7 +19,9 @@
     "validate:research": "sh tools/validate.sh research",
     "test": "node --test test/",
     "screen:build": "node tools/build-screen.mjs",
-    "replay": "node --max-old-space-size=6144 tools/replay.mjs"
+    "replay": "node --max-old-space-size=6144 tools/replay.mjs",
+    "earnings:build": "node tools/build-earnings.mjs",
+    "health": "node tools/check-health.mjs"
   },
   "overrides": {
     "zod": "^4.6.6"

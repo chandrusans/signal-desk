@@ -342,7 +342,7 @@ export async function fetchAlertData(tickers, { base = '', slow = true, fetchFn 
     const spy = vixR.status === 'fulfilled' ? vixR.value?.quotes?.SPY : null;
     const sc = (spy?.bars || []).map((b) => b.c).slice(-50);
     const spyAbove50 = sc.length === 50 && spy.price != null ? spy.price > sc.reduce((a, b) => a + b, 0) / 50 : null;   // null = not enough bars, gate untouched
-    out.gate = vix != null ? { vix, spyAbove50, macroLevel: macroR.status === 'fulfilled' ? macroR.value?.macroRisk?.level || null : null } : null;
+    out.gate = vix != null ? { vix, spyAbove50, macroLevel: macroR.status === 'fulfilled' ? macroR.value?.macroRisk?.level || 'unknown' : 'unknown' } : null;
     // ticker -> { date, daysAway } | null. A ticker the feed answered without a date is present as null ("unknown").
     out.next = nextR.status === 'fulfilled' && nextR.value?.fundamentals ? Object.fromEntries(eq.map((t) => [t, nextR.value.fundamentals[t]?.earnings || null])) : null;
   }

@@ -1,6 +1,7 @@
 name: Nightly screen build
 
-# Builds data/screen.json — one row per S&P 500 name: fundamentals from SEC filings,
+# Builds data/earnings.json (next-earnings dates: NASDAQ's day-by-day calendar plus SEC-based
+# estimates, see earnings-calendar.js) and data/screen.json — one row per S&P 500 name: fundamentals from SEC filings,
 # technicals from the deployed scan, five-year drawdown, NASDAQ yield / P/E — and
 # commits it, which redeploys the site. The Research tab's Screen view reads the file.
 # Runs after the US close (02:15 UTC, Tue–Sat); dispatch it by hand to refresh now.
@@ -28,7 +29,18 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # Each build keeps yesterday's file when its own sources fail (exit 2), so one bad
+      # source never blocks the other file. The last step then fails the run, which emails
+      # the repo owner: that is the alarm for a nightly source that stopped answering.
+      - name: Build data/earnings.json
+        id: earnings
+        continue-on-error: true
+        env:
+          SEC_UA: ${{ vars.SEC_UA }}
+        run: node tools/build-earnings.mjs
       - name: Build data/screen.json
+        id: screen
+        continue-on-error: true
         env:
           APP_URL: https://signal-desk-virid.vercel.app
           SCREEN_CONCURRENCY: '4'
@@ -37,7 +49,13 @@ jobs:
         run: |
           git config user.name "signal-desk-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/screen.json
+          git add data/screen.json data/earnings.json
           if git diff --cached --quiet; then echo "no change"; exit 0; fi
           git commit -m "data: nightly screen build $(date -u +%Y-%m-%d)"
+          git pull --rebase -q origin main
           git push
+      - name: Fail the run if a build failed
+        if: steps.earnings.outcome == 'failure' || steps.screen.outcome == 'failure'
+        run: |
+          echo "::error::earnings build: ${{ steps.earnings.outcome }} · screen build: ${{ steps.screen.outcome }}"
+          exit 1

@@ -79,6 +79,17 @@ as browser notifications and through the phone runner (the Alerts tab's sync
 includes the Swing list and book). `/swing?preview=open` forces the market
 gate open for trying the page. Nothing places an order. Handbook ch. 25.
 
+### Data health
+
+`/api/intel?op=health` probes every source from the deployment itself (prices,
+VIX, scan, universe, economic calendar, the nightly files and their age, news,
+NASDAQ, SEC, Coinbase). `health.yml` runs `npm run health` four times a day and
+fails on a critical outage; `screen.yml` fails when either nightly build could
+not reach its sources (and keeps the previous file). A failed scheduled run
+emails the repo owner — that is the alarm. Next-earnings dates come from
+`data/earnings.json` (see `earnings-calendar.js`), not from NASDAQ's per-stock
+endpoint, which no longer carries them.
+
 ### Ten-year replay
 
 `npm run replay` runs a $1,000 cash account through the Swing rules every day
@@ -110,6 +121,8 @@ signal-desk/
 ├── swing.html         Swing — $1,000 paper account, four strategies, buy and exit alerts
 ├── strategies.js      The swing strategies: entry signal, grade, small-account sizing (shared with alerts)
 ├── replay.js          Ten-year replay simulator: a cash account through the live rules, day by day
+├── earnings-calendar.js  Next-earnings dates: calendar file lookup + SEC-rhythm estimate (shared by API and nightly build)
+├── manifest.webmanifest, icon-*.png  Home-screen install (iOS: Share → Add to Home Screen)
 ├── alerts.html        Seven alert types + browser notifications (engine in alerts.js)
 ├── simulate.html      Paper auto-trading — the rulebook trades pretend money
 ├── index.html         Stocks UI (all inline CSS/JS)
@@ -123,7 +136,8 @@ signal-desk/
 ├── screen.js          Profile-driven ranking of the universe (percentile components, weights, filters)
 ├── views.js           Compare, dividend blueprint, allocation-plan and screen views
 ├── data/screen.json   Nightly screen file (built by tools/build-screen.mjs via screen.yml)
-├── data/replay.json   Ten-year replay results (built by `npm run replay`; aggregates only)
+├── data/replay.json   Ten-year replay results (built by `npm run replay` / replay.yml monthly; aggregates only)
+├── data/earnings.json Next-earnings dates (built nightly by tools/build-earnings.mjs via screen.yml)
 ├── risk.js            Risk engine (book-level limits) + trade journal, shared by Today and Dashboard
 ├── dialog.js          In-page ask / confirm / notify dialogs (prompt() is blocked in embedded browsers)
 ├── handbook.html      Beginner reference + changelog (see CLAUDE.md — keep current)
@@ -156,6 +170,8 @@ signal-desk/
 │   ├── devserver.mjs  Local server routing /api/* to the handler modules
 │   ├── build-screen.mjs  Nightly screen builder (filings + scan + history + NASDAQ → data/screen.json)
 │   ├── replay.mjs     Ten-year replay: base case + 22 variants → data/replay.json
+│   ├── build-earnings.mjs  Nightly earnings calendar (NASDAQ by-date calendar + SEC estimates → data/earnings.json)
+│   ├── check-health.mjs  Reads /api/intel?op=health; exit 1 when a critical source is down (health.yml, 4×/day)
 │   ├── replay-data.mjs  Point-in-time membership, bars, SEC earnings dates, per-day scan rows (cached)
 │   └── lint.mjs       Undefined-function detector for inline scripts
 └── vercel.json        Static + serverless config
@@ -258,7 +274,7 @@ npm test
 
 Unit tests (node:test) for the pure modules — exit rulebook, risk engine and
 journal, UI escaping/formatting, analysis plan, forward DCF, indicators and
-statistical tests, the profile screen, the swing strategies, buy alerts and the replay simulator — no network. 64 tests. CI runs them with
+statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar — no network. 71 tests. CI runs them with
 the lint and `npm audit` on every push.
 
 ### Security model
