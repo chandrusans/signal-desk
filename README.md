@@ -122,6 +122,7 @@ signal-desk/
 ├── strategies.js      The swing strategies: entry signal, grade, small-account sizing (shared with alerts)
 ├── replay.js          Ten-year replay simulator: a cash account through the live rules, day by day
 ├── apple.css          The shared design layer (system SF type, surfaces, cards, pills, sticky nav); loaded by every page after its own CSS
+├── sync.js            Sync across devices: client-side AES-GCM encryption, sync code + passphrase, conflict handling
 ├── earnings-calendar.js  Next-earnings dates: calendar file lookup + SEC-rhythm estimate (shared by API and nightly build)
 ├── manifest.webmanifest, icon-*.png  Home-screen install (iOS: Share → Add to Home Screen)
 ├── alerts.html        Seven alert types + browser notifications (engine in alerts.js)
@@ -275,7 +276,7 @@ npm test
 
 Unit tests (node:test) for the pure modules — exit rulebook, risk engine and
 journal, UI escaping/formatting, analysis plan, forward DCF, indicators and
-statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar — no network. 72 tests. CI runs them with
+statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar and encrypted sync (against the real vault handler) — no network. 79 tests. CI runs them with
 the lint and `npm audit` on every push.
 
 ### Security model

@@ -34,6 +34,9 @@ const TYPES = {
   '.svg': 'image/svg+xml',
 };
 
+// Sync storage in development: a scratch folder instead of Vercel Blob.
+process.env.SD_VAULT_DIR ||= join(ROOT, '.cache', 'vault-dev');
+
 const handlers = new Map();
 async function apiHandler(name) {
   if (!handlers.has(name)) {
@@ -59,7 +62,10 @@ createServer(async (req, res) => {
         json(body) { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(body)); },
         send(body) { res.end(body); },
       };
-      await fn({ query, method: req.method, headers: req.headers, url: req.url }, vres);
+      // JSON bodies, as Vercel parses them for POST handlers
+      let body;
+      if (req.method === 'POST') { const chunks = []; for await (const c of req) chunks.push(c); try { body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { body = {}; } }
+      await fn({ query, method: req.method, headers: req.headers, url: req.url, body, socket: req.socket }, vres);
     } catch (err) {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');

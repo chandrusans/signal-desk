@@ -495,7 +495,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.25</div>
+      <div class="kicker">Signal Desk · Handbook · v3.26</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -938,7 +938,16 @@
         <span class="callout-label">Data lives only in your browser</span>
         <p>Positions are stored in <code>localStorage</code> under key <code>sd-portfolio-v1</code>. Clearing site data, switching browsers, or using incognito will make them disappear. Export before doing any of that.</p>
       </div>
-    </section>
+          <h3 id="sync-devices">Sync across devices</h3>
+      <p>Everything you enter lives in the browser you entered it in. A second phone, a laptop, or the home-screen copy of the app each start empty. <strong>Dashboard → Sync across devices</strong> keeps them in step, without an account.</p>
+      <ol>
+        <li><strong>On the device that has your data:</strong> choose <em>Set up sync</em> and pick a passphrase (8 characters or more). The app shows a 20-character sync code.</li>
+        <li><strong>On the other device:</strong> Dashboard → <em>I have a sync code</em>, enter the code and the passphrase. It receives your positions, journal, Swing list and paper trades, alert watchlist and settings.</li>
+        <li>From then on each device syncs when a page opens and shortly after you change something.</li>
+      </ol>
+      <p><strong>What the server can see: nothing readable.</strong> Your data is encrypted in the browser with a key made from your passphrase before it is sent. The server stores the scrambled result under a label derived from the sync code; it never receives the code or the passphrase. The cost of that privacy is that <strong>nobody can reset a forgotten passphrase</strong>: the cloud copy becomes unreadable (the data on your devices is unaffected; turn sync off and set it up again).</p>
+      <p><strong>If two devices both changed things</strong> since they last synced, nothing is overwritten. A bar appears asking which copy to keep, and the other device follows. <em>Turn off on this device</em> leaves your data where it is. <em>Delete the cloud copy</em> removes the stored copy for every device. The theme and the alert history stay per device and are not synced.</p>
+</section>
 
     <section id="options">
       <h2><span class="chnum">Chapter 13</span>Options · Robinhood &amp; Schwab</h2>
@@ -1482,12 +1491,25 @@
       <h3>Preview on a closed day</h3>
       <p><code>/swing?preview=open</code> forces the market gate open so the cards, sizing and paper buttons can be tried when the real gate is shut. A banner states the real verdict and no buy alert is raised in preview.</p>
       <h3>Where it is stored</h3>
-      <p>In this browser only: the list, the paper trades, the journal and the three settings (capital, risk per trade, fractional shares) under <code>sd-swing-*</code> keys. The Dashboard's book and risk engine are separate and untouched. "Reset paper account" clears the trades and journal and keeps the list.</p>
+      <p>In this browser, and on your other devices if you turn on sync (Chapter 12, end-to-end encrypted): the list, the paper trades, the journal and the three settings (capital, risk per trade, fractional shares) under <code>sd-swing-*</code> keys. The Dashboard's book and risk engine are separate and untouched. "Reset paper account" clears the trades and journal and keeps the list.</p>
     </section>
 
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 26</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.26<br/>2026-11-19</div>
+        <div class="what">
+          <h4>Sync across devices, end-to-end encrypted (Chapter 12)</h4>
+          <ul>
+            <li>New on the Dashboard: <strong>Sync across devices</strong>. One device sets a passphrase and shows a sync code; another enters both and receives your positions, journal, Swing account, watchlists and settings. No account, no email.</li>
+            <li>Data is encrypted in your browser before it is sent. The server stores it and cannot read it; it never sees your sync code or passphrase. A forgotten passphrase cannot be reset.</li>
+            <li>If two devices changed things between syncs, the app asks which copy to keep instead of overwriting either.</li>
+            <li>Checked on a live market (2026-11-19): tracking, closing, the journal, risk limits, alerts and the scheduled jobs all worked on live prices. One defect found: Today offered breakouts on a day the Swing tab's market gate was closed; fixed in the next entry.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.25<br/>2026-11-19</div>

@@ -870,6 +870,18 @@
     .pos-analytics { grid-template-columns: 1fr; }
     .an-cell { border-right: none; }
   }
+  .sync-panel { background: var(--panel); border-radius: 18px; padding: 18px 20px; margin: 16px 0 0; scroll-margin-top: 64px; }
+  .sync-head { display: flex; align-items: baseline; gap: 10px; }
+  .sync-head h3 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.015em; }
+  .sync-state { font-size: 12px; font-weight: 600; color: var(--ink-3); background: var(--fill); border-radius: 980px; padding: 2px 10px; }
+  .sync-state.on { color: var(--signal); } .sync-state.warn { color: var(--caution); }
+  .sync-panel p { margin: 8px 0 12px; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); max-width: 78ch; }
+  .sync-panel code { background: var(--ground); padding: 3px 8px; border-radius: 8px; font-size: 13px; letter-spacing: 0.04em; }
+  .sync-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sync-acts button { border: none; background: var(--fill); color: var(--ink); font-size: 13px; font-weight: 500; padding: 8px 16px; cursor: pointer; min-height: 36px; }
+  .sync-acts button:hover { background: var(--fill-hover); }
+  .sync-acts button.primary { background: var(--accent); color: #fff; }
+  .sync-acts button.quiet { background: transparent; color: var(--ink-3); }
 </style>
 <link rel="stylesheet" href="/apple.css">
 
@@ -927,7 +939,7 @@
 
   <div class="section-head">
     <h2>Add a position</h2>
-    <span class="aside">Only stored in your browser · never sent anywhere</span>
+    <span class="aside">Stored in this browser · leaves it only if you turn on sync (encrypted) or phone alerts</span>
   </div>
 
   <div class="quick-add">
@@ -1001,6 +1013,12 @@ AAPL 30 @ 218.75"></textarea>
     <input type="file" id="import-file" accept="application/json" style="display: none;"/>
     <button class="tool-btn" id="clear-btn" style="color: var(--ink-3); margin-left: auto;" title="Delete all positions">✕ Clear all</button>
   </div>
+
+  <section class="sync-panel" id="sync" aria-live="polite">
+    <div class="sync-head"><h3>Sync across devices</h3><span class="sync-state" id="sync-state">Off</span></div>
+    <p id="sync-text"></p>
+    <div class="sync-acts" id="sync-acts"></div>
+  </section>
 
   <div class="section-head">
     <h2>Positions · action verdicts</h2>
@@ -1102,7 +1120,8 @@ import { analyze, regime, cryptoRegime } from './analyze.js';
 import { positionVerdict, defaultStop, classOf } from './exits.js';
 import { LIMITS, loadJournal, saveJournal, closeTrade, journalStats, riskBudget } from './risk.js';
 import { px, num, tradingDateISO, parseNum, noteBuild } from './ui.js';
-import { ask, confirmBox, notify } from './dialog.js';
+import { ask, confirmBox, notify, showCopy } from './dialog.js';
+import { formatCode } from './sync.js';
 import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from './indicators.js';
 
 (function () {
@@ -1582,6 +1601,66 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
     });
     renderRisk(rows); renderPortfolioRisk(rows); renderJournal();
   }
+
+  // ---- Sync across devices (sync.js; the server only ever holds ciphertext) ----
+  const syncEl = { state: document.getElementById('sync-state'), text: document.getElementById('sync-text'), acts: document.getElementById('sync-acts') };
+  let syncNote = null;                  // last result from the background sync or a button
+  const when = (iso) => { try { return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch { return 'earlier'; } };
+  function renderSync() {
+    const sync = window.sdSync; if (!sync || !syncEl.acts) return;
+    const st = sync.state(), btn = (id, label, cls = '') => `<button id="${id}" class="${cls}">${label}</button>`;
+    if (!st) {
+      syncEl.state.textContent = 'Off'; syncEl.state.className = 'sync-state';
+      syncEl.text.textContent = 'Your positions, journal and settings live in this browser only. Sync keeps a second device, or the home-screen app, in step with it. Everything is encrypted on this device before it leaves, with a passphrase only you know: the server stores it but cannot read it. No account or email is needed.';
+      syncEl.acts.innerHTML = btn('sync-setup', 'Set up sync', 'primary') + btn('sync-join', 'I have a sync code');
+    } else if (syncNote && (syncNote.status === 'conflict' || syncNote.status === 'conflict-remote')) {
+      syncEl.state.textContent = 'Needs a choice'; syncEl.state.className = 'sync-state warn';
+      syncEl.text.textContent = 'This device and another one both changed since they last synced, so nothing was overwritten. Choose which copy to keep; the other device will then follow it.';
+      syncEl.acts.innerHTML = btn('sync-mine', "Keep this device's data", 'primary') + btn('sync-theirs', "Take the other device's data");
+    } else if (syncNote && syncNote.status === 'gone') {
+      syncEl.state.textContent = 'Paused'; syncEl.state.className = 'sync-state warn';
+      syncEl.text.textContent = 'The cloud copy was deleted from another device. The data on this device is untouched. Turn sync off here, then set it up again if you still want it.';
+      syncEl.acts.innerHTML = btn('sync-off', 'Turn off on this device', 'primary');
+    } else {
+      syncEl.state.textContent = 'On'; syncEl.state.className = 'sync-state on';
+      syncEl.text.innerHTML = `${syncNote && syncNote.status === 'error' ? `<strong>Last attempt failed:</strong> ${escapeHtml(syncNote.error)}. ` : ''}This device syncs when a page opens and after you change something. Last in step ${escapeHtml(when(st.at))}. To add a device, open Dashboard on it, choose "I have a sync code", and enter this code and your passphrase.`;
+      syncEl.acts.innerHTML = btn('sync-now', 'Sync now', 'primary') + btn('sync-show', 'Show sync code') + btn('sync-off', 'Turn off on this device', 'quiet') + btn('sync-wipe', 'Delete the cloud copy', 'quiet');
+    }
+  }
+  async function syncAct(fn, okText) {
+    try { const r = await fn(); syncNote = r; renderSync(); if (r && r.status === 'pulled') { location.reload(); return; } if (okText) syncEl.state.textContent = okText; }
+    catch (e) { await notify(`Sync could not finish.\n\n${e.message}`); renderSync(); }
+  }
+  syncEl.acts?.addEventListener('click', async (ev) => {
+    const id = ev.target.closest('button')?.id, sync = window.sdSync; if (!id || !sync) return;
+    if (id === 'sync-setup') {
+      const p1 = await ask('Choose a passphrase for sync\n\nAt least 8 characters. It encrypts your data before it leaves this device. Nobody can reset it: if you forget it, the cloud copy cannot be opened (the data on your devices is not affected).', { type: 'password', ok: 'Continue', placeholder: 'Passphrase' });
+      if (p1 == null) return;
+      const p2 = await ask('Type the passphrase again', { type: 'password', ok: 'Set up sync', placeholder: 'Passphrase' });
+      if (p2 == null) return;
+      if (p1 !== p2) { await notify('The two passphrases did not match. Nothing was set up.'); return; }
+      try { const { code } = await sync.setup(p1); syncNote = null; renderSync(); await showCopy(code, 'Sync is on. This is your sync code.\n\nOn your other device: Dashboard → "I have a sync code", then enter this code and your passphrase. You can show the code again from here at any time.'); }
+      catch (e) { await notify(`Sync was not set up.\n\n${e.message}`); }
+    } else if (id === 'sync-join') {
+      const code = await ask('Enter the sync code from your other device\n\n20 letters and digits, shown under Dashboard → Sync on that device.', { ok: 'Continue', placeholder: 'XXXX-XXXX-XXXX-XXXX-XXXX' });
+      if (!code) return;
+      const pass = await ask('Enter your sync passphrase', { type: 'password', ok: 'Continue', placeholder: 'Passphrase' });
+      if (pass == null) return;
+      try {
+        const look = await sync.join(code, pass);
+        if (look.wouldReplace && !(await confirmBox(`Replace what is on this device?\n\nThis device already has positions, a journal or lists. Joining replaces them with the synced copy (last changed ${when(look.updatedAt)}). Export first if you want to keep what is here.`, { ok: 'Replace and sync', danger: true }))) return;
+        await sync.join(code, pass, { replace: true });
+        location.reload();
+      } catch (e) { await notify(`Could not join.\n\n${e.message}`); }
+    } else if (id === 'sync-now') await syncAct(() => sync.syncNow(), 'In step');
+    else if (id === 'sync-mine') { if (await confirmBox("Keep this device's data?\n\nThe other device's changes since the last sync are discarded, and it will pick up this copy.", { ok: 'Keep this device', danger: true })) await syncAct(() => sync.resolve('mine'), 'In step'); }
+    else if (id === 'sync-theirs') { if (await confirmBox("Take the other device's data?\n\nChanges made on this device since the last sync are discarded.", { ok: 'Take the other copy', danger: true })) await syncAct(() => sync.resolve('theirs')); }
+    else if (id === 'sync-show') await showCopy(formatCode(sync.state().code), 'Your sync code. Enter it, with your passphrase, on the device you want to add.');
+    else if (id === 'sync-off') { if (await confirmBox('Turn sync off on this device?\n\nThe data here stays as it is. Other devices keep syncing with each other.', { ok: 'Turn off' })) { await sync.disconnect(); syncNote = null; renderSync(); } }
+    else if (id === 'sync-wipe') { if (await confirmBox('Delete the cloud copy?\n\nSync stops on every device. The data already on each device stays there. This cannot be undone.', { ok: 'Delete cloud copy', danger: true })) { try { await sync.disconnect({ wipe: true }); } catch (e) { await notify(`Could not delete it.\n\n${e.message}`); } syncNote = null; renderSync(); } }
+  });
+  window.addEventListener('sd-sync', (e) => { syncNote = e.detail; renderSync(); });
+  renderSync();
 
   // ---- Portfolio risk check: concentration, sector, class, correlation, the one vulnerability ----
   let universeMap = null;
@@ -2123,4 +2202,5 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
   }
 })();
 </script>
+<script type="module" src="/sync.js"></script>
 </html>
