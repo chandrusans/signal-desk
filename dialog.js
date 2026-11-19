@@ -10,19 +10,19 @@
 //   await notify('Enter the price you sold at.');                                              // void
 
 const CSS = `
-.sd-dialog { border: 1px solid var(--rule, #333); background: var(--panel, var(--ground, #111)); color: var(--ink, #eee); padding: 0; max-width: min(520px, 92vw); width: 100%; box-shadow: 0 24px 80px rgba(0,0,0,.45); }
-.sd-dialog::backdrop { background: rgba(0,0,0,.5); }
-.sd-dialog form { margin: 0; padding: 18px 20px 16px; display: flex; flex-direction: column; gap: 12px; }
-.sd-dialog .sd-msg { white-space: pre-wrap; font-size: 14px; line-height: 1.5; margin: 0; color: var(--ink, #eee); overflow-wrap: anywhere; }
+.sd-dialog { border: none; border-radius: 18px; background: var(--ground, #fff); color: var(--ink, #1d1d1f); padding: 0; max-width: min(520px, 92vw); width: 100%; box-shadow: 0 24px 80px rgba(0,0,0,.28), 0 0 0 1px var(--rule, rgba(0,0,0,.1)); font-family: var(--sans, -apple-system, system-ui, sans-serif); }
+.sd-dialog::backdrop { background: rgba(0,0,0,.38); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.sd-dialog form { margin: 0; padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 14px; }
+.sd-dialog .sd-msg { white-space: pre-wrap; font-size: 15px; line-height: 1.47; letter-spacing: -0.011em; margin: 0; color: var(--ink, #1d1d1f); overflow-wrap: anywhere; }
 .sd-dialog .sd-msg strong { font-weight: 600; }
-.sd-dialog input, .sd-dialog textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; font: 14px var(--mono, ui-monospace, monospace); background: var(--ground, #0b0b0b); color: var(--ink, #eee); border: 1px solid var(--rule, #333); border-radius: 2px; }
-.sd-dialog textarea { min-height: 140px; resize: vertical; font-size: 12px; line-height: 1.45; }
-.sd-dialog input:focus, .sd-dialog textarea:focus { outline: 2px solid var(--accent, #c9a74b); outline-offset: 1px; }
-.sd-dialog .sd-row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
-.sd-dialog button { font: 11px var(--mono, ui-monospace, monospace); letter-spacing: .12em; text-transform: uppercase; padding: 10px 16px; min-height: 40px; cursor: pointer; border-radius: 2px; border: 1px solid var(--rule, #333); background: transparent; color: var(--ink-2, var(--ink, #eee)); }
-.sd-dialog button.ok { background: var(--accent, #c9a74b); color: var(--ground, #111); border-color: var(--accent, #c9a74b); font-weight: 600; }
-.sd-dialog button.ok.danger { background: var(--risk, #c0392b); border-color: var(--risk, #c0392b); color: #fff; }
-.sd-dialog button:focus-visible { outline: 2px solid var(--accent, #c9a74b); outline-offset: 2px; }
+.sd-dialog input, .sd-dialog textarea { width: 100%; box-sizing: border-box; padding: 11px 13px; font: 16px var(--sans, -apple-system, system-ui, sans-serif); background: var(--ground, #fff); color: var(--ink, #1d1d1f); border: 1px solid var(--rule, #d2d2d7); border-radius: 12px; }
+.sd-dialog textarea { min-height: 140px; resize: vertical; font: 12px/1.45 var(--code, ui-monospace, Menlo, monospace); }
+.sd-dialog input:focus, .sd-dialog textarea:focus { outline: none; border-color: var(--accent, #0071e3); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent, #0071e3) 22%, transparent); }
+.sd-dialog .sd-row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.sd-dialog button { font: 500 14px var(--sans, -apple-system, system-ui, sans-serif); padding: 9px 18px; min-height: 40px; cursor: pointer; border-radius: 980px; border: none; background: var(--fill, #e8e8ed); color: var(--ink, #1d1d1f); }
+.sd-dialog button.ok { background: var(--accent, #0071e3); color: #fff; }
+.sd-dialog button.ok.danger { background: var(--risk, #d70015); color: #fff; }
+.sd-dialog button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent, #0071e3) 60%, transparent); outline-offset: 2px; }
 `;
 
 let dlg = null;

@@ -121,6 +121,7 @@ signal-desk/
 ├── swing.html         Swing — $1,000 paper account, four strategies, buy and exit alerts
 ├── strategies.js      The swing strategies: entry signal, grade, small-account sizing (shared with alerts)
 ├── replay.js          Ten-year replay simulator: a cash account through the live rules, day by day
+├── apple.css          The shared design layer (system SF type, surfaces, cards, pills, sticky nav); loaded by every page after its own CSS
 ├── earnings-calendar.js  Next-earnings dates: calendar file lookup + SEC-rhythm estimate (shared by API and nightly build)
 ├── manifest.webmanifest, icon-*.png  Home-screen install (iOS: Share → Add to Home Screen)
 ├── alerts.html        Seven alert types + browser notifications (engine in alerts.js)

@@ -10,8 +10,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Signal Desk">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#F4EFE4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E1116" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <title>Signal Desk — Handbook</title>
 <script>
   (function () {
@@ -23,48 +23,49 @@
 </script>
 <style>
   :root {
-    --ground: #F4EFE4;
-    --ground-2: #EDE7D8;
-    --ink: #161512;
-    --ink-2: #3A362E;
-    --ink-3: #6B655A;
-    --rule: #D9D2BF;
-    --panel: #FBF8F0;
-    --accent: #B8863A;
-    --signal: #3B8C5A;
-    --caution: #B57F1F;
-    --risk: #B84438;
+    --ground: #FFFFFF;
+    --ground-2: #E8E8ED;
+    --ink: #1D1D1F;
+    --ink-2: #424245;
+    --ink-3: #6E6E73;
+    --rule: #D2D2D7;
+    --panel: #F5F5F7;
+    --accent: #0071E3;
+    --signal: #248A3D;
+    --caution: #B25000;
+    --risk: #D70015;
 
-    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-    --sans: ui-sans-serif, -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
-    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --serif: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --code: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --ground: #0E1116;
-      --ground-2: #141821;
-      --ink: #E7E2D6;
-      --ink-2: #B5AF9F;
-      --ink-3: #918B7B;
-      --rule: #262B36;
-      --panel: #161B24;
-      --accent: #D6A24B;
-      --signal: #5FBF83;
-      --caution: #D4A040;
-      --risk: #D96355;
+      --ground: #000000;
+      --ground-2: #161617;
+      --ink: #F5F5F7;
+      --ink-2: #C7C7CC;
+      --ink-3: #98989D;
+      --rule: #333336;
+      --panel: #1D1D1F;
+      --accent: #2997FF;
+      --signal: #30D158;
+      --caution: #FF9F0A;
+      --risk: #FF453A;
     }
   }
   :root[data-theme="light"] {
-    --ground: #F4EFE4; --ground-2: #EDE7D8; --ink: #161512; --ink-2: #3A362E; --ink-3: #6B655A;
-    --rule: #D9D2BF; --panel: #FBF8F0; --accent: #B8863A; --signal: #3B8C5A; --caution: #B57F1F; --risk: #B84438;
+    --ground: #FFFFFF; --ground-2: #E8E8ED; --ink: #1D1D1F; --ink-2: #424245; --ink-3: #6E6E73;
+    --rule: #D2D2D7; --panel: #F5F5F7; --accent: #0071E3; --signal: #248A3D; --caution: #B25000; --risk: #D70015;
   }
   :root[data-theme="dark"] {
-    --ground: #0E1116; --ground-2: #141821; --ink: #E7E2D6; --ink-2: #B5AF9F; --ink-3: #918B7B;
-    --rule: #262B36; --panel: #161B24; --accent: #D6A24B; --signal: #5FBF83; --caution: #D4A040; --risk: #D96355;
+    --ground: #000000; --ground-2: #161617; --ink: #F5F5F7; --ink-2: #C7C7CC; --ink-3: #98989D;
+    --rule: #333336; --panel: #1D1D1F; --accent: #2997FF; --signal: #30D158; --caution: #FF9F0A; --risk: #FF453A;
   }
   html { color-scheme: light dark; }
   html, body { overflow-x: hidden; max-width: 100%; }
-  body { background: var(--ground); color: var(--ink); font-family: var(--serif); font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--serif); font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; font-weight: 600; letter-spacing: -0.015em; }
   * { box-sizing: border-box; }
 
   .shell {
@@ -92,10 +93,10 @@
     border-bottom: 1px solid var(--ink);
     margin-bottom: 32px;
   }
-  .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
-  .brand { font-family: var(--serif); font-size: 40px; line-height: 1; letter-spacing: -0.015em; font-weight: 500; text-wrap: balance; margin: 0; }
+  .kicker { font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin-bottom: 10px; }
+  .brand { font-family: var(--serif); font-size: 40px; line-height: 1; letter-spacing: -0.015em; font-weight: 600; text-wrap: balance; margin: 0; }
   .brand em { font-style: italic; color: var(--accent); font-weight: 400; }
-  .meta { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-2); line-height: 1.7; }
+  .meta { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--ink-2); line-height: 1.7; }
   .meta a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
   .meta a:hover { border-bottom-style: solid; }
 
@@ -108,9 +109,9 @@
   }
   .toc h3 {
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--ink-3);
     margin: 0 0 12px;
     font-weight: 500;
@@ -119,11 +120,11 @@
   .toc-group + .toc-group { padding-top: 14px; border-top: 1px dotted var(--rule); }
   .toc-sub {
     font-family: var(--serif);
-    font-style: italic;
+    
     font-size: 13px;
     color: var(--accent);
     margin: 0 0 8px;
-    font-weight: 500;
+    font-weight: 400;
     letter-spacing: 0;
   }
   .toc ul {
@@ -158,9 +159,9 @@
     padding-top: 14px;
     border-top: 1px solid var(--rule);
     font-family: var(--mono);
-    font-size: 10.5px;
+    font-size: 12px;
     color: var(--ink-3);
-    letter-spacing: 0.06em;
+    
   }
   .toc .toc-log a { color: var(--accent); border-bottom-color: transparent; }
 
@@ -170,15 +171,15 @@
   .content h2 {
     font-family: var(--serif);
     font-size: 28px;
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: -0.01em;
     margin: 0 0 6px;
     text-wrap: balance;
   }
   .content h2 .chnum {
     font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.14em;
+    font-size: 12px;
+    
     color: var(--accent);
     display: block;
     margin-bottom: 4px;
@@ -187,7 +188,7 @@
   .content h3 {
     font-family: var(--serif);
     font-size: 20px;
-    font-weight: 500;
+    font-weight: 600;
     margin: 32px 0 10px;
     letter-spacing: -0.005em;
   }
@@ -200,7 +201,7 @@
     font-size: 13px;
     background: var(--ground-2);
     padding: 1px 6px;
-    border-radius: 2px;
+    border-radius: 6px;
     color: var(--ink);
   }
   .content a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
@@ -215,9 +216,9 @@
   }
   .callout .callout-label {
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--ink-3);
     margin-bottom: 6px;
     display: block;
@@ -245,9 +246,9 @@
   .pt-table th {
     background: var(--ground-2);
     font-family: var(--mono);
-    font-size: 10.5px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--ink-3);
     font-weight: 500;
   }
@@ -273,9 +274,9 @@
     display: inline-block;
     padding: 2px 8px;
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     border: 1px solid;
     line-height: 1.5;
     vertical-align: middle;
@@ -292,10 +293,10 @@
   .changelog { border-top: 2px solid var(--ink); padding-top: 20px; }
   .cadence { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
   .cadence th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--ink);
-    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+    font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
   .cadence td { padding: 8px 10px; border-bottom: 1px solid var(--rule); color: var(--ink-2); }
   .cadence td:first-child { color: var(--ink); }
-  @media (max-width: 640px) { .cadence { font-size: 11.5px; } .cadence th, .cadence td { padding: 6px 5px; } }
+  @media (max-width: 640px) { .cadence { font-size: 12px; } .cadence th, .cadence td { padding: 6px 5px; } }
   .log-entry {
     display: grid;
     grid-template-columns: 110px 1fr;
@@ -306,17 +307,16 @@
   .log-entry:last-child { border-bottom: none; }
   .log-entry .when {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--accent);
     font-variant-numeric: tabular-nums;
-    letter-spacing: 0.06em;
+    
   }
   .log-entry .what h4 {
     font-family: var(--serif);
     font-size: 16px;
-    font-weight: 500;
-    margin: 0 0 6px;
-  }
+    font-weight: 600;
+    margin: 0 0 6px; letter-spacing: -0.015em; }
   .log-entry .what ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
   .log-entry .what li { margin-bottom: 3px; font-family: var(--sans); }
 
@@ -330,9 +330,9 @@
   }
   .disclosure h4 {
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--risk);
     margin: 0 0 8px;
     font-weight: 500;
@@ -344,9 +344,9 @@
     border: 1px solid var(--rule);
     color: var(--ink-2);
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     padding: 6px 10px;
     margin-top: 8px;
     cursor: pointer;
@@ -356,24 +356,24 @@
   /* --- UI trends layer for handbook --- */
   :root {
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-    --glass-bg: rgba(251, 248, 240, 0.72);
-    --glass-border: rgba(22, 21, 18, 0.10);
+    --glass-bg: rgba(255, 255, 255, 0.72);
+    --glass-border: rgba(0, 0, 0, 0.10);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --glass-bg: rgba(14, 17, 22, 0.65);
-      --glass-border: rgba(214, 162, 75, 0.12);
+      --glass-bg: rgba(22, 22, 23, 0.65);
+      --glass-border: rgba(41, 151, 255, 0.12);
     }
     /* Subtle atmospheric background (only when standalone, not embedded) */
     body:not(.embedded) {
       background:
-        radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.05), transparent 60%),
+        radial-gradient(1200px 700px at 15% -10%, rgba(41, 151, 255, 0.05), transparent 60%),
         var(--ground);
     }
   }
   :root[data-theme="dark"] body:not(.embedded) {
     background:
-      radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.05), transparent 60%),
+      radial-gradient(1200px 700px at 15% -10%, rgba(41, 151, 255, 0.05), transparent 60%),
       var(--ground);
   }
   /* When embedded in the drawer iframe, background becomes transparent so
@@ -383,7 +383,7 @@
     background: color-mix(in srgb, var(--panel) 40%, transparent);
     padding: 16px 20px;
     border: 1px solid var(--glass-border);
-    border-radius: 10px;
+    border-radius: 16px;
     backdrop-filter: blur(12px);
   }
 
@@ -395,7 +395,7 @@
   .toc li:hover::before { color: var(--accent); }
 
   .theme-toggle {
-    border-radius: 6px;
+    border-radius: 14px;
     transition: transform 0.18s var(--ease-out), border-color 0.18s var(--ease-out);
   }
   .theme-toggle:hover { transform: translateY(-1px); }
@@ -446,7 +446,7 @@
 
     .masthead { grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px; padding-bottom: 14px; }
     .brand { font-size: 25px; }
-    .meta { text-align: left; font-size: 10.5px; }
+    .meta { text-align: left; font-size: 12px; }
     .theme-toggle { min-height: 38px; }
 
     /* TOC becomes a collapsible-feeling block above the content rather than
@@ -475,7 +475,7 @@
 
     .log-entry { grid-template-columns: 1fr; gap: 8px; padding: 14px 0; }
     .log-entry .when {
-      font-size: 10.5px; letter-spacing: 0.1em;
+      font-size: 12px; 
       padding-bottom: 4px; border-bottom: 1px dotted var(--rule);
     }
     .log-entry .what h4 { font-size: 15px; }
@@ -490,11 +490,12 @@
     .content h2 { font-size: 21px; }
   }
 </style>
+<link rel="stylesheet" href="/apple.css">
 
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.24</div>
+      <div class="kicker">Signal Desk · Handbook · v3.25</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -1487,6 +1488,19 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 26</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.25<br/>2026-11-19</div>
+        <div class="what">
+          <h4>A new look across the whole app</h4>
+          <ul>
+            <li>Every page now uses the system font (San Francisco on iPhone, iPad and Mac; the system sans elsewhere), white and near-black surfaces, soft grey cards with rounded corners, pill-shaped buttons and one blue accent. The serif headlines, small capital labels, sharp boxes and gold accents of the old look are gone.</li>
+            <li>The row of tabs is now a navigation bar that stays at the top as you scroll, on every page.</li>
+            <li>Small text is larger: nothing is set below 12 px. Labels are written in sentence case instead of capitals.</li>
+            <li>Dialogs, inputs and the handbook itself follow the same style in light and dark mode. Nothing about the rules, the numbers or where things are on a page has changed.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.24<br/>2026-11-19</div>

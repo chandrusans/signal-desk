@@ -10,8 +10,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Signal Desk">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#F4EFE4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E1116" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <title>Signal Desk — Dashboard · My Portfolio</title>
 <script>
   (function () {
@@ -23,73 +23,74 @@
 </script>
 <style>
   :root {
-    --ground: #F4EFE4;
-    --ground-2: #EDE7D8;
-    --ink: #161512;
-    --ink-2: #3A362E;
-    --ink-3: #6B655A;
-    --rule: #D9D2BF;
-    --panel: #FBF8F0;
-    --accent: #B8863A;
-    --accent-soft: #E9D3A3;
-    --signal: #3B8C5A;
-    --caution: #B57F1F;
-    --risk: #B84438;
+    --ground: #FFFFFF;
+    --ground-2: #E8E8ED;
+    --ink: #1D1D1F;
+    --ink-2: #424245;
+    --ink-3: #6E6E73;
+    --rule: #D2D2D7;
+    --panel: #F5F5F7;
+    --accent: #0071E3;
+    --accent-soft: #E8F2FF;
+    --signal: #248A3D;
+    --caution: #B25000;
+    --risk: #D70015;
 
-    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-    --sans: ui-sans-serif, -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
-    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --serif: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --code: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --neu-hi: rgba(255, 255, 255, 0.9);
-    --neu-lo: rgba(96, 84, 60, 0.14);
+    --neu-lo: rgba(0, 0, 0, 0.14);
     --neu-inset-hi: rgba(255, 255, 255, 0.7);
-    --neu-inset-lo: rgba(96, 84, 60, 0.16);
-    --glass-bg: rgba(251, 248, 240, 0.72);
-    --glass-border: rgba(22, 21, 18, 0.10);
+    --neu-inset-lo: rgba(0, 0, 0, 0.16);
+    --glass-bg: rgba(255, 255, 255, 0.72);
+    --glass-border: rgba(0, 0, 0, 0.10);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --ground: #0E1116;
-      --ground-2: #141821;
-      --ink: #E7E2D6;
-      --ink-2: #B5AF9F;
-      --ink-3: #918B7B;
-      --rule: #262B36;
-      --panel: #161B24;
-      --accent: #D6A24B;
-      --accent-soft: #4A3820;
-      --signal: #5FBF83;
-      --caution: #D4A040;
-      --risk: #D96355;
+      --ground: #000000;
+      --ground-2: #161617;
+      --ink: #F5F5F7;
+      --ink-2: #C7C7CC;
+      --ink-3: #98989D;
+      --rule: #333336;
+      --panel: #1D1D1F;
+      --accent: #2997FF;
+      --accent-soft: #0A2A4D;
+      --signal: #30D158;
+      --caution: #FF9F0A;
+      --risk: #FF453A;
       --neu-hi: rgba(255, 255, 255, 0.045);
       --neu-lo: rgba(0, 0, 0, 0.55);
       --neu-inset-hi: rgba(255, 255, 255, 0.03);
       --neu-inset-lo: rgba(0, 0, 0, 0.5);
-      --glass-bg: rgba(14, 17, 22, 0.65);
-      --glass-border: rgba(214, 162, 75, 0.12);
+      --glass-bg: rgba(22, 22, 23, 0.65);
+      --glass-border: rgba(41, 151, 255, 0.12);
     }
-    body { background: radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.06), transparent 60%), var(--ground); }
+    body { background: radial-gradient(1200px 700px at 15% -10%, rgba(41, 151, 255, 0.06), transparent 60%), var(--ground); }
   }
   :root[data-theme="light"] {
-    --ground: #F4EFE4; --ground-2: #EDE7D8; --ink: #161512; --ink-2: #3A362E; --ink-3: #6B655A;
-    --rule: #D9D2BF; --panel: #FBF8F0; --accent: #B8863A; --accent-soft: #E9D3A3;
-    --signal: #3B8C5A; --caution: #B57F1F; --risk: #B84438;
-    --neu-hi: rgba(255,255,255,0.9); --neu-lo: rgba(96,84,60,0.14);
-    --neu-inset-hi: rgba(255,255,255,0.7); --neu-inset-lo: rgba(96,84,60,0.16);
-    --glass-bg: rgba(251,248,240,0.72); --glass-border: rgba(22,21,18,0.10);
+    --ground: #FFFFFF; --ground-2: #E8E8ED; --ink: #1D1D1F; --ink-2: #424245; --ink-3: #6E6E73;
+    --rule: #D2D2D7; --panel: #F5F5F7; --accent: #0071E3; --accent-soft: #E8F2FF;
+    --signal: #248A3D; --caution: #B25000; --risk: #D70015;
+    --neu-hi: rgba(255,255,255,0.9); --neu-lo: rgba(0, 0, 0,0.14);
+    --neu-inset-hi: rgba(255,255,255,0.7); --neu-inset-lo: rgba(0, 0, 0,0.16);
+    --glass-bg: rgba(255, 255, 255,0.72); --glass-border: rgba(0, 0, 0,0.10);
   }
   :root[data-theme="light"] body { background: var(--ground); }
   :root[data-theme="dark"] {
-    --ground: #0E1116; --ground-2: #141821; --ink: #E7E2D6; --ink-2: #B5AF9F; --ink-3: #918B7B;
-    --rule: #262B36; --panel: #161B24; --accent: #D6A24B; --accent-soft: #4A3820;
-    --signal: #5FBF83; --caution: #D4A040; --risk: #D96355;
+    --ground: #000000; --ground-2: #161617; --ink: #F5F5F7; --ink-2: #C7C7CC; --ink-3: #98989D;
+    --rule: #333336; --panel: #1D1D1F; --accent: #2997FF; --accent-soft: #0A2A4D;
+    --signal: #30D158; --caution: #FF9F0A; --risk: #FF453A;
     --neu-hi: rgba(255,255,255,0.045); --neu-lo: rgba(0,0,0,0.55);
     --neu-inset-hi: rgba(255,255,255,0.03); --neu-inset-lo: rgba(0,0,0,0.5);
-    --glass-bg: rgba(14,17,22,0.65); --glass-border: rgba(214,162,75,0.12);
+    --glass-bg: rgba(22, 22, 23,0.65); --glass-border: rgba(41, 151, 255,0.12);
   }
   :root[data-theme="dark"] body {
-    background: radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.06), transparent 60%), var(--ground);
+    background: radial-gradient(1200px 700px at 15% -10%, rgba(41, 151, 255, 0.06), transparent 60%), var(--ground);
   }
 
   html { color-scheme: light dark; }
@@ -109,13 +110,13 @@
   /* Tab bar */
   .tabbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 0 12px; margin-bottom: 20px; border-bottom: 1px solid var(--rule); }
   .tabbar-tabs { display: flex; gap: 0; }
-  .tab { padding: 10px 22px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); text-decoration: none; border: none; border-bottom: 2px solid transparent; transition: color 0.15s var(--ease-out), background 0.15s var(--ease-out); background: transparent; cursor: pointer; border-radius: 10px 10px 0 0; }
+  .tab { padding: 10px 22px; font-family: var(--mono); font-size: 12px; color: var(--ink-3); text-decoration: none; border: none; border-bottom: 2px solid transparent; transition: color 0.15s var(--ease-out), background 0.15s var(--ease-out); background: transparent; cursor: pointer; border-radius: 10px 10px 0 0; }
   .tab:hover:not(.on) { color: var(--ink); background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 6%, transparent)); }
   .tab.on { color: var(--ink); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent); box-shadow: inset 0 -2px 0 var(--accent); border-bottom-color: transparent; }
   .handbook-btn {
     background: var(--panel); border: 1px solid var(--rule); color: var(--ink-2);
-    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
-    padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px;
+    font-family: var(--mono); font-size: 12px; 
+    padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border-radius: 16px;
     box-shadow: 3px 3px 8px var(--neu-lo), -3px -3px 8px var(--neu-hi);
     transition: transform 0.18s var(--ease-out), color 0.18s var(--ease-out);
   }
@@ -132,14 +133,14 @@
     padding-bottom: 20px;
     border-bottom: 1px solid var(--ink);
   }
-  .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
-  .brand { font-family: var(--serif); font-size: 40px; line-height: 1; letter-spacing: -0.015em; font-weight: 500; text-wrap: balance; margin: 0; }
+  .kicker { font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin-bottom: 10px; }
+  .brand { font-family: var(--serif); font-size: 40px; line-height: 1; letter-spacing: -0.015em; font-weight: 600; text-wrap: balance; margin: 0; }
   .brand em { font-style: italic; color: var(--accent); font-weight: 400; }
-  .meta { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-2); line-height: 1.7; }
+  .meta { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--ink-2); line-height: 1.7; }
   .theme-toggle {
     background: var(--panel); border: none; color: var(--ink-2); font-family: var(--mono);
-    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 10px;
-    margin-top: 8px; cursor: pointer; border-radius: 6px;
+    font-size: 12px; padding: 6px 10px;
+    margin-top: 8px; cursor: pointer; border-radius: 14px;
     box-shadow: 2px 2px 6px var(--neu-lo), -2px -2px 6px var(--neu-hi);
     transition: transform 0.18s var(--ease-out);
   }
@@ -158,8 +159,8 @@
   /* Refresh button (matches Stocks + Metals meta) */
   .refresh-btn {
     background: transparent; border: 1px solid var(--rule); color: var(--ink-3);
-    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
-    padding: 3px 7px; margin-left: 6px; cursor: pointer; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; 
+    padding: 3px 7px; margin-left: 6px; cursor: pointer; border-radius: 6px;
     transition: color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
   }
   .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
@@ -184,9 +185,9 @@
   }
   .sum-cell:last-child { border-right: none; }
   @media (max-width: 900px) { .sum-cell:nth-child(2n) { border-right: none; } }
-  .sum-cell .label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+  .sum-cell .label { font-size: 12px; color: var(--ink-3); margin-bottom: 4px; }
   .sum-cell .value { font-size: 18px; color: var(--ink); }
-  .sum-cell .delta { font-size: 11px; margin-top: 2px; }
+  .sum-cell .delta { font-size: 12px; margin-top: 2px; }
   .up { color: var(--signal); }
   .down { color: var(--risk); }
   .flat { color: var(--ink-3); }
@@ -203,15 +204,15 @@
   .section-head h2 {
     font-family: var(--serif);
     font-size: 22px;
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: -0.01em;
     margin: 0;
   }
   .section-head .aside {
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--ink-3);
   }
 
@@ -241,11 +242,11 @@
     background: var(--ground);
     color: var(--ink);
     border: 1px solid var(--rule);
-    border-radius: 8px;
+    border-radius: 16px;
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
     width: 100%;
-    letter-spacing: 0.02em;
+    
   }
   .qa-input:focus {
     border-color: var(--accent);
@@ -261,10 +262,10 @@
     top: 50%;
     transform: translateY(-50%);
     font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.04em;
+    font-size: 12px;
+    
     padding: 5px 10px;
-    border-radius: 4px;
+    border-radius: 12px;
     background: var(--ground-2);
     color: var(--ink-3);
     border: 1px solid transparent;
@@ -280,13 +281,13 @@
   .qa-btn {
     font-family: var(--mono);
     font-size: 12px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    
+    
     padding: 0 22px;
     background: var(--accent);
-    color: var(--ground);
+    color: #fff;
     border: none;
-    border-radius: 8px;
+    border-radius: 16px;
     cursor: pointer;
     font-weight: 600;
     transition: transform 0.15s var(--ease-out), opacity 0.15s;
@@ -300,9 +301,9 @@
     justify-content: space-between;
     align-items: center;
     font-family: var(--mono);
-    font-size: 10.5px;
+    font-size: 12px;
     color: var(--ink-3);
-    letter-spacing: 0.04em;
+    
     margin-top: 10px;
     flex-wrap: wrap;
     gap: 12px;
@@ -310,18 +311,18 @@
   .qa-hint code {
     background: var(--ground-2);
     padding: 1px 6px;
-    border-radius: 3px;
+    border-radius: 6px;
     color: var(--ink-2);
-    font-size: 10.5px;
+    font-size: 12px;
   }
   .qa-hint button {
     background: transparent;
     border: none;
     color: var(--accent);
     font-family: var(--mono);
-    font-size: 10.5px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     cursor: pointer;
     padding: 4px 0;
   }
@@ -339,9 +340,9 @@
 
   .qa-panel-label {
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--ink-3);
     margin-bottom: 8px;
   }
@@ -354,7 +355,7 @@
     background: var(--ground);
     color: var(--ink);
     border: 1px solid var(--rule);
-    border-radius: 6px;
+    border-radius: 14px;
     outline: none;
     resize: vertical;
     line-height: 1.7;
@@ -369,28 +370,28 @@
   }
   .qa-secondary-btn {
     font-family: var(--mono);
-    font-size: 10.5px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     padding: 8px 14px;
     background: transparent;
     color: var(--ink-2);
     border: 1px solid var(--rule);
-    border-radius: 6px;
+    border-radius: 14px;
     cursor: pointer;
     transition: color 0.15s, border-color 0.15s;
   }
   .qa-secondary-btn:hover { color: var(--accent); border-color: var(--accent); }
-  .qa-secondary-btn.primary { background: var(--accent); color: var(--ground); border-color: var(--accent); }
+  .qa-secondary-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   .qa-secondary-btn.primary:hover { color: var(--ground); }
 
   .parse-report {
     margin-top: 10px;
     padding: 10px 12px;
     background: var(--ground-2);
-    border-radius: 4px;
+    border-radius: 12px;
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--ink-2);
     line-height: 1.6;
     max-height: 200px;
@@ -410,9 +411,9 @@
   .field { display: flex; flex-direction: column; gap: 4px; }
   .field label {
     font-family: var(--mono);
-    font-size: 9.5px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--ink-3);
   }
   .field input {
@@ -422,7 +423,7 @@
     background: var(--ground);
     color: var(--ink);
     border: 1px solid var(--rule);
-    border-radius: 4px;
+    border-radius: 12px;
     outline: none;
     transition: border-color 0.15s;
   }
@@ -474,9 +475,9 @@
   }
   .an-cell .an-label {
     font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--ink-3);
     margin-bottom: 4px;
   }
@@ -489,10 +490,10 @@
   }
   .an-cell .an-sub {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 12px;
     color: var(--ink-3);
     margin-top: 2px;
-    letter-spacing: 0.04em;
+    
   }
   .an-cell .an-value .hi { color: var(--signal); }
   .an-cell .an-value .lo { color: var(--risk); }
@@ -515,7 +516,7 @@
     font-family: var(--mono);
     font-size: 18px;
     font-weight: 500;
-    letter-spacing: 0.02em;
+    
     color: var(--ink);
     display: flex;
     align-items: center;
@@ -523,13 +524,13 @@
   }
   .pos-meta {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--ink-3);
     font-variant-numeric: tabular-nums;
   }
   .pos-notes {
     font-family: var(--serif);
-    font-style: italic;
+    
     font-size: 12.5px;
     color: var(--ink-2);
     margin-top: 4px;
@@ -543,9 +544,9 @@
     font-size: 20px;
     color: var(--ink);
     padding: 0 3px;
-    border-radius: 3px;
+    border-radius: 6px;
   }
-  .pos-price .chg { font-family: var(--mono); font-size: 11px; margin-top: 2px; }
+  .pos-price .chg { font-family: var(--mono); font-size: 12px; margin-top: 2px; }
 
   .pos-pnl { text-align: right; }
   .pos-pnl .amt {
@@ -560,10 +561,10 @@
   }
   .pos-pnl .r {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 12px;
     color: var(--ink-3);
     margin-top: 4px;
-    letter-spacing: 0.06em;
+    
   }
 
   .pos-verdict { display: flex; flex-direction: column; gap: 6px; }
@@ -571,13 +572,13 @@
     display: inline-block;
     padding: 4px 12px;
     font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     border: 1.5px solid;
     line-height: 1.5;
     align-self: flex-start;
-    border-radius: 4px;
+    border-radius: 12px;
     font-weight: 600;
   }
   .verdict-SELL  { color: var(--risk); border-color: var(--risk); background: color-mix(in srgb, var(--risk) 12%, transparent); }
@@ -599,12 +600,12 @@
     border: 1px solid var(--rule);
     color: var(--ink-3);
     font-family: var(--mono);
-    font-size: 9.5px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     padding: 4px 8px;
     cursor: pointer;
-    border-radius: 3px;
+    border-radius: 6px;
     transition: color 0.15s, border-color 0.15s;
   }
   .close-btn:hover { color: var(--risk); border-color: var(--risk); }
@@ -615,7 +616,7 @@
     padding: 48px 20px;
     color: var(--ink-3);
     font-family: var(--serif);
-    font-style: italic;
+    
     font-size: 15px;
     line-height: 1.6;
     background: var(--panel);
@@ -640,12 +641,12 @@
     border: 1px solid var(--rule);
     color: var(--ink-2);
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     padding: 6px 12px;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: 12px;
     transition: color 0.15s, border-color 0.15s;
   }
   .tool-btn:hover { color: var(--accent); border-color: var(--accent); }
@@ -675,11 +676,11 @@
     display: flex; justify-content: space-between; align-items: center;
     padding: 14px 20px; border-bottom: 1px solid var(--glass-border);
   }
-  .hb-title { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+  .hb-title { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
   .hb-title strong { color: var(--ink); }
   .hb-close {
     background: transparent; border: 1px solid var(--rule); color: var(--ink-2);
-    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    font-family: var(--mono); font-size: 12px; 
     padding: 6px 12px; cursor: pointer;
   }
   .hb-close:hover { color: var(--ink); border-color: var(--ink); }
@@ -702,12 +703,12 @@
   /* Risk engine + journal */
   .risk-panel { border: 1px solid var(--rule); background: var(--panel); margin-bottom: 8px; }
   .risk-gate { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 18px; border-bottom: 1px solid var(--rule); }
-  .risk-gate .stamp { font-family: var(--mono); font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; padding: 6px 12px; border: 2px solid; font-weight: 700; }
+  .risk-gate .stamp { font-family: var(--mono); font-size: 12px; padding: 6px 12px; border: 2px solid; font-weight: 700; }
   .risk-gate .stamp.OPEN { color: var(--signal); border-color: var(--signal); }
   .risk-gate .stamp.REDUCED { color: var(--caution); border-color: var(--caution); }
   .risk-gate .stamp.BLOCKED { color: var(--risk); border-color: var(--risk); }
   .risk-gate .msg { font-size: 13px; color: var(--ink-2); flex: 1 1 260px; min-width: 0; }
-  .risk-gate .cap { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .risk-gate .cap { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
   .risk-gate .cap input { width: 110px; font-family: var(--mono); font-size: 13px; padding: 6px 8px; border: 1px solid var(--rule); background: var(--ground); color: var(--ink); }
   .risk-cells { display: grid; grid-template-columns: repeat(5, 1fr); }
   @media (max-width: 900px) { .risk-cells { grid-template-columns: repeat(2, 1fr); } }
@@ -722,7 +723,7 @@
   .pr-col { padding: 12px 18px; border-right: 1px solid var(--rule); min-width: 0; }
   .pr-col:last-child { border-right: none; }
   @media (max-width: 900px) { .pr-col { border-right: none; border-bottom: 1px solid var(--rule); } }
-  .pr-col h5 { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 8px; font-weight: 500; }
+  .pr-col h5 { font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin: 0 0 8px; font-weight: 500; }
   .pr-bar { display: grid; grid-template-columns: minmax(90px, 150px) 1fr 54px; gap: 10px; align-items: center; font-size: 12.5px; margin: 4px 0; }
   .pr-bar > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pr-bar .track { height: 6px; background: var(--ground-2); position: relative; }
@@ -732,20 +733,20 @@
   .pr-vuln { padding: 12px 18px; border-top: 1px solid var(--rule); font-size: 13.5px; }
   .pr-vuln strong { color: var(--risk); }
   .pr-corr-wrap { overflow-x: auto; }
-  .pr-corr { font-family: var(--mono); font-size: 11.5px; border-collapse: collapse; }
+  .pr-corr { font-family: var(--mono); font-size: 12px; border-collapse: collapse; }
   .pr-corr td, .pr-corr th { padding: 3px 7px; text-align: center; border: 1px solid var(--rule); }
   .pr-corr th { color: var(--ink-3); font-weight: 500; }
   .jr-cells { display: grid; grid-template-columns: repeat(6, 1fr); border: 1px solid var(--rule); background: var(--panel); margin-bottom: 8px; }
   @media (max-width: 900px) { .jr-cells { grid-template-columns: repeat(3, 1fr); } .jr-cells .sum-cell:nth-child(3n) { border-right: none; } }
   .jr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; background: var(--panel); border: 1px solid var(--rule); }
   .jr-table th, .jr-table td { padding: 8px 10px; border-bottom: 1px solid var(--rule); text-align: left; white-space: nowrap; }
-  .jr-table th { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+  .jr-table th { font-family: var(--mono); font-size: 12px; color: var(--ink-3); font-weight: 500; }
   .jr-table td.num { font-family: var(--mono); text-align: right; }
-  .jr-table .x { background: none; border: 1px solid var(--rule); color: var(--ink-3); cursor: pointer; padding: 2px 8px; font-size: 11px; }
+  .jr-table .x { background: none; border: 1px solid var(--rule); color: var(--ink-3); cursor: pointer; padding: 2px 8px; font-size: 12px; }
   .jr-table .x:hover { color: var(--risk); border-color: var(--risk); }
   .jr-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .jr-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; }
-  .jr-tools button { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 12px; cursor: pointer; }
+  .jr-tools button { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 12px; padding: 8px 12px; cursor: pointer; }
   .jr-tools button:hover { border-color: var(--accent); color: var(--ink); }
   .jr-note { font-size: 12.5px; color: var(--ink-3); margin: 8px 0 0; max-width: 78ch; }
   .disclosure {
@@ -753,11 +754,11 @@
     border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule);
   }
   .disclosure h4 {
-    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    font-family: var(--mono); font-size: 12px; 
     color: var(--risk); margin: 0 0 8px; font-weight: 500;
   }
   .disclosure p {
-    font-family: var(--serif); font-style: italic; font-size: 13.5px; line-height: 1.55;
+    font-family: var(--serif); font-size: 13.5px; line-height: 1.55;
     color: var(--ink-2); margin: 0; max-width: 78ch;
   }
 
@@ -796,14 +797,14 @@
     .tabbar-tabs::-webkit-scrollbar { display: none; }
     /* The strip scrolls sideways; without a hint nobody knows Options, Crypto, Metals and Research are off to the right. */
     .tabbar-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
-    .tab { padding: 12px 11px; letter-spacing: 0.1em; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    .tab { padding: 12px 11px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
     .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
 
     /* Masthead */
     .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
     .brand { font-size: 26px; }
     .brand-mark { width: 30px; height: 30px; margin-right: 8px; vertical-align: -4px; }
-    .meta { text-align: left; font-size: 10.5px; line-height: 1.9; }
+    .meta { text-align: left; font-size: 12px; line-height: 1.9; }
     .theme-toggle, .refresh-btn { min-height: 36px; padding: 8px 12px; }
     /* Header buttons inline rather than stacked — reclaims vertical space */
     .meta { display: flex; flex-direction: column; gap: 2px; }
@@ -829,7 +830,7 @@
       display: block; max-width: none; text-align: center;
     }
     .qa-btn { width: 100%; min-height: 48px; padding: 14px; }
-    .qa-hint { flex-direction: column; align-items: flex-start; gap: 10px; font-size: 10px; }
+    .qa-hint { flex-direction: column; align-items: flex-start; gap: 10px; font-size: 12px; }
     .qa-hint > div:last-child { flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; }
     .qa-hint button { min-height: 38px; }
     .adv-form { grid-template-columns: 1fr 1fr; }
@@ -870,6 +871,7 @@
     .an-cell { border-right: none; }
   }
 </style>
+<link rel="stylesheet" href="/apple.css">
 
 <div class="shell">
 
@@ -958,7 +960,7 @@ PLTR 25 @ 32.10 2026-06-04 30
 CRWD 8 @ 268.40 2026-06-20
 AAPL 30 @ 218.75"></textarea>
       <div class="qa-panel-actions">
-        <span id="bulk-parse-count" style="align-self: center; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3);"></span>
+        <span id="bulk-parse-count" style="align-self: center; font-family: var(--mono); font-size: 12px; color: var(--ink-3);"></span>
         <button type="button" class="qa-secondary-btn primary" id="bulk-add-btn">Add all</button>
       </div>
       <div class="parse-report" id="parse-report" style="display: none;"></div>
@@ -1410,8 +1412,8 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
           <div class="pos-ident">
             <div class="pos-ticker">
               ${isOpt
-                ? `${r.pos.underlying} <span style="color: var(--accent);">$${r.pos.strike.toFixed(0)}${r.pos.optionType === 'CALL' ? 'C' : 'P'}</span> <span style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.06em;">${r.pos.qty} × 100 sh</span> <span class="setup-chip" style="font-size: 9px; padding: 1px 6px; color: var(--accent); border-color: var(--accent);">OPT</span>`
-                : `${escapeHtml(r.pos.label || r.pos.ticker)} <span style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.06em;">${r.pos.qty} ${classOf(r.pos) === 'crypto' ? 'units' : classOf(r.pos) === 'metal' ? 'oz-eq' : 'sh'}</span>${classOf(r.pos) !== 'stock' ? ` <span class="setup-chip" style="font-size: 9px; padding: 1px 6px; color: var(--accent); border-color: var(--accent);">${classOf(r.pos).toUpperCase()}</span>` : ''}${r.analysis?.setup ? ` <span class="setup-chip setup-${r.analysis.setup}" style="font-size: 9px; padding: 1px 6px;">${r.analysis.setup}</span>` : ''}`
+                ? `${r.pos.underlying} <span style="color: var(--accent);">$${r.pos.strike.toFixed(0)}${r.pos.optionType === 'CALL' ? 'C' : 'P'}</span> <span style="font-family: var(--mono); font-size: 12px; color: var(--ink-3); ">${r.pos.qty} × 100 sh</span> <span class="setup-chip" style="font-size: 12px; padding: 1px 6px; color: var(--accent); border-color: var(--accent);">OPT</span>`
+                : `${escapeHtml(r.pos.label || r.pos.ticker)} <span style="font-family: var(--mono); font-size: 12px; color: var(--ink-3); ">${r.pos.qty} ${classOf(r.pos) === 'crypto' ? 'units' : classOf(r.pos) === 'metal' ? 'oz-eq' : 'sh'}</span>${classOf(r.pos) !== 'stock' ? ` <span class="setup-chip" style="font-size: 12px; padding: 1px 6px; color: var(--accent); border-color: var(--accent);">${classOf(r.pos).toUpperCase()}</span>` : ''}${r.analysis?.setup ? ` <span class="setup-chip setup-${r.analysis.setup}" style="font-size: 12px; padding: 1px 6px;">${r.analysis.setup}</span>` : ''}`
               }
             </div>
             <div class="pos-meta">
@@ -1653,13 +1655,13 @@ import { windowReturn, worstRolling, liquidity, rateBeta, STRESS_WINDOWS } from 
       <div class="pr-col" style="border-right:none;border-top:1px solid var(--rule);">
         <h5>Stress test · what these windows would do to this book</h5>
         <div class="pr-corr-wrap"><table class="pr-corr"><tr><th>Scenario</th><th>Book</th>${rows.map((r) => `<th>${escapeHtml(name(r))}</th>`).join('')}</tr>${stress.map((s) => `<tr><th style="text-align:left">${escapeHtml(s.name)}${s.from ? `<br/><span style="font-weight:400">${s.from} → ${s.to}</span>` : ''}</th><td style="color:${s.portPct != null && s.portPct <= -20 ? 'var(--risk)' : s.portPct != null && s.portPct <= -10 ? 'var(--caution)' : 'var(--ink)'}"><strong>${s.portPct != null ? s.portPct.toFixed(1) + '%' : '—'}</strong></td>${rows.map((r) => { const p = s.parts.find((x) => x.t === name(r)); return `<td style="color:${p && p.ret <= -20 ? 'var(--risk)' : 'var(--ink)'}">${p ? p.ret.toFixed(0) + '%' + (p.proxy ? '*' : '') + (p.note ? '†' : '') : '—'}</td>`; }).join('')}</tr>`).join('')}</table></div>
-        <p style="font-size:11.5px;color:var(--ink-3);margin:6px 0 0;">Weighted by today's position values; realised history, not a model. * = no history for that name, the S&amp;P 500's move used instead. † = options taken as three times the underlying's move. ${latestLongAt ? '' : 'Loading 5-year history…'}</p>
+        <p style="font-size: 12px;color:var(--ink-3);margin:6px 0 0;">Weighted by today's position values; realised history, not a model. * = no history for that name, the S&amp;P 500's move used instead. † = options taken as three times the underlying's move. ${latestLongAt ? '' : 'Loading 5-year history…'}</p>
         <h5 style="margin-top:12px;">Liquidity · rate sensitivity</h5>
         <div class="pr-corr-wrap"><table class="pr-corr"><tr><th></th>${rows.map((r) => `<th>${escapeHtml(name(r))}</th>`).join('')}</tr>
           <tr><th style="text-align:left">Sessions to exit (10% of volume)</th>${rows.map((r) => { const x = liq.find((z) => z.t === name(r))?.l; return `<td style="color:${x && (x.rating === 'thin' || x.rating === 'illiquid') ? 'var(--risk)' : 'var(--ink)'}">${x ? `${x.sessionsToExit < 0.01 ? '<0.01' : x.sessionsToExit.toFixed(2)} · ${x.rating}` : '—'}</td>`; }).join('')}</tr>
           <tr><th style="text-align:left">% move per +1 pt 10-yr yield</th>${rows.map((r) => { const x = rb.find((z) => z.t === name(r))?.b; return `<td style="color:${x && Math.abs(x.betaPerPoint) >= 3 ? 'var(--caution)' : 'var(--ink)'}">${x ? (x.betaPerPoint >= 0 ? '+' : '') + x.betaPerPoint.toFixed(1) + '%' : '—'}</td>`; }).join('')}<td></td></tr>
         </table></div>
-        <p style="font-size:11.5px;color:var(--ink-3);margin:6px 0 0;">Book rate sensitivity ${portRateBeta != null ? (portRateBeta >= 0 ? '+' : '') + portRateBeta.toFixed(1) + '% per +1 pt' : '—'} (value-weighted, last ~120 sessions). Geographic and currency exposure is not in structured filings; the Research page's copy-prompt carries each name's data for that question.</p>
+        <p style="font-size: 12px;color:var(--ink-3);margin:6px 0 0;">Book rate sensitivity ${portRateBeta != null ? (portRateBeta >= 0 ? '+' : '') + portRateBeta.toFixed(1) + '% per +1 pt' : '—'} (value-weighted, last ~120 sessions). Geographic and currency exposure is not in structured filings; the Research page's copy-prompt carries each name's data for that question.</p>
       </div>` : '';
     const headline = vulns[0] || `<strong style="color:var(--signal)">No single dominant exposure.</strong> Largest name ${byName[0][1].toFixed(0)}%, largest sector ${bySector[0][1].toFixed(0)}%${avgCorr != null ? `, average correlation ${avgCorr.toFixed(2)}` : ''}. The remaining risk is the one the heat meter above measures: every stop hitting on the same day.`;
     document.getElementById('pr-aside').textContent = `${rows.length} position${rows.length === 1 ? '' : 's'} · $${fmt(total)}`;

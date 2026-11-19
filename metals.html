@@ -10,8 +10,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Signal Desk">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#F4EFE4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E1116" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <title>Signal Desk — Metals · Gold & Silver</title>
 <script>
   (function () {
@@ -23,50 +23,51 @@
 </script>
 <style>
   :root {
-    --ground: #F4EFE4;
-    --ground-2: #EDE7D8;
-    --ink: #161512;
-    --ink-2: #3A362E;
-    --ink-3: #6B655A;
-    --rule: #D9D2BF;
-    --panel: #FBF8F0;
-    --accent: #B8863A;
-    --accent-soft: #E9D3A3;
-    --signal: #3B8C5A;
-    --caution: #B57F1F;
-    --risk: #B84438;
-    --grid: rgba(22, 21, 18, 0.06);
+    --ground: #FFFFFF;
+    --ground-2: #E8E8ED;
+    --ink: #1D1D1F;
+    --ink-2: #424245;
+    --ink-3: #6E6E73;
+    --rule: #D2D2D7;
+    --panel: #F5F5F7;
+    --accent: #0071E3;
+    --accent-soft: #E8F2FF;
+    --signal: #248A3D;
+    --caution: #B25000;
+    --risk: #D70015;
+    --grid: rgba(0, 0, 0, 0.06);
     --gold: #C89B3C;
     --silver: #9BA1A6;
 
-    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-    --sans: ui-sans-serif, -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
-    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --serif: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --code: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --ground: #0E1116;
-      --ground-2: #141821;
-      --ink: #E7E2D6;
-      --ink-2: #B5AF9F;
-      --ink-3: #918B7B;
-      --rule: #262B36;
-      --panel: #161B24;
-      --accent: #D6A24B;
-      --accent-soft: #4A3820;
-      --signal: #5FBF83;
-      --caution: #D4A040;
-      --risk: #D96355;
-      --grid: rgba(231, 226, 214, 0.06);
+      --ground: #000000;
+      --ground-2: #161617;
+      --ink: #F5F5F7;
+      --ink-2: #C7C7CC;
+      --ink-3: #98989D;
+      --rule: #333336;
+      --panel: #1D1D1F;
+      --accent: #2997FF;
+      --accent-soft: #0A2A4D;
+      --signal: #30D158;
+      --caution: #FF9F0A;
+      --risk: #FF453A;
+      --grid: rgba(255, 255, 255, 0.06);
       --gold: #E0B45C;
       --silver: #C4CBD1;
     }
   }
   :root[data-theme="light"] {
-    --ground:#F4EFE4;--ground-2:#EDE7D8;--ink:#161512;--ink-2:#3A362E;--ink-3:#6B655A;--rule:#D9D2BF;--panel:#FBF8F0;--accent:#B8863A;--accent-soft:#E9D3A3;--signal:#3B8C5A;--caution:#B57F1F;--risk:#B84438;--grid:rgba(22,21,18,0.06);--gold:#C89B3C;--silver:#9BA1A6;
+    --ground:#FFFFFF;--ground-2:#E8E8ED;--ink:#1D1D1F;--ink-2:#424245;--ink-3:#6E6E73;--rule:#D2D2D7;--panel:#F5F5F7;--accent:#0071E3;--accent-soft:#E8F2FF;--signal:#248A3D;--caution:#B25000;--risk:#D70015;--grid:rgba(0, 0, 0,0.06);--gold:#C89B3C;--silver:#9BA1A6;
   }
   :root[data-theme="dark"] {
-    --ground:#0E1116;--ground-2:#141821;--ink:#E7E2D6;--ink-2:#B5AF9F;--ink-3:#918B7B;--rule:#262B36;--panel:#161B24;--accent:#D6A24B;--accent-soft:#4A3820;--signal:#5FBF83;--caution:#D4A040;--risk:#D96355;--grid:rgba(231,226,214,0.06);--gold:#E0B45C;--silver:#C4CBD1;
+    --ground:#000000;--ground-2:#161617;--ink:#F5F5F7;--ink-2:#C7C7CC;--ink-3:#98989D;--rule:#333336;--panel:#1D1D1F;--accent:#2997FF;--accent-soft:#0A2A4D;--signal:#30D158;--caution:#FF9F0A;--risk:#FF453A;--grid:rgba(255, 255, 255,0.06);--gold:#E0B45C;--silver:#C4CBD1;
   }
 
   html { color-scheme: light dark; }
@@ -91,16 +92,16 @@
     padding-bottom: 20px;
     border-bottom: 1px solid var(--ink);
   }
-  .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
-  .brand { font-family: var(--serif); font-size: 40px; line-height: 1; letter-spacing: -0.015em; font-weight: 500; text-wrap: balance; margin: 0; }
+  .kicker { font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin-bottom: 10px; }
+  .brand { font-family: var(--serif); font-size: 40px; line-height: 1; letter-spacing: -0.015em; font-weight: 600; text-wrap: balance; margin: 0; }
   .brand em { font-style: italic; color: var(--accent); font-weight: 400; }
-  .meta { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-2); line-height: 1.7; }
+  .meta { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--ink-2); line-height: 1.7; }
   .meta .date { color: var(--ink); font-variant-numeric: tabular-nums; }
   .meta a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
   .meta a:hover { border-bottom-style: solid; }
   .theme-toggle {
     background: transparent; border: 1px solid var(--rule); color: var(--ink-2);
-    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    font-family: var(--mono); font-size: 12px; 
     padding: 6px 10px; margin-top: 8px; cursor: pointer;
   }
   .theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
@@ -125,9 +126,9 @@
   }
   .drv-cell:last-child { border-right: none; }
   @media (max-width: 900px) { .drv-cell:nth-child(2n) { border-right: none; } }
-  .drv-cell .label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+  .drv-cell .label { font-size: 12px; color: var(--ink-3); margin-bottom: 4px; }
   .drv-cell .value { font-size: 15px; color: var(--ink); }
-  .drv-cell .delta { font-size: 11px; margin-top: 2px; }
+  .drv-cell .delta { font-size: 12px; margin-top: 2px; }
   .up { color: var(--signal); }
   .down { color: var(--risk); }
   .flat { color: var(--ink-3); }
@@ -144,15 +145,15 @@
   .section-head h2 {
     font-family: var(--serif);
     font-size: 22px;
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: -0.01em;
     margin: 0;
   }
   .section-head .aside {
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--ink-3);
   }
 
@@ -184,14 +185,14 @@
   .mp-ticker {
     font-family: var(--mono);
     font-size: 20px;
-    letter-spacing: 0.02em;
+    
     font-weight: 500;
   }
   .mp-name {
     font-family: var(--serif);
     font-size: 12px;
     color: var(--ink-3);
-    font-style: italic;
+    
     margin-top: 2px;
   }
   .mp-price {
@@ -211,9 +212,9 @@
 
   .mp h3 {
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--ink-3);
     margin: 20px 0 10px;
     font-weight: 500;
@@ -236,15 +237,15 @@
   }
   .range-cell:last-child { border-right: none; }
   .range-cell .l {
-    font-size: 9.5px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--ink-3);
     margin-bottom: 6px;
   }
   .range-cell .hi { color: var(--signal); font-size: 15px; }
   .range-cell .lo { color: var(--risk); font-size: 15px; }
-  .range-cell .band { font-size: 11px; color: var(--ink-2); margin-top: 4px; }
+  .range-cell .band { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
   .range-visual {
     height: 6px;
     background: var(--ground-2);
@@ -282,9 +283,9 @@
   }
   .ind-grid .k {
     font-family: var(--mono);
-    font-size: 10.5px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--ink-2);
   }
   .ind-grid .v {
@@ -302,9 +303,9 @@
     display: inline-block;
     padding: 2px 8px;
     font-family: var(--mono);
-    font-size: 9.5px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     border: 1px solid;
     line-height: 1.5;
   }
@@ -339,9 +340,9 @@
   }
   .plan-cell:last-child { border-right: none; }
   .plan-cell .l {
-    font-size: 9.5px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 12px;
+    
+    
     color: var(--ink-3);
     margin-bottom: 6px;
   }
@@ -365,15 +366,15 @@
   .rule-cell:nth-last-child(-n+2) { border-bottom: none; }
   @media (max-width: 900px) { .rule-cell { border-right: none; } .rule-cell:not(:last-child) { border-bottom: 1px solid var(--rule); } }
   .rule-cell h4 {
-    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    font-family: var(--mono); font-size: 12px; 
     color: var(--ink-3); margin: 0 0 8px; font-weight: 500;
   }
   .rule-cell h4 .num {
-    font-family: var(--serif); font-style: italic; color: var(--accent);
+    font-family: var(--serif); color: var(--accent);
     font-size: 14px; margin-right: 6px; letter-spacing: 0;
   }
   .rule-cell p { font-family: var(--serif); font-size: 13.5px; line-height: 1.5; color: var(--ink); margin: 0 0 6px; }
-  .rule-cell code { font-family: var(--mono); font-size: 11.5px; background: var(--ground-2); padding: 1px 5px; color: var(--ink); }
+  .rule-cell code { font-family: var(--mono); font-size: 12px; background: var(--ground-2); padding: 1px 5px; color: var(--ink); }
 
   /* News */
   .intel { background: var(--panel); border: 1px solid var(--rule); }
@@ -387,16 +388,16 @@
     align-items: baseline;
   }
   .feed li:last-child { border-bottom: none; }
-  .feed .ts { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.04em; }
+  .feed .ts { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
   .feed .src-badge {
-    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    font-family: var(--mono); font-size: 12px; 
     color: var(--ink-2); padding: 2px 6px; border: 1px solid var(--rule); text-align: center;
   }
-  .feed .tk { font-family: var(--mono); font-size: 12px; color: var(--ink); letter-spacing: 0.02em; }
+  .feed .tk { font-family: var(--mono); font-size: 12px; color: var(--ink); }
   .feed .hd { font-family: var(--serif); font-size: 13.5px; line-height: 1.4; color: var(--ink); }
   .feed .hd a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--ink-3); }
   .feed .hd a:hover { border-bottom-color: var(--accent); }
-  .feed .sent { font-family: var(--mono); font-size: 10.5px; text-align: right; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+  .feed .sent { font-family: var(--mono); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
   .sent.pos { color: var(--signal); }
   .sent.neg { color: var(--risk); }
   .sent.neu { color: var(--ink-3); }
@@ -412,21 +413,21 @@
     border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule);
   }
   .disclosure h4 {
-    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    font-family: var(--mono); font-size: 12px; 
     color: var(--risk); margin: 0 0 8px; font-weight: 500;
   }
   .disclosure p {
-    font-family: var(--serif); font-style: italic; font-size: 13.5px; line-height: 1.55;
+    font-family: var(--serif); font-size: 13.5px; line-height: 1.55;
     color: var(--ink-2); margin: 0; max-width: 78ch;
   }
 
   /* Tab bar + Handbook button (mirrored from dashboard) */
   .tabbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 0 12px; margin-bottom: 20px; border-bottom: 1px solid var(--rule); }
   .tabbar-tabs { display: flex; gap: 0; }
-  .tab { padding: 10px 22px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); text-decoration: none; border: none; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; background: transparent; cursor: pointer; }
+  .tab { padding: 10px 22px; font-family: var(--mono); font-size: 12px; color: var(--ink-3); text-decoration: none; border: none; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; background: transparent; cursor: pointer; }
   .tab:hover { color: var(--ink); }
   .tab.on { color: var(--ink); border-bottom-color: var(--accent); }
-  .handbook-btn { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+  .handbook-btn { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 12px; padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
   .handbook-btn:hover, .handbook-btn:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
   .handbook-btn .hb-glyph { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
 
@@ -438,9 +439,9 @@
   .hb-drawer.open { display: flex; animation: hb-in 0.24s ease-out; }
   @keyframes hb-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
   .hb-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--rule); background: var(--panel); }
-  .hb-title { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+  .hb-title { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
   .hb-title strong { color: var(--ink); }
-  .hb-close { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 12px; cursor: pointer; }
+  .hb-close { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); font-family: var(--mono); font-size: 12px; padding: 6px 12px; cursor: pointer; }
   .hb-close:hover, .hb-close:focus-visible { border-color: var(--ink); color: var(--ink); outline: none; }
   .hb-frame { flex: 1; border: none; width: 100%; background: var(--ground); }
 
@@ -449,11 +450,11 @@
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
     --neu-hi: rgba(255, 255, 255, 0.9);
-    --neu-lo: rgba(96, 84, 60, 0.14);
+    --neu-lo: rgba(0, 0, 0, 0.14);
     --neu-inset-hi: rgba(255, 255, 255, 0.7);
-    --neu-inset-lo: rgba(96, 84, 60, 0.16);
-    --glass-bg: rgba(251, 248, 240, 0.72);
-    --glass-border: rgba(22, 21, 18, 0.10);
+    --neu-inset-lo: rgba(0, 0, 0, 0.16);
+    --glass-bg: rgba(255, 255, 255, 0.72);
+    --glass-border: rgba(0, 0, 0, 0.10);
     --glass-blur: 20px;
     --card-glow: transparent;
   }
@@ -463,20 +464,20 @@
       --neu-lo: rgba(0, 0, 0, 0.55);
       --neu-inset-hi: rgba(255, 255, 255, 0.03);
       --neu-inset-lo: rgba(0, 0, 0, 0.5);
-      --glass-bg: rgba(14, 17, 22, 0.65);
-      --glass-border: rgba(214, 162, 75, 0.12);
-      --card-glow: rgba(214, 162, 75, 0.06);
+      --glass-bg: rgba(22, 22, 23, 0.65);
+      --glass-border: rgba(41, 151, 255, 0.12);
+      --card-glow: rgba(41, 151, 255, 0.06);
     }
     body {
       background:
-        radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.08), transparent 60%),
+        radial-gradient(1200px 700px at 15% -10%, rgba(41, 151, 255, 0.08), transparent 60%),
         radial-gradient(900px 600px at 90% 100%, rgba(155, 161, 166, 0.05), transparent 55%),
         var(--ground);
     }
   }
   :root[data-theme="dark"] body {
     background:
-      radial-gradient(1200px 700px at 15% -10%, rgba(214, 162, 75, 0.08), transparent 60%),
+      radial-gradient(1200px 700px at 15% -10%, rgba(41, 151, 255, 0.08), transparent 60%),
       radial-gradient(900px 600px at 90% 100%, rgba(155, 161, 166, 0.05), transparent 55%),
       var(--ground);
   }
@@ -491,7 +492,7 @@
     border-bottom-color: transparent;
   }
   .handbook-btn {
-    border-radius: 8px; background: var(--panel);
+    border-radius: 16px; background: var(--panel);
     box-shadow: 3px 3px 8px var(--neu-lo), -3px -3px 8px var(--neu-hi);
     transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), color 0.18s var(--ease-out);
   }
@@ -505,7 +506,7 @@
   }
   .handbook-btn .hb-glyph { box-shadow: 0 0 8px var(--accent); }
   .theme-toggle {
-    border-radius: 6px; background: var(--panel);
+    border-radius: 14px; background: var(--panel);
     box-shadow: 2px 2px 6px var(--neu-lo), -2px -2px 6px var(--neu-hi);
     transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), color 0.18s var(--ease-out);
     border: none;
@@ -554,13 +555,13 @@
   /* Price flash */
   @keyframes flash-up { 0% { background: color-mix(in srgb, var(--signal) 45%, transparent); color: var(--signal); } 100% { background: transparent; color: inherit; } }
   @keyframes flash-down { 0% { background: color-mix(in srgb, var(--risk) 45%, transparent); color: var(--risk); } 100% { background: transparent; color: inherit; } }
-  .flash-up   { animation: flash-up 1.4s var(--ease-out); border-radius: 3px; }
-  .flash-down { animation: flash-down 1.4s var(--ease-out); border-radius: 3px; }
+  .flash-up   { animation: flash-up 1.4s var(--ease-out); border-radius: 6px; }
+  .flash-down { animation: flash-down 1.4s var(--ease-out); border-radius: 6px; }
 
   .refresh-btn {
     background: transparent; border: 1px solid var(--rule); color: var(--ink-3);
-    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
-    padding: 3px 7px; margin-left: 6px; cursor: pointer; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; 
+    padding: 3px 7px; margin-left: 6px; cursor: pointer; border-radius: 6px;
     transition: color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
   }
   .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
@@ -630,13 +631,13 @@
     .tabbar-tabs::-webkit-scrollbar { display: none; }
     /* The strip scrolls sideways; without a hint nobody knows Options, Crypto, Metals and Research are off to the right. */
     .tabbar-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
-    .tab { padding: 12px 11px; letter-spacing: 0.1em; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
+    .tab { padding: 12px 11px; flex: 0 0 auto; scroll-snap-align: start; min-height: 44px; display: flex; align-items: center; }
     .handbook-btn { width: 100%; justify-content: center; min-height: 44px; }
 
     .masthead { grid-template-columns: 1fr; gap: 12px; padding-bottom: 14px; }
     .brand { font-size: 25px; }
     .brand-mark { width: 30px; height: 30px; margin-right: 8px; vertical-align: -4px; }
-    .meta { text-align: left; font-size: 10.5px; line-height: 1.9; }
+    .meta { text-align: left; font-size: 12px; line-height: 1.9; }
     .theme-toggle, .refresh-btn { min-height: 36px; padding: 8px 12px; }
     /* Header buttons inline rather than stacked — reclaims vertical space */
     .meta { display: flex; flex-direction: column; gap: 2px; }
@@ -688,6 +689,7 @@
     .plan-cell { border-right: none; }
   }
 </style>
+<link rel="stylesheet" href="/apple.css">
 
 <div class="shell">
 
@@ -1140,12 +1142,12 @@ import { ask, confirmBox, notify } from './dialog.js';
     const setupCls = `setup-${a.setup}`;
 
     body.innerHTML = `
-      <div style="display:flex;justify-content:flex-end;margin:-4px 0 6px;"><button class="track-btn" data-track="${ticker}|${q.price}|${stopLong}|${targetLong}|${ticker === 'GC=F' ? 'Gold · XAU/USD' : 'Silver · XAG/USD'}" style="font-family:var(--mono);font-size:10px;letter-spacing:0.08em;padding:5px 9px;border:1px dashed var(--rule);border-radius:3px;background:transparent;color:var(--ink-3);cursor:pointer;" title="Add to Dashboard with this stop and target">+ Track in Dashboard</button></div>
+      <div style="display:flex;justify-content:flex-end;margin:-4px 0 6px;"><button class="track-btn" data-track="${ticker}|${q.price}|${stopLong}|${targetLong}|${ticker === 'GC=F' ? 'Gold · XAU/USD' : 'Silver · XAG/USD'}" style="font-family:var(--mono);font-size: 12px;padding:5px 9px;border:1px dashed var(--rule);border-radius: 6px;background:transparent;color:var(--ink-3);cursor:pointer;" title="Add to Dashboard with this stop and target">+ Track in Dashboard</button></div>
       <h3>Directional bias</h3>
       <div class="thesis">
         <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
           <span class="setup-chip ${setupCls}">${a.setup}</span>
-          <span style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; color: var(--accent);">${bias}</span>
+          <span style="font-family: var(--mono); font-size: 12px; color: var(--accent);">${bias}</span>
         </div>
         ${biasNote}
       </div>
@@ -1163,7 +1165,7 @@ import { ask, confirmBox, notify } from './dialog.js';
           <div class="band">−${(0.5*atr).toFixed(2)} · −${(0.5*dayBandPct).toFixed(2)}%</div>
         </div>
       </div>
-      <p style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin: 6px 0 0; letter-spacing: 0.06em;">
+      <p style="font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin: 6px 0 0; ">
         68% of days close within this ~${dayBandPct.toFixed(2)}% band · ATR₁₄ = $${atr.toFixed(2)}
       </p>
 
@@ -1180,7 +1182,7 @@ import { ask, confirmBox, notify } from './dialog.js';
           <div class="band">−${(atr*Math.sqrt(5)).toFixed(2)} · −${(wkBandPct/2).toFixed(2)}%</div>
         </div>
       </div>
-      <p style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin: 6px 0 0; letter-spacing: 0.06em;">
+      <p style="font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin: 6px 0 0; ">
         Full-week ~${wkBandPct.toFixed(2)}% ATR band · variance scales with √5 (not 5×) · a Fed / CPI print can widen this materially
       </p>
 
@@ -1208,7 +1210,7 @@ import { ask, confirmBox, notify } from './dialog.js';
         <div class="plan-cell tgt"><div class="l">Target (+2.5R)</div><div class="n">$${targetLong.toFixed(2)}</div></div>
         <div class="plan-cell"><div class="l">Time stop</div><div class="n">15 days</div></div>
       </div>
-      <p style="font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin: 8px 0 0; letter-spacing: 0.06em;">
+      <p style="font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin: 8px 0 0; ">
         Stop = max(1.5×ATR, 2%). Target = 2.5R. Position size = <code style="background: var(--ground-2); padding: 1px 4px;">(capital × 0.0075) / stop distance</code>.
         For a short setup, flip stop above resistance ($${swingHi.toFixed(2)}) and target below support.
       </p>
@@ -1246,9 +1248,9 @@ import { ask, confirmBox, notify } from './dialog.js';
       <div class="rule-cell">
         <h4>
           <span class="num" style="color: ${impactColor[e.impact] || 'var(--accent)'};">${e.daysUntil <= 0 ? 'TODAY' : e.daysUntil + 'd'}</span>
-          <span style="letter-spacing: 0.14em;">${e.tag}</span>
+          <span style="">${e.tag}</span>
         </h4>
-        <p><strong>${e.label}</strong> <span style="color: var(--ink-3); font-family: var(--mono); font-size: 11px;">· ${e.date}</span></p>
+        <p><strong>${e.label}</strong> <span style="color: var(--ink-3); font-family: var(--mono); font-size: 12px;">· ${e.date}</span></p>
         <p style="color: var(--ink-2); font-size: 12.5px;">${e.note}</p>
       </div>
     `).join('');
@@ -1279,7 +1281,7 @@ import { ask, confirmBox, notify } from './dialog.js';
           <span class="ts">${ago}</span>
           <span class="src-badge">${x.tk}</span>
           <span class="tk">${x.political ? '<span style="color: var(--caution);">POL</span>' : ''}</span>
-          <span class="hd"><a href="${safeHref(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a> <span style="color: var(--ink-3); font-size: 10px; font-family: var(--mono);">· ${esc(x.publisher || host)}</span></span>
+          <span class="hd"><a href="${safeHref(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a> <span style="color: var(--ink-3); font-size: 12px; font-family: var(--mono);">· ${esc(x.publisher || host)}</span></span>
           <span class="sent ${cls}">${s >= 0 ? '+' : ''}${s.toFixed(2)}</span>
         </li>
       `;

@@ -71,7 +71,7 @@ createServer(async (req, res) => {
   // Serve only the pages and the shared front-end modules — never dotfiles,
   // the env file, tools/, db/ or anything else in the repository.
   const rel = path.replace(/^\//, '');
-  const allowed = PAGES[path] || (/^[A-Za-z0-9_-]+\.(js|svg|png|ico|webmanifest|json)$/.test(rel) && !rel.startsWith('package') ? rel : null) || (/^data\/(screen|replay|earnings)\.json$/.test(rel) ? rel : null);
+  const allowed = PAGES[path] || (/^[A-Za-z0-9_-]+\.(js|css|svg|png|ico|webmanifest|json)$/.test(rel) && !rel.startsWith('package') ? rel : null) || (/^data\/(screen|replay|earnings)\.json$/.test(rel) ? rel : null);
   if (!allowed) { res.statusCode = 404; res.end('not found'); return; }
   const file = allowed;
   try {
