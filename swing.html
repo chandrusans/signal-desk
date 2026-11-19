@@ -1506,6 +1506,8 @@ import { getSettings, getHistory, getSwingWatch, setSwingWatch, getSwingBook, se
     syncTimer = setTimeout(async () => {
       let key = ''; try { key = localStorage.getItem('sd-sync-key-v1') || ''; } catch {}
       if (!key) return;
+      // a device that joined an existing link does not push its lists unless device sync makes them the shared ones
+      try { if (localStorage.getItem('sd-sync-follower') === '1' && !(window.sdSync && window.sdSync.state())) return; } catch {}
       let dash = []; try { dash = JSON.parse(localStorage.getItem('sd-portfolio-v1') || '[]'); } catch {}
       try { await fetch('/api/notify?op=sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ syncKey: key, watch: watchUnion().slice(0, 30), settings: getSettings(), portfolio: bookUnion(Array.isArray(dash) ? dash : []) }) }); } catch { /* next change retries */ }
     }, 1500);

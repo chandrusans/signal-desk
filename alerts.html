@@ -1319,23 +1319,32 @@ import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is al
   const SYNC_KEY = 'sd-sync-key-v1';
   const syncKey = () => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch { return ''; } };
   let syncTimer = null;
-  async function syncToServer(extra = {}, { interactive = false } = {}) {
+  // A device that JOINED an existing link (a phone added after the computer) does not push its own
+  // lists in the background: its watchlist may be a fresh default, and that would replace the one the
+  // server is checking. It does once "Sync across devices" is on here, because then the lists are the
+  // same on every device. Pressing Save & sync always sends.
+  const FOLLOWER = 'sd-sync-follower';
+  const isFollower = () => { try { return localStorage.getItem(FOLLOWER) === '1' && !(window.sdSync && window.sdSync.state()); } catch { return false; } };
+  async function syncToServer(extra = {}, { interactive = false, linkOnly = false } = {}) {
     // Nothing to sync with until this device has a key or the user presses Save: a background
     // sync without one is a guaranteed 403 and an error line in the console on every load.
     if (!syncKey() && !interactive) return { ok: false, error: 'not set up on this device' };
-    const body = { syncKey: syncKey(), watch: watchUnion(watch).slice(0, 30), settings, portfolio: portfolio(), ...extra };
+    if (!interactive && isFollower()) return { ok: true, skipped: 'follower' };
+    const body = linkOnly ? { syncKey: syncKey() } : { syncKey: syncKey(), watch: watchUnion(watch).slice(0, 30), settings, portfolio: portfolio(), ...extra };
     try {
       let r = await fetch('/api/notify?op=sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       let d = await r.json();
       // Claiming an empty server store needs the owner's RUN_KEY once (so nobody else can
       // claim it first). Only ask when the user pressed Save; background syncs stay quiet.
       if (d.needsSetupKey && interactive) {
-        const setupKey = await ask('First sync: paste the RUN_KEY you set in Vercel (Settings → Environment Variables). It is used once to claim the server store and is not kept in the browser.', { type: 'password', ok: 'Claim server store' });
-        if (!setupKey) return { ok: false, error: 'first sync needs the owner key' };
+        const setupKey = await ask(d.linked
+          ? 'Link this device\n\nThe server is already linked to your first device. Two ways to add this one:\n\n1. Easiest: on both devices, Dashboard → Sync across devices. This device then links itself; press Cancel here and do that.\n\n2. Or paste the owner key (the RUN_KEY set in Vercel). It is used once and not kept.'
+          : 'First sync: paste the RUN_KEY you set in Vercel (Settings → Environment Variables). It is used once to claim the server store and is not kept in the browser.', { type: 'password', ok: d.linked ? 'Link this device' : 'Claim server store', placeholder: 'Owner key' });
+        if (!setupKey) return { ok: false, error: d.linked ? 'not linked yet: turn on Sync across devices on both devices (Dashboard), or enter the owner key' : 'first sync needs the owner key' };
         r = await fetch('/api/notify?op=sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, setupKey: setupKey.trim() }) });
         d = await r.json();
       }
-      if (d.ok && d.syncKey) { try { localStorage.setItem(SYNC_KEY, d.syncKey); } catch {} }
+      if (d.ok && d.syncKey) { try { localStorage.setItem(SYNC_KEY, d.syncKey); if (d.joined) localStorage.setItem(FOLLOWER, '1'); } catch {} }
       return d;
     } catch (e) { return { ok: false, error: e.message }; }
   }
@@ -1370,10 +1379,10 @@ import { ask, confirmBox, notify as say } from '/dialog.js';   // `notify` is al
       if (!key.ok) throw new Error(key.error || 'the server has no push key');
       const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(key.publicKey) }));
       // The server keeps one owner's settings; a device that has never synced claims or joins them first.
-      if (!syncKey()) { const s = await syncToServer({}, { interactive: true }); if (!s.ok) { await sub.unsubscribe(); throw new Error(s.error || 'sync with the server first'); } }
+      if (!syncKey()) { const s = await syncToServer({}, { interactive: true, linkOnly: true }); if (!s.ok) { await sub.unsubscribe(); throw new Error(s.error || 'link this device to the server first'); } }
       const d = await (await fetch('/api/notify?op=subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ syncKey: syncKey(), subscription: sub.toJSON() }) })).json();
       if (!d.ok) { await sub.unsubscribe(); throw new Error(d.error || 'the server did not accept this device'); }
-      await syncToServer(); refreshPhoneStatus();
+      refreshPhoneStatus();
       renderWebPush(`● push is on for this device (${d.devices} in all)`);
     } catch (e) { await renderWebPush(); $('wp-st').textContent = `✕ could not turn push on: ${e.message}`; $('wp-st').className = 'st no'; }
   });

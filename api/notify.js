@@ -136,6 +136,17 @@ const rnd = () => [...crypto.getRandomValues(new Uint8Array(18))].map((b) => b.t
 // The runner fetches the app's own API; the base is fixed, never taken from request headers.
 const APP_URL = (process.env.APP_URL || 'https://signal-desk-virid.vercel.app').replace(/\/$/, '');
 const mask = (s) => (s ? `…${String(s).slice(-4)}` : null);
+/**
+ * Who may sync. 'ok' this device holds the link · 'join' another device of the owner, proven by the
+ * owner key · 'need-owner-key' a device that holds neither · 'claim' the store is empty (the caller
+ * then checks the owner key as before).
+ */
+export async function syncAccess({ stateKey, bodyKey, setupKey, runKey }, eq = same) {
+  if (!stateKey) return 'claim';
+  if (await eq(bodyKey, stateKey)) return 'ok';
+  if (runKey && (await eq(setupKey, runKey))) return 'join';
+  return 'need-owner-key';
+}
 /** Constant-time string equality (both sides hashed so lengths never leak). */
 async function same(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string' || !a || !b) return false;
@@ -184,8 +195,17 @@ export default async function handler(req, res) {
   if (op === 'sync' && req.method === 'POST') {
     const body = await readBody(req);
     const state = await loadState();
+    const access = await syncAccess({ stateKey: state.syncKey, bodyKey: body.syncKey, setupKey: body.setupKey, runKey: process.env.RUN_KEY });
+    if (access === 'join') {
+      // The owner's second device (a phone, the home-screen app): it presents the owner key and is
+      // handed the existing link. Nothing it sent is applied, so it cannot overwrite the first device's
+      // watchlist or channels by joining.
+      res.status(200).json({ ok: true, joined: true, syncKey: state.syncKey, watch: (state.watch || []).length, positions: (state.portfolio || []).length, channels: Object.keys(state.channels || {}).filter((k) => state.channels[k]) });
+      return;
+    }
+    if (access === 'need-owner-key') { res.status(403).json({ ok: false, linked: true, needsSetupKey: true, error: 'This server is already linked to your first device. To link this one as well, enter the owner key, or turn on "Sync across devices" on both (Dashboard) and it links itself.' }); return; }
     if (state.syncKey) {
-      if (!(await same(body.syncKey, state.syncKey))) { res.status(403).json({ ok: false, error: 'syncKey mismatch — this server already belongs to another device. Use that device, or clear the blob.' }); return; }
+      /* access === 'ok': this device already holds the link */
     } else {
       // Claiming an empty store is the one privileged step: it needs the owner's RUN_KEY
       // (from Vercel), typed once into the Alerts tab. Otherwise anyone who found the URL

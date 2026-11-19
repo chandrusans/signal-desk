@@ -50,3 +50,14 @@ test('sending: one failure does not stop the rest, and devices the service repor
   assert.equal(calls.length, 3); assert.equal(calls[0].urgency, 'high'); assert.equal(JSON.parse(calls[0].payload).url, '/swing');
   assert.equal((await pushAll([], vapid, 'https://example.test', { title: 'T' }, send)).ok, false);
 });
+
+test('linking devices to the alert server: the first claims it, a second joins with the owner key, a stranger gets neither', async () => {
+  const { syncAccess } = await import('../api/notify.js');
+  const eq = async (a, b) => typeof a === 'string' && typeof b === 'string' && !!a && a === b;
+  assert.equal(await syncAccess({ stateKey: '', bodyKey: '', setupKey: 'owner', runKey: 'owner' }, eq), 'claim');
+  assert.equal(await syncAccess({ stateKey: 'link-1', bodyKey: 'link-1', runKey: 'owner' }, eq), 'ok');
+  assert.equal(await syncAccess({ stateKey: 'link-1', bodyKey: '', setupKey: 'owner', runKey: 'owner' }, eq), 'join', 'a phone added later, proven by the owner key');
+  assert.equal(await syncAccess({ stateKey: 'link-1', bodyKey: '', setupKey: 'guess', runKey: 'owner' }, eq), 'need-owner-key');
+  assert.equal(await syncAccess({ stateKey: 'link-1', bodyKey: 'other', runKey: 'owner' }, eq), 'need-owner-key');
+  assert.equal(await syncAccess({ stateKey: 'link-1', bodyKey: '', setupKey: '', runKey: '' }, eq), 'need-owner-key', 'no owner key configured: nobody can join');
+});

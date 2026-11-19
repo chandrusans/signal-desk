@@ -495,7 +495,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.29</div>
+      <div class="kicker">Signal Desk · Handbook · v3.30</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -1333,6 +1333,7 @@
         <li><strong>Install the app.</strong> On iPhone or iPad (iOS 16.4 or later): open the site in Safari, tap <em>Share → Add to Home Screen</em>, then open Signal Desk from its new icon. On Android or a computer, Chrome or Edge works without installing.</li>
         <li><strong>Alerts → Push to this device → Turn on push here</strong>, and allow notifications when asked.</li>
         <li>The first device also needs the one-time server step below (it asks for the owner key once).</li>
+        <li><strong>Adding a second device</strong> (for example your phone, after setting alerts up on a computer): the server is already linked to the first one, so the new device has to be linked too. The easy way is <em>Dashboard → Sync across devices</em> on both: the link travels with your synced data and push then turns on with nothing to type. The other way is to enter the owner key when the phone asks for it.</li>
       </ol>
       <p>From then on the server's scheduled check sends buy signals, exit signals and the other alert types to that device as ordinary notifications, with the app closed. Tapping one opens the relevant page. Up to six devices can be registered; a device that removes the app or withdraws permission is dropped automatically. Telegram, WhatsApp and ntfy below still work alongside it.</p>
       <h3>One-time server step (whoever owns the Vercel project)</h3>
@@ -1514,6 +1515,17 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 26</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.30<br/>2026-11-19</div>
+        <div class="what">
+          <h4>A second device can now turn on push</h4>
+          <ul>
+            <li>Fixed: turning on push from a phone failed with "syncKey mismatch" when alerts had first been set up on another device. A second device can now link to the server, either automatically through Sync across devices or by entering the owner key once.</li>
+            <li>A device that joins this way does not replace the watchlist the server is checking with its own, unless Sync across devices is on (when the lists are the same everywhere).</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.29<br/>2026-11-19</div>

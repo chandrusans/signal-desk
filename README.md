@@ -287,7 +287,7 @@ npm test
 
 Unit tests (node:test) for the pure modules — exit rulebook, risk engine and
 journal, UI escaping/formatting, analysis plan, forward DCF, indicators and
-statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar, encrypted sync (against the real vault handler), Web Push and the Alpaca paper broker (against a pretend API) — no network. 91 tests. CI runs them with
+statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar, encrypted sync (against the real vault handler), Web Push and the Alpaca paper broker (against a pretend API) — no network. 92 tests. CI runs them with
 the lint and `npm audit` on every push.
 
 ```bash
