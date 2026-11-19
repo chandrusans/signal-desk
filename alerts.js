@@ -126,6 +126,7 @@ export function entryAlert(t, sig, today) {
   const stopPct = ((sig.entry - sig.stop) / sig.entry) * 100;
   const px = (x) => (x >= 1000 ? '$' + Math.round(x).toLocaleString('en-US') : '$' + Number(x).toFixed(2));
   return { id: `entry:${t}:${sig.strategy}:${today}`, type: 'entry', ticker: t, severity: 'high', link: '/swing', strategy: sig.strategy,
+    plan: { entry: sig.entry, stop: sig.stop, target: sig.target, timeStopDays: sig.timeStopDays, sizeMult: sig.sizeMult },   // what a paper order needs
     title: `Buy signal: ${t} — ${S.name.toLowerCase()}`,
     body: `${sig.reason} Entry near ${px(sig.entry)}, stop ${px(sig.stop)} (−${stopPct.toFixed(1)}%)${sig.target ? `, target ${px(sig.target)}` : ', exit on the first close above the 5-day average'}, ${sig.timeStopDays}-session time stop.${sig.caveats[0] ? ' ' + sig.caveats[0] : ''}` };
 }

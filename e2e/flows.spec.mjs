@@ -182,3 +182,21 @@ test('Alerts: the push panel offers to turn push on, and explains installing fir
   await expect(phone.locator('#wp-note')).toContainText('Add to Home Screen');
   await ctx.close();
 });
+
+test('Swing: the paper-broker panel explains itself when the device is not linked, and shows the account when it is', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/swing');
+  await expect(page.locator('#broker')).toContainText('Not linked to the server yet');
+
+  await page.addInitScript(() => localStorage.setItem('sd-sync-key-v1', 'e2e-key'));
+  await page.route('**/api/notify?op=broker', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, configured: true, problem: null, enabled: true,
+    account: { equity: 100250, cash: 80000, status: 'ACTIVE' }, positions: [{ symbol: 'KMI', qty: 581, entry: 34.43, price: 34.9, pl: 273.07, mine: true }],
+    trades: { KMI: { stop: 32.71, strategy: 'breakout' } }, log: [{ at: Date.now(), kind: 'buy', symbol: 'KMI', text: 'KMI: paper order for 581 shares (breakout), about $20,004, stop $32.71, target $38.73.' }], lastRun: { at: Date.now(), ok: true, note: '1 action' } }) }));
+  await page.reload();
+  const b = page.locator('#broker');
+  await expect(b).toContainText('$100,250');
+  await expect(b.locator('table')).toContainText('Breakout');
+  await expect(b).toContainText('paper order for 581 shares');
+  await expect(b).toContainText('refuses live keys');
+  await expect(b.locator('#broker-toggle')).toHaveText('Turn automatic paper trading off');
+});

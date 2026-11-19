@@ -1,4 +1,4 @@
-// Vercel serverless: /api/notify?op=sync|run|test|status|pushkey|subscribe|unsubscribe
+// Vercel serverless: /api/notify?op=sync|run|test|status|pushkey|subscribe|unsubscribe|broker|broker-set
 //
 // Phone delivery for the Alerts engine. Until now every alert was computed in
 // the browser and could only reach a phone while a tab was open. This runs
@@ -15,6 +15,8 @@
 //   status  GET   ?syncKey= — what is configured, when it last ran, what it sent.
 //   pushkey GET   this server's public push key, for a browser to subscribe with.
 //   subscribe / unsubscribe  POST { syncKey, subscription | endpoint } — add or remove a device for Web Push.
+//   broker / broker-set      POST { syncKey[, enabled] } — the Alpaca PAPER account: status, and the on/off switch
+//                            for turning buy alerts into paper orders (see _alpaca.js; paper only).
 //
 // STORAGE: Vercel Blob (private). One JSON document holds everything. If the
 // store is not connected yet (no BLOB_READ_WRITE_TOKEN), every op says so
@@ -32,6 +34,7 @@
 
 import { put, get } from '@vercel/blob';
 import { cleanSubscription, addDevice, removeDevice, vapidKeys, pushAll } from './_push.js';
+import { runBroker, brokerStatus, keyProblem } from './_alpaca.js';
 import { evaluate, evaluatePositions, fetchAlertData, fetchPositionContext, useStore, memoryStore, TYPES, DEFAULT_SETTINGS } from '../alerts.js';
 
 const BLOB_PATH = 'signal-desk/alerts-state.json';
@@ -239,6 +242,22 @@ export default async function handler(req, res) {
     return;
   }
 
+  if ((op === 'broker' || op === 'broker-set') && req.method === 'POST') {
+    const body = await readBody(req);
+    const state = await loadState();
+    if (!state.syncKey || !(await same(body.syncKey, state.syncKey))) { res.status(403).json({ ok: false, error: 'sync first' }); return; }
+    if (op === 'broker-set') {
+      const enabled = body.enabled === true;
+      const problem = keyProblem(process.env);
+      if (enabled && problem) { res.status(200).json({ ok: false, error: problem }); return; }
+      await saveState({ ...state, broker: { ...(state.broker || {}), enabled } });
+      res.status(200).json({ ok: true, enabled });
+      return;
+    }
+    res.status(200).json({ ok: true, ...(await brokerStatus({ env: process.env, broker: state.broker || {} })) });
+    return;
+  }
+
   if (op === 'status') {
     const state = await loadState();
     if (state.syncKey && !(await same(req.query.syncKey, state.syncKey))) { res.status(403).json({ ok: false, error: 'syncKey mismatch' }); return; }
@@ -288,15 +307,25 @@ export default async function handler(req, res) {
       const ctx = await fetchPositionContext(pf, { base });
       fired.push(...evaluatePositions(pf, ctx, settings));
     }
+    // Paper broker: each buy alert becomes a paper order; positions it opened follow the exit rules.
+    let brokerRun = null;
+    if (state.broker?.enabled) {
+      try {
+        brokerRun = await runBroker({ env: process.env, broker: state.broker, entries: fired.filter((a) => a.type === 'entry' && a.plan), contextFor: (positions) => fetchPositionContext(positions, { base }) });
+        for (const a of brokerRun.actions.filter((x) => ['buy', 'sell', 'stop'].includes(x.kind)))
+          fired.push({ id: `broker:${a.kind}:${a.symbol}:${a.at}`, type: 'position', severity: a.kind === 'stop' ? 'medium' : 'high', title: `Paper account: ${a.kind === 'buy' ? 'bought' : a.kind === 'sell' ? 'sold' : 'stop moved'} ${a.symbol}`, body: a.text, link: '/swing' });
+      } catch (e) { brokerRun = { broker: { ...state.broker, lastRun: { at: Date.now(), ok: false, note: redact(e.message) } }, summary: 'error' }; }
+    }
     const dead = new Set();
     const report = await deliver(state, fired, dead);
     // A sync may have landed while this run was fetching (up to 60 s). Re-read and write
     // only the runner's own fields so the user's watchlist / channels are never reverted.
     const fresh = await loadState();
     fresh.engine = mem.data;
+    if (brokerRun) fresh.broker = { ...brokerRun.broker, enabled: fresh.broker?.enabled ?? true };     // keep a switch flipped mid-run
     if (dead.size) fresh.push = (fresh.push || []).filter((d) => !dead.has(d.endpoint));       // devices the push service says are gone
     if (slow) { fresh.slow = state.slow; fresh.slowAt = state.slowAt; }
-    fresh.lastRun = { at: Date.now(), ms: Date.now() - t0, watch: watch.length, positions: pf.length, fired: fired.length, delivered: report, sourcesDown: data?.failed || 0 };
+    fresh.lastRun = { at: Date.now(), ms: Date.now() - t0, watch: watch.length, positions: pf.length, fired: fired.length, delivered: report, sourcesDown: data?.failed || 0, ...(brokerRun ? { broker: brokerRun.summary } : {}) };
     await saveState(fresh);
     // Alert text stays out of the response by default: the scheduler's log is public.
     res.status(200).json({ ok: true, ...fresh.lastRun, ...(req.query.verbose === '1' ? { alerts: fired.map((a) => `${a.type}:${a.ticker}`) } : {}) });

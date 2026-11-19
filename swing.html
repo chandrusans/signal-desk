@@ -1170,6 +1170,10 @@
   <div id="score"></div>
   <div id="replay"><div class="none"><strong>Loading the ten-year replay…</strong>Ten years of the S&amp;P 500, run through these rules one day at a time.</div></div>
 
+  <!-- 7 · automatic paper trading -->
+  <div class="step"><span class="n">7</span><h3>Let the rules trade a paper account</h3><span class="sub">optional: buy alerts become orders in an Alpaca paper account, pretend money only</span></div>
+  <div id="broker"><div class="none"><strong>Checking…</strong></div></div>
+
   <div class="disclosure" style="margin-top: 34px;">
     <strong>Paper trading only. Nothing here places an order, and none of it is advice.</strong> The signals are mechanical outputs of rules written in
     the Handbook, applied to live prices. Run through ten years of the S&amp;P 500, they roughly broke even while simply holding the index
@@ -1713,6 +1717,41 @@ import { getSettings, getHistory, getSwingWatch, setSwingWatch, getSwingBook, se
     const box = $('replay').querySelector('.rp-chart'); chartW = box.clientWidth; drawChart(box, R.curve);
   }
 
+  // ---- 7 · automatic paper trading through an Alpaca PAPER account (api/_alpaca.js) ----
+  async function brokerCall(op, extra = {}) {
+    const r = await fetch(`/api/notify?op=${op}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ syncKey: localStorage.getItem('sd-sync-key-v1') || '', ...extra }) });
+    return r.json();
+  }
+  async function renderBroker() {
+    const el = $('broker'); if (!el) return;
+    let key = ''; try { key = localStorage.getItem('sd-sync-key-v1') || ''; } catch { /* none */ }
+    if (!key) { el.innerHTML = `<div class="none"><strong>Not linked to the server yet.</strong>Automatic paper trading runs on the server, alongside phone alerts. Link this device first: Alerts → turn on push, or save a phone channel. Then come back here.</div>`; return; }
+    let d;
+    try { d = await brokerCall('broker'); } catch (e) { el.innerHTML = `<div class="none"><strong>The server did not answer.</strong>${esc(e.message)}</div>`; return; }
+    if (!d.ok) { el.innerHTML = `<div class="none"><strong>Not available.</strong>${esc(d.error || 'Sync this device on the Alerts tab first.')}</div>`; return; }
+    if (d.problem && !d.account) {
+      el.innerHTML = `<div class="none"><strong>${d.configured ? 'The broker connection has a problem.' : 'No paper broker connected.'}</strong>${esc(d.problem)}</div>
+        ${d.configured ? '' : `<p class="na"><strong>To connect one (about five minutes, free):</strong> 1. Open an account at alpaca.markets and switch to <em>Paper Trading</em>. 2. Generate API keys there; a paper key id starts with "PK". 3. In Vercel → this project → Settings → Environment Variables, add <code>ALPACA_KEY_ID</code> and <code>ALPACA_SECRET_KEY</code>, then redeploy. The keys stay on the server; this page never sees them. Live keys are refused.</p>`}`;
+      return;
+    }
+    const a = d.account || {}, pos = d.positions || [], log = d.log || [];
+    el.innerHTML = `<div class="acct"><div class="c"><div class="l">Automatic paper trading</div><div class="v ${d.enabled ? 'up' : ''}">${d.enabled ? 'On' : 'Off'}</div><div class="s">${d.lastRun ? `last run ${esc(new Date(d.lastRun.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))} · ${esc(d.lastRun.note || '')}` : 'has not run yet'}</div></div>
+        <div class="c"><div class="l">Paper account value</div><div class="v">${money(a.equity, 0)}</div><div class="s">Alpaca paper · pretend money</div></div>
+        <div class="c"><div class="l">Cash</div><div class="v">${money(a.cash, 0)}</div><div class="s">${pos.length} position${pos.length === 1 ? '' : 's'}</div></div></div>
+      <div class="controls" style="margin-top:12px;"><button class="refresh-btn" id="broker-toggle">${d.enabled ? 'Turn automatic paper trading off' : 'Turn automatic paper trading on'}</button>
+        <span class="na" style="margin:0;">${d.enabled ? 'Each buy alert for your watchlist becomes a paper order; the exit rules manage it.' : 'Off: nothing is sent to the broker.'}</span></div>
+      ${pos.length ? `<div class="tbl-wrap" style="margin-top:12px;"><table class="sw-t"><thead><tr><th>Position</th><th>Shares</th><th>Entry</th><th>Now</th><th>Open P&amp;L</th><th>Stop</th><th>Opened by</th></tr></thead><tbody>${pos.map((p) => { const t = d.trades?.[p.symbol]; return `<tr><td><strong>${esc(p.symbol)}</strong></td><td>${p.qty}</td><td>${px(p.entry)}</td><td>${px(p.price)}</td><td class="${p.pl >= 0 ? 'up' : 'down'}">${money(p.pl)}</td><td>${t ? px(t.stop) : '—'}</td><td>${t ? esc(STRATEGIES[t.strategy]?.name || 'the rules') : 'you (left alone)'}</td></tr>`; }).join('')}</tbody></table></div>` : ''}
+      ${log.length ? `<ul class="feed-list" style="margin-top:12px;">${log.slice(0, 12).map((x) => `<li><span class="na" style="margin:0 8px 0 0;">${esc(new Date(x.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</span>${esc(x.text)}</li>`).join('')}</ul>` : ''}
+      <p class="na">Paper only: this connection can reach Alpaca's paper-trading service and nothing else, and it refuses live keys. It buys whole shares, attaches the stop (and target) to each order, moves stops to breakeven and +1R as the rulebook says, and closes a position on any sell verdict. It never touches a position it did not open. Results here are the rules' own record, on pretend money.</p>`;
+    $('broker-toggle').addEventListener('click', async () => {
+      const turnOn = !d.enabled;
+      if (turnOn && !(await confirmBox('Turn automatic paper trading on?\n\nFrom the next scheduled check, every buy alert for a stock on your watchlist is sent to your Alpaca PAPER account as an order, sized at 1% risk of that account. It is pretend money; no real order can be placed from here.', { ok: 'Turn on' }))) return;
+      const r = await brokerCall('broker-set', { enabled: turnOn }).catch((e) => ({ ok: false, error: e.message }));
+      if (!r.ok) await say(`That did not work.\n\n${r.error || 'The server refused.'}`);
+      renderBroker();
+    });
+  }
+
   // ---- actions ----
   function addTicker(raw) {
     const t = String(raw || '').toUpperCase().trim();
@@ -1776,6 +1815,7 @@ import { getSettings, getHistory, getSwingWatch, setSwingWatch, getSwingBook, se
   $('sw-notif').addEventListener('click', async () => { await requestPermission(); await registerWorker(); renderNotifStatus(); });
   $('refresh-now').addEventListener('click', async () => { slowAt = 0; await loadGate(); await refresh(); });
   loadReplay();
+  renderBroker();
   window.addEventListener('storage', (e) => { if (e.key && e.key.startsWith('sd-swing-')) refresh(); if (e.key === 'sd-sync-key-v1') renderNotifStatus(); });
 
   // ---- boot ----
