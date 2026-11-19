@@ -114,7 +114,7 @@ needs `NODE_EXTRA_CA_CERTS` on this Mac like the validators.
 
 ## What it does
 
-- **Live prices**: 1-year OHLC + volume via Yahoo Finance chart API (no auth key). Polls every 15s (Stocks) / 20s (Crypto) behind a 30s edge cache.
+- **Live prices**: 1-year OHLC + volume from Alpaca's Market Data API when `ALPACA_KEY_ID` / `ALPACA_SECRET_KEY` are set (`api/_prices.js`; free Basic plan by default, `ALPACA_DATA_FEED=sip` after upgrading to Algo Trader Plus), with Yahoo Finance for indices, futures and as the fallback. Polls every 15s (Stocks) / 20s (Crypto) behind a 30s edge cache.
 - **Real analytics**: SMA (10/20/50/200), RSI(14), ATR(14), 20d/60d returns, 52-week high distance, volume expansion.
 - **Composite score (0–100)**: transparent breakdown — trend (30) + momentum (25) + location (20) + volume (15) + volatility (10).
 - **Setup classifier**: `BREAKOUT`, `PULLBACK`, `EARLY`, `EXTENDED`, `BROKEN`, `AVOID` — each with mechanical entry rules.
@@ -288,7 +288,7 @@ npm test
 
 Unit tests (node:test) for the pure modules — exit rulebook, risk engine and
 journal, UI escaping/formatting, analysis plan, forward DCF, indicators and
-statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar, encrypted sync (against the real vault handler), Web Push and the Alpaca paper broker (against a pretend API) — no network. 93 tests. CI runs them with
+statistical tests, the profile screen, the swing strategies, buy alerts, the replay simulator and the earnings calendar, encrypted sync (against the real vault handler), Web Push and the Alpaca paper broker (against a pretend API) — no network. 101 tests. CI runs them with
 the lint and `npm audit` on every push.
 
 ```bash

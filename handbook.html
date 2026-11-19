@@ -495,7 +495,7 @@
 <div class="shell">
   <header class="masthead">
     <div>
-      <div class="kicker">Signal Desk · Handbook · v3.31</div>
+      <div class="kicker">Signal Desk · Handbook · v3.32</div>
       <h1 class="brand">A beginner's field guide to <em>the desk.</em></h1>
     </div>
     <div class="meta">
@@ -848,7 +848,9 @@
       <h2><span class="chnum">Chapter 10</span>Data sources</h2>
       <h3>Live</h3>
       <ul>
-        <li><strong>Prices, OHLC, volume, VIX</strong> — Yahoo Finance chart API. No auth key. Polled every 15s (Stocks) / 20s (Crypto), behind a 30s edge cache — see Chapter 17 for the full cadence table.</li>
+        <li><strong>Stock and ETF prices, OHLC, volume</strong> — <strong>Alpaca Market Data API</strong> (since v3.32), a licensed feed, using the keys the project owner keeps on the server. Daily history is consolidated across every US exchange and split-adjusted. On Alpaca's free Basic plan the live price is the last trade on the IEX exchange (real time, one exchange) and the day's volume is the market-wide figure from fifteen minutes ago; on the Algo Trader Plus plan both are real time for the whole market. Polled every 15s behind a 30s edge cache — see Chapter 17.</li>
+        <li><strong>VIX, other indices, futures (gold, silver), rates, the dollar index</strong> — Yahoo Finance chart API. Alpaca's stock feed does not carry these.</li>
+        <li><strong>Fallback</strong> — any stock Alpaca cannot answer for, and every stock if Alpaca is down or the server has no keys, is read from Yahoo instead. Each response says how many symbols came from each source, and the health check reports it.</li>
         <li><strong>News headlines</strong> — Yahoo Finance search endpoint. Also no key. Pulled on each poll.</li>
         <li><strong>Sentiment (general + political)</strong> — computed client-side from headlines using keyword lexicons.</li>
         <li><strong>All technical indicators</strong> — computed from the 1-year OHLC series (server-side for the index scan, in the browser for the ticker you open).</li>
@@ -1523,6 +1525,19 @@
     <section id="changelog" class="changelog">
       <h2><span class="chnum">Chapter 26</span>Changelog</h2>
       <p>Every substantive change to Signal Desk lands here. This section is updated with each shipped feature so the handbook stays a truthful reference. Newest at the top.</p>
+
+      <div class="log-entry">
+        <div class="when">v3.32<br/>2026-11-19</div>
+        <div class="what">
+          <h4>Stock prices now come from Alpaca's licensed feed (Chapter 10)</h4>
+          <ul>
+            <li>Prices, daily history and volume for stocks and ETFs are read from Alpaca's Market Data API instead of Yahoo. Scores, setups, stops and targets are computed from the same kind of data as before (consolidated, split-adjusted daily bars), so nothing about the rules changes.</li>
+            <li>Yahoo remains for the VIX, gold and silver, rates and the dollar, and as the automatic fallback if Alpaca cannot answer.</li>
+            <li>Built for Alpaca's free plan: live prices from one exchange (IEX), market-wide volume fifteen minutes old. Upgrading to Algo Trader Plus makes both real time for the whole market; the owner then sets <code>ALPACA_DATA_FEED=sip</code> on the server.</li>
+            <li>The ten-year replay still uses Yahoo's history: Alpaca's starts in 2016, which is too short for it.</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="log-entry">
         <div class="when">v3.31<br/>2026-11-19</div>

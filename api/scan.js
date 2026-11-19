@@ -13,39 +13,7 @@
 // is fetched separately from /api/quotes.
 
 import { analyze } from '../analyze.js';
-
-const UA = 'Mozilla/5.0 (compatible; SignalDesk/1.0)';
-const CHART = (sym, range) =>
-  `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=${range}`;
-
-async function fetchBars(sym, range = '1y') {
-  try {
-    const res = await fetch(CHART(sym, range), { headers: { 'User-Agent': UA } });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const r = data?.chart?.result?.[0];
-    if (!r) return null;
-    const q = r.indicators?.quote?.[0] || {};
-    const ts = r.timestamp || [];
-    const bars = [];
-    for (let i = 0; i < ts.length; i++) {
-      const o = q.open?.[i], h = q.high?.[i], l = q.low?.[i], c = q.close?.[i], v = q.volume?.[i];
-      if (o != null && h != null && l != null && c != null && v != null) {
-        bars.push({ t: ts[i] * 1000, o, h, l, c, v });
-      }
-    }
-    if (bars.length < 60) return null;
-    const meta = r.meta || {};
-    const price = meta.regularMarketPrice ?? bars[bars.length - 1].c;
-    const prevClose = bars.length >= 2 ? bars[bars.length - 2].c : null;
-    return {
-      bars,
-      price,
-      changePct: prevClose ? ((price - prevClose) / prevClose) * 100 : null,
-      volume: meta.regularMarketVolume ?? bars[bars.length - 1].v,
-    };
-  } catch { return null; }
-}
+import { getQuotes } from './_prices.js';
 
 const r2 = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 100) / 100);
 const r1 = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10) / 10);
@@ -76,11 +44,12 @@ export default async function handler(req, res) {
   // Benchmarks: SPY for market RS, plus whichever sector ETFs this batch needs.
   // Fetched alongside the batch so RS is computed against the same window.
   const benchSyms = ['SPY', ...sectorEtfs];
-  const [benchResults, tickerResults] = await Promise.all([
-    Promise.all(benchSyms.map(async (s) => [s, await fetchBars(s)])),
-    Promise.all(tickers.map(async (t) => [t, await fetchBars(t)])),
-  ]);
-  const benchMap = Object.fromEntries(benchResults);
+  // One provider call for the whole batch (Alpaca when the server has keys, Yahoo otherwise or as the
+  // fallback); a symbol needs 60 bars to be scored, as before.
+  const { quotes, source } = await getQuotes([...new Set([...benchSyms, ...tickers])], '1y');
+  const pick = (t) => { const q = quotes[t]; return q && q.bars && q.bars.length >= 60 ? { bars: q.bars, price: q.price, changePct: q.changePct, volume: q.volume } : null; };
+  const benchMap = Object.fromEntries(benchSyms.map((s) => [s, pick(s)]));
+  const tickerResults = tickers.map((t) => [t, pick(t)]);
   const spyBars = benchMap['SPY']?.bars || null;
 
   const rows = [];
@@ -151,6 +120,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=180');
   res.status(200).json({
     asOf: Date.now(),
+    source,                                       // how many symbols came from Alpaca and from Yahoo, and the live feed
     requested: tickers.length,
     scored: rows.length,
     ...(errors.length ? { skipped: errors } : {}),

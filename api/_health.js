@@ -11,6 +11,8 @@
 //          degraded — a feature loses detail but the rulebook still works (news, NASDAQ extras,
 //                     SEC, crypto)
 
+import { dataConfigured } from './_prices.js';
+
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36';
 const DAY = 864e5;
 
@@ -57,6 +59,11 @@ function probes(origin) {
       if (!(a < 4.6)) throw new Error(`built ${a.toFixed(1)} days ago`);
       if (!(c.sp500Covered >= c.sp500 * 0.9)) throw new Error(`covers ${c.sp500Covered} of ${c.sp500}`);
       return `built ${a.toFixed(1)} days ago, ${c.calendar} on the calendar, ${c.estimated} estimated`; } },
+    { id: 'alpaca-data', label: 'Prices from Alpaca (licensed feed)', level: 'degraded', run: async () => {
+      if (!dataConfigured()) return 'no Alpaca keys on the server: prices come from Yahoo';
+      const d = await get(`${origin}/api/quotes?tickers=SPY,AAPL,MSFT,JPM&range=3mo`), src = d.source || {};
+      if (!src.alpaca) throw new Error(`Alpaca returned nothing${src.note ? ` (${src.note})` : ''}; Yahoo is covering`);
+      return `${src.alpaca} of ${src.alpaca + src.yahoo} test symbols, live feed ${src.feed === 'sip' ? 'SIP (all exchanges)' : 'IEX (free plan)'}`; } },
     { id: 'screen-nasdaq', label: 'Screen: NASDAQ yield / P/E coverage', level: 'degraded', run: async () => {
       const d = await get(`${origin}/data/screen.json`); const n = (d.rows || []).length, k = d.coverage?.nasdaq ?? 0;
       if (k < n * 0.8) throw new Error(`${k} of ${n} names`); return `${k} of ${n} names`; } },
