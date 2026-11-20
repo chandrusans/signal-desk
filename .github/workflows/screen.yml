@@ -43,6 +43,7 @@ jobs:
         continue-on-error: true
         env:
           APP_URL: https://signal-desk-virid.vercel.app
+          RUN_KEY: ${{ secrets.RUN_KEY }}   # the app lock lets the owner's jobs through with this
           SCREEN_CONCURRENCY: '4'
         run: node tools/build-screen.mjs
       - name: Commit if changed

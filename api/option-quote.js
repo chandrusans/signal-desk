@@ -12,6 +12,8 @@
 // Chains are fetched once per underlying and shared across all requested
 // contracts on that underlying.
 
+import { gated } from './_gate.js';
+
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
 const HEADERS = { 'User-Agent': UA, Accept: 'application/json' };
 
@@ -93,7 +95,7 @@ function findContract(raw, want) {
   return null;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const raw = (req.query && (req.query.occ || req.query.symbols)) || '';
   const symbols = String(raw)
     .split(',')
@@ -139,3 +141,6 @@ export default async function handler(req, res) {
     ...(Object.keys(errors).length ? { errors } : {}),
   });
 }
+
+// Behind the app lock when one is set (see ../gate.js).
+export default gated(handler);

@@ -28,6 +28,8 @@
 //     ]
 //   }
 
+import { gated } from './_gate.js';
+
 const NAS_URL = (t) => `https://api.nasdaq.com/api/quote/${encodeURIComponent(t)}/option-chain?assetclass=stocks&limit=10000&fromdate=all&todate=undefined&excode=oprac&callput=callput&money=all&type=all`;
 
 // Both apps charge $0.65/contract regulatory fee. Commission itself is $0 on Robinhood
@@ -265,7 +267,7 @@ function recommendationsForTicker(chain, sym, direction, perHorizon = 3) {
   return recs;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const raw = (req.query && req.query.tickers) || 'NVDA,PLTR,CRWD,HOOD,ASML,AMD,META,MSFT,GOOGL,TSLA,AAPL,AMZN,NFLX,COIN,ORCL,AVGO,MU,MRVL,SNOW,NET,PANW,PYPL,SQ,SHOP,SOFI,RIVN,SMCI,LLY,JPM,BAC';
   const dirRaw = (req.query && req.query.directions) || '';
   const dirMap = {};
@@ -310,3 +312,6 @@ export default async function handler(req, res) {
     recommendations: capped,
   });
 }
+
+// Behind the app lock when one is set (see ../gate.js).
+export default gated(handler);

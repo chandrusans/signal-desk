@@ -37,6 +37,7 @@ import { cleanSubscription, addDevice, removeDevice, vapidKeys, pushAll } from '
 import { runBroker, brokerStatus, keyProblem } from './_alpaca.js';
 import { evaluate, evaluatePositions, fetchAlertData, fetchPositionContext, useStore, memoryStore, TYPES, DEFAULT_SETTINGS } from '../alerts.js';
 
+import { gated, authOp, ownFetch } from './_gate.js';
 const BLOB_PATH = 'signal-desk/alerts-state.json';
 const MAX_PER_RUN = 6;                 // per channel per run; the rest are summarised
 const SLOW_MS = 30 * 60 * 1000;        // filings sources every 30 min, like the page
@@ -134,6 +135,7 @@ async function readBody(req) {
 }
 const rnd = () => [...crypto.getRandomValues(new Uint8Array(18))].map((b) => b.toString(16).padStart(2, '0')).join('');
 // The runner fetches the app's own API; the base is fixed, never taken from request headers.
+// With the app lock on it signs those calls with the owner key (ownFetch), which is why the base must be fixed.
 const APP_URL = (process.env.APP_URL || 'https://signal-desk-virid.vercel.app').replace(/\/$/, '');
 const mask = (s) => (s ? `…${String(s).slice(-4)}` : null);
 /**
@@ -184,9 +186,11 @@ const cleanPosition = (p) => {
 const redact = (detail) => { const t = String(detail || ''); return /unauthor|401|403/i.test(t) ? 'rejected (check token / key)' : /404/.test(t) ? 'not found (check chat id / topic)' : /429|rate/i.test(t) ? 'rate limited' : /timeout|ETIMEDOUT|ECONN/i.test(t) ? 'network' : t ? 'provider error' : ''; };
 
 // ── ops ────────────────────────────────────────────────────────────────────
-export default async function handler(req, res) {
+async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const op = String((req.query && req.query.op) || '').toLowerCase();
+  // Signing in and out of the app lock (session | login | logout) — needs no storage to answer.
+  if (await authOp(op, req, res)) return;
   if (!hasBlob()) {
     res.status(200).json({ ok: false, storage: 'not-connected', error: 'Server storage is not connected yet. In Vercel: Storage → Create → Blob → Connect Project → signal-desk, then redeploy.' });
     return;
@@ -318,20 +322,20 @@ export default async function handler(req, res) {
     const fired = [];
     let data = null;
     if (watch.length) {
-      data = await fetchAlertData(watch, { base, slow });
+      data = await fetchAlertData(watch, { base, slow, fetchFn: ownFetch });
       if (slow) { state.slow = { earnings: data.earnings || {}, analyst: data.analyst || {}, insider: data.insider || {}, gate: data.gate || null, next: data.next || null }; state.slowAt = Date.now(); }
       const s = state.slow || {};
       fired.push(...evaluate(watch, { scan: data.scan, news: data.news, earnings: s.earnings || {}, analyst: s.analyst || {}, insider: s.insider || {}, gate: s.gate || null, next: s.next || null }, settings));
     }
     if (pf.length) {
-      const ctx = await fetchPositionContext(pf, { base });
+      const ctx = await fetchPositionContext(pf, { base, fetchFn: ownFetch });
       fired.push(...evaluatePositions(pf, ctx, settings));
     }
     // Paper broker: each buy alert becomes a paper order; positions it opened follow the exit rules.
     let brokerRun = null;
     if (state.broker?.enabled) {
       try {
-        brokerRun = await runBroker({ env: process.env, broker: state.broker, entries: fired.filter((a) => a.type === 'entry' && a.plan), contextFor: (positions) => fetchPositionContext(positions, { base }) });
+        brokerRun = await runBroker({ env: process.env, broker: state.broker, entries: fired.filter((a) => a.type === 'entry' && a.plan), contextFor: (positions) => fetchPositionContext(positions, { base, fetchFn: ownFetch }) });
         for (const a of brokerRun.actions.filter((x) => ['buy', 'sell', 'stop'].includes(x.kind)))
           fired.push({ id: `broker:${a.kind}:${a.symbol}:${a.at}`, type: 'position', severity: a.kind === 'stop' ? 'medium' : 'high', title: `Paper account: ${a.kind === 'buy' ? 'bought' : a.kind === 'sell' ? 'sold' : 'stop moved'} ${a.symbol}`, body: a.text, link: '/swing' });
       } catch (e) { brokerRun = { broker: { ...state.broker, lastRun: { at: Date.now(), ok: false, note: redact(e.message) } }, summary: 'error' }; }
@@ -354,3 +358,6 @@ export default async function handler(req, res) {
 
   res.status(400).json({ error: 'Pass ?op=sync (POST) | run (GET, bearer RUN_KEY) | test (POST) | status (GET)' });
 }
+
+// Behind the app lock when one is set (see ../gate.js).
+export default gated(handler);

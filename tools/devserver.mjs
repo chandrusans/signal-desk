@@ -6,6 +6,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
+import { decide } from '../gate.js';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const PORT = Number(process.argv[2] || 3000);
@@ -25,6 +26,7 @@ const PAGES = {
   '/research': 'research.html',
   '/privacy': 'privacy.html',
   '/terms': 'terms.html',
+  '/login': 'login.html',
 };
 
 const TYPES = {
@@ -34,6 +36,9 @@ const TYPES = {
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.txt': 'text/plain; charset=utf-8',
+  '.webmanifest': 'application/manifest+json',
 };
 
 // Sync storage in development: a scratch folder instead of Vercel Blob.
@@ -51,6 +56,13 @@ async function apiHandler(name) {
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const path = url.pathname;
+
+  // The app lock, as middleware.js applies it on Vercel (off unless APP_PASSWORD is set).
+  const gate = await decide({ path, search: url.search, method: req.method, cookie: req.headers.cookie, authorization: req.headers.authorization, env: process.env });
+  if (!gate.allow) {
+    if (gate.respond === 'redirect') { res.statusCode = 302; res.setHeader('Location', gate.location); res.end(); return; }
+    res.statusCode = 401; res.setHeader('Content-Type', 'application/json'); res.setHeader('X-SD-Auth', 'required'); res.end(JSON.stringify({ error: 'Sign in to use Signal Desk.', signIn: '/login' })); return;
+  }
 
   if (path.startsWith('/api/')) {
     const name = path.slice(5).replace(/\/$/, '');
@@ -79,7 +91,7 @@ createServer(async (req, res) => {
   // Serve only the pages and the shared front-end modules — never dotfiles,
   // the env file, tools/, db/ or anything else in the repository.
   const rel = path.replace(/^\//, '');
-  const allowed = PAGES[path] || (/^[A-Za-z0-9_-]+\.(js|css|svg|png|ico|webmanifest|json)$/.test(rel) && !rel.startsWith('package') ? rel : null) || (/^data\/(screen|replay|earnings)\.json$/.test(rel) ? rel : null);
+  const allowed = PAGES[path] || (/^[A-Za-z0-9_-]+\.(js|css|svg|png|ico|webmanifest|json|txt)$/.test(rel) && !rel.startsWith('package') ? rel : null) || (/^data\/(screen|replay|earnings)\.json$/.test(rel) ? rel : null);
   if (!allowed) { res.statusCode = 404; res.end('not found'); return; }
   const file = allowed;
   try {

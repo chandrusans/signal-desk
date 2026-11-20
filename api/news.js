@@ -3,6 +3,8 @@
 // tags political headlines. Sector param lets the political sentiment be
 // interpreted correctly (a "chips act" headline is bullish for semis, neutral elsewhere).
 
+import { gated } from './_gate.js';
+
 const UA = 'Mozilla/5.0 (compatible; SignalDesk/1.0)';
 const NEWS = (sym) =>
   `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(sym)}&newsCount=15&quotesCount=0`;
@@ -218,7 +220,7 @@ async function fetchNews(sym, sector, isCrypto = false) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const raw = (req.query && req.query.tickers) || '';
   const cryptoList = String((req.query && req.query.crypto) || '').split(',').map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z0-9]{2,10}$/.test(s)).slice(0, 20);
   const sectorsRaw = (req.query && req.query.sectors) || '';
@@ -256,3 +258,6 @@ export default async function handler(req, res) {
     ...(Object.keys(errors).length ? { errors } : {}),
   });
 }
+
+// Behind the app lock when one is set (see ../gate.js).
+export default gated(handler);

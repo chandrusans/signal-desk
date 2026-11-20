@@ -16,9 +16,11 @@ import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
 import { forensic } from '../api/_forensic.js';
 
 const BASE = process.env.APP_URL || 'https://signal-desk-virid.vercel.app';
+// With the app lock on, the site only answers its owner's machines. The key is sent to the app's own address and nowhere else.
+const AUTH = (u) => (process.env.RUN_KEY && String(u).startsWith(`${BASE}/`) ? { Authorization: `Bearer ${process.env.RUN_KEY}` } : {});
 const CONCURRENCY = +(process.env.SCREEN_CONCURRENCY || 4);     // SEC asks for ≤ 10 req/s
 const LIMIT = process.env.SCREEN_LIMIT ? +process.env.SCREEN_LIMIT : Infinity;   // for quick local runs
-const j = async (u, tries = 3) => { for (let i = 0; i < tries; i++) { try { const r = await fetch(u); if (!r.ok) throw new Error(`${r.status}`); return await r.json(); } catch (e) { if (i === tries - 1) throw e; await new Promise((s) => setTimeout(s, 1500 * (i + 1))); } } };
+const j = async (u, tries = 3) => { for (let i = 0; i < tries; i++) { try { const r = await fetch(u, { headers: AUTH(u) }); if (!r.ok) throw new Error(`${r.status}`); return await r.json(); } catch (e) { if (i === tries - 1) throw e; await new Promise((s) => setTimeout(s, 1500 * (i + 1))); } } };
 const chunk = (a, n) => { const o = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
 const r1 = (x) => (x == null || !isFinite(x) ? null : +x.toFixed(1));
 const r2 = (x) => (x == null || !isFinite(x) ? null : +x.toFixed(2));

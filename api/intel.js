@@ -21,14 +21,18 @@ import preview from './_earnings-preview.js';
 import macrodata from './_macro-data.js';
 import health from './_health.js';
 
+import { gated } from './_gate.js';
 const OPS = { macro, congress, earnings, analyst, insider, preview, macrodata, health };
 
 // congress parses PDFs and insider walks EDGAR under a 10 req/s ceiling.
 export const config = { maxDuration: 60 };
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const op = String((req.query && req.query.op) || '').trim().toLowerCase();
   const fn = OPS[op];
   if (!fn) { res.status(400).json({ error: `Pass ?op=${Object.keys(OPS).join('|')}`, received: op || null }); return; }
   return fn(req, res);
 }
+
+// Behind the app lock when one is set (see ../gate.js).
+export default gated(handler);

@@ -22,6 +22,7 @@
 import { forensic } from './_forensic.js';
 import { calendarEntry } from '../earnings-calendar.js';
 
+import { gated, ownFetch } from './_gate.js';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
 const HEADERS = { 'User-Agent': UA, Accept: 'application/json' };
 
@@ -86,13 +87,13 @@ async function loadCalendar(req) {
     const host = String(req.headers?.host || '');
     if (!/^[A-Za-z0-9.-]+(:\d+)?$/.test(host)) return calCache.cal;
     const proto = /^(localhost|127\.0\.0\.1)(:|$)/.test(host) ? 'http' : 'https';
-    const r = await fetch(`${proto}://${host}/data/earnings.json`);
+    const r = await ownFetch(`${proto}://${host}/data/earnings.json`);     // signed with the owner key only if the host is this app
     if (r.ok) { const cal = await r.json(); if (cal && cal.dates) calCache = { at: Date.now(), cal }; }
   } catch { /* keep whatever we had */ }
   return calCache.cal;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const op = String((req.query && req.query.op) || '').toLowerCase();
   if (op === 'research') {
     const t = String((req.query && req.query.ticker) || '').trim().toUpperCase();
@@ -139,3 +140,6 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200'); // fundamentals move slowly
   res.status(200).json({ asOf: Date.now(), fundamentals: out, earningsCalendar: cal ? { builtAt: cal.builtAt, through: cal.calendarThrough } : null });
 }
+
+// Behind the app lock when one is set (see ../gate.js).
+export default gated(handler);

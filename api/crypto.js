@@ -19,12 +19,13 @@ import backtest from './_crypto-backtest.js';
 import pumpfun from './_pumpfun.js';
 import bars from './_crypto-bars.js';
 
+import { gated } from './_gate.js';
 const OPS = { universe, scan, hours, backtest, pumpfun, bars };
 
 // The backtest paginates ~50 upstream requests; the others are quick.
 export const config = { maxDuration: 60 };
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const op = String((req.query && req.query.op) || '').trim().toLowerCase();
   const fn = OPS[op];
   if (!fn) {
@@ -36,3 +37,6 @@ export default async function handler(req, res) {
   }
   return fn(req, res);
 }
+
+// Behind the app lock when one is set (see ../gate.js).
+export default gated(handler);

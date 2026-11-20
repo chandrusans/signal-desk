@@ -9,12 +9,13 @@
   },
   "dependencies": {
     "@vercel/blob": "^2.8.2",
+    "@vercel/functions": "^3.11.3",
     "unpdf": "^1.7.0",
     "web-push": "^4.0.0"
   },
   "scripts": {
     "validate": "sh tools/validate.sh",
-    "lint": "node tools/lint.mjs research.html today.html swing.html alerts.html simulate.html index.html dashboard.html options.html crypto.html metals.html handbook.html privacy.html terms.html",
+    "lint": "node tools/lint.mjs research.html today.html swing.html alerts.html simulate.html index.html dashboard.html options.html crypto.html metals.html handbook.html privacy.html terms.html login.html",
     "validate:co": "sh tools/validate.sh co",
     "validate:risk": "node tools/validate-risk.mjs",
     "validate:research": "sh tools/validate.sh research",

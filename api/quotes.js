@@ -8,7 +8,8 @@
 
 import { getQuotes } from './_prices.js';
 
-export default async function handler(req, res) {
+import { gated } from './_gate.js';
+async function handler(req, res) {
   const raw = (req.query && req.query.tickers) || '';
   const range = ((req.query && req.query.range) || '1y').toString();
   const validRange = ['3mo', '6mo', '1y', '2y', '5y', '10y', 'max'].includes(range) ? range : '1y';   // 5y/max: stress tests and seasonality need the 2020 and 2022 drawdowns
@@ -38,3 +39,6 @@ export default async function handler(req, res) {
     ...(Object.keys(errors).length ? { errors } : {}),
   });
 }
+
+// Behind the app lock when one is set (see ../gate.js).
+export default gated(handler);

@@ -12,14 +12,15 @@
 //                                               409 { conflict, rev } when another device wrote first)
 //   delete  POST { id }                      → { ok }       (the user removing their cloud copy)
 //
-// No accounts, no email, no cookies. Knowing the id is the only credential, and it is unguessable
-// (derived from 100 random bits). STORAGE: Vercel Blob (private), one object per id. For local
+// No accounts and no email. Knowing the id is the credential, and it is unguessable (derived from
+// 100 random bits). When the app lock is on (../gate.js) the caller must also be signed in. STORAGE: Vercel Blob (private), one object per id. For local
 // development, set SD_VAULT_DIR to a folder and objects are kept there as files instead.
 
 import { put, get, del } from '@vercel/blob';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { gated } from './_gate.js';
 const MAX_CT = 900_000;                           // ~650 KB of data once base64 is undone; far above any real book
 const ID = /^[a-f0-9]{64}$/;
 const B64 = /^[A-Za-z0-9+/=]+$/;
@@ -58,7 +59,7 @@ function limited(req) {
   return w.n > 40;
 }
 
-export default async function handler(req, res, s = store) {
+async function handler(req, res, s = store) {
   res.setHeader('Cache-Control', 'no-store');
   if (!hasStore() && s === store) { res.status(503).json({ error: 'Storage is not connected on this deployment, so sync is unavailable.' }); return; }
   if (limited(req)) { res.status(429).json({ error: 'Too many requests. Try again in a minute.' }); return; }
@@ -86,3 +87,6 @@ export default async function handler(req, res, s = store) {
   if (op === 'delete' && req.method === 'POST') { await s.remove(id); res.status(200).json({ ok: true }); return; }
   res.status(400).json({ error: 'Pass ?op=get|put|delete' });
 }
+
+// Behind the app lock when one is set (see ../gate.js).
+export default gated(handler);

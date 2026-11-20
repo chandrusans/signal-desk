@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Signal Desk">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Signal Desk — Sign in</title>
+<meta name="robots" content="noindex">
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('sd-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root {
+    --ground: #FFFFFF;
+    --ground-2: #E8E8ED;
+    --ink: #1D1D1F;
+    --ink-2: #424245;
+    --ink-3: #6E6E73;
+    --rule: #D2D2D7;
+    --panel: #F5F5F7;
+    --accent: #0071E3;
+    --accent-soft: #E8F2FF;
+    --signal: #248A3D;
+    --caution: #B25000;
+    --risk: #D70015;
+    --grid: rgba(0, 0, 0, 0.06);
+    --gold: #C89B3C;
+    --silver: #9BA1A6;
+
+    --serif: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --code: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #000000;
+      --ground-2: #161617;
+      --ink: #F5F5F7;
+      --ink-2: #C7C7CC;
+      --ink-3: #98989D;
+      --rule: #333336;
+      --panel: #1D1D1F;
+      --accent: #2997FF;
+      --accent-soft: #0A2A4D;
+      --signal: #30D158;
+      --caution: #FF9F0A;
+      --risk: #FF453A;
+      --grid: rgba(255, 255, 255, 0.06);
+      --gold: #E0B45C;
+      --silver: #C4CBD1;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#FFFFFF;--ground-2:#E8E8ED;--ink:#1D1D1F;--ink-2:#424245;--ink-3:#6E6E73;--rule:#D2D2D7;--panel:#F5F5F7;--accent:#0071E3;--accent-soft:#E8F2FF;--signal:#248A3D;--caution:#B25000;--risk:#D70015;--grid:rgba(0, 0, 0,0.06);--gold:#C89B3C;--silver:#9BA1A6;
+  }
+  :root[data-theme="dark"] {
+    --ground:#000000;--ground-2:#161617;--ink:#F5F5F7;--ink-2:#C7C7CC;--ink-3:#98989D;--rule:#333336;--panel:#1D1D1F;--accent:#2997FF;--accent-soft:#0A2A4D;--signal:#30D158;--caution:#FF9F0A;--risk:#FF453A;--grid:rgba(255, 255, 255,0.06);--gold:#E0B45C;--silver:#C4CBD1;
+  }
+
+
+  html { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); background: var(--ground); color: var(--ink); font-family: var(--sans); }
+  .signin { width: 100%; max-width: 380px; }
+  .signin .mark { width: 56px; height: 56px; border-radius: 14px; display: block; margin: 0 auto 22px; }
+  .signin h1 { font-family: var(--serif); font-size: 32px; line-height: 1.1; font-weight: 600; letter-spacing: -0.024em; text-align: center; margin: 0 0 8px; }
+  .signin .lede { font-size: 16px; line-height: 1.45; color: var(--ink-3); text-align: center; margin: 0 0 28px; }
+  .signin label { display: block; font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 0 0 8px; }
+  .signin input[type="password"] { display: block; width: 100%; min-height: 50px; padding: 0 16px; font: inherit; font-size: 17px; color: var(--ink); background: var(--ground); border: 1px solid var(--rule); border-radius: 12px; outline: none; }
+  .signin input[type="password"]:focus { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .signin button { display: block; width: 100%; min-height: 50px; margin-top: 14px; font: inherit; font-size: 17px; font-weight: 500; color: #fff; background: var(--accent); border: none; border-radius: 980px; cursor: pointer; }
+  .signin button:disabled { opacity: 0.5; cursor: default; }
+  .signin .msg { min-height: 22px; margin: 14px 0 0; font-size: 14px; line-height: 1.45; text-align: center; color: var(--risk); }
+  .signin .note { margin: 26px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-3); text-align: center; }
+  .legal-links { margin: 30px 0 0; font-size: 12px; color: var(--ink-3); text-align: center; }
+  .legal-links a { color: var(--ink-3); text-decoration: none; }
+  .legal-links a:hover { color: var(--ink); text-decoration: underline; }
+</style>
+</head>
+<body>
+<main class="signin">
+  <img class="mark" src="/icon-192.png" alt="" width="56" height="56">
+  <h1>Signal Desk</h1>
+  <p class="lede">This is a private app. Enter the password to open it.</p>
+  <form id="f" autocomplete="on">
+    <!-- A fixed username lets a password manager file the password under one name. -->
+    <input type="text" name="username" value="owner" autocomplete="username" hidden>
+    <label for="pw">Password</label>
+    <input type="password" id="pw" name="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="256" required autofocus>
+    <button type="submit" id="go">Sign in</button>
+    <p class="msg" id="msg" role="alert" aria-live="assertive"></p>
+  </form>
+  <p class="note">This device stays signed in for 30 days. Use "Sign out" in the More menu on a device you share.</p>
+  <p class="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
+</main>
+<script type="module">
+  // Where to go afterwards: a path on this site only (the server-side rule lives in gate.js; this mirrors it).
+  const raw = new URLSearchParams(location.search).get('next') || '/';
+  const dest = /^\/[A-Za-z0-9\-._~/?=&%#]{0,300}$/.test(raw) && !raw.startsWith('//') && !/^\/login(\.html)?([?#/]|$)/.test(raw) ? raw : '/';
+  const form = document.getElementById('f'), pw = document.getElementById('pw'), go = document.getElementById('go'), msg = document.getElementById('msg');
+
+  // Already signed in, or no lock on this deployment: nothing to do here.
+  try {
+    const s = await (await fetch('/api/notify?op=session', { cache: 'no-store' })).json();
+    if (s && s.signedIn) location.replace(dest);
+  } catch { /* offline: the form below will say so when used */ }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!pw.value) return;
+    go.disabled = true; msg.textContent = '';
+    try {
+      const r = await fetch('/api/notify?op=login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw.value }) });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.ok) { location.replace(dest); return; }
+      msg.textContent = d.error || 'Could not sign in. Try again.';
+      pw.select();
+    } catch {
+      msg.textContent = 'No connection. Check the network and try again.';
+    }
+    go.disabled = false;
+  });
+</script>
+</body>
+</html>

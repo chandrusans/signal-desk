@@ -12,6 +12,8 @@
 //                     SEC, crypto)
 
 import { dataConfigured } from './_prices.js';
+import { ownFetch } from './_gate.js';
+import { lockOn } from '../gate.js';
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36';
 const DAY = 864e5;
@@ -19,7 +21,7 @@ const DAY = 864e5;
 async function get(url, { headers = {}, as = 'json', ms = 9000 } = {}) {
   const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), ms);
   try {
-    const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json', ...headers }, signal: ctl.signal });
+    const r = await ownFetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json', ...headers }, signal: ctl.signal });   // own endpoints get the owner key; nothing else does
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return as === 'text' ? await r.text() : await r.json();
   } finally { clearTimeout(timer); }
@@ -88,7 +90,10 @@ export default async function handler(req, res) {
     try { const detail = await p.run(); return { id: p.id, label: p.label, level: p.level, ok: true, ms: Date.now() - t0, detail }; }
     catch (e) { return { id: p.id, label: p.label, level: p.level, ok: false, ms: Date.now() - t0, detail: e.name === 'AbortError' ? 'timed out' : String(e.message || e).slice(0, 160) }; }
   }));
+  // Not a data source, but the first thing worth knowing about a personal app: is it locked?
+  const locked = lockOn(process.env);
+  sources.push({ id: 'lock', label: 'App lock', level: 'degraded', ok: true, ms: 0, detail: locked ? 'on: sign-in required for every page and data call' : 'OFF: anyone with the link can open the app (set APP_PASSWORD in Vercel to lock it)' });
   const down = sources.filter((s) => !s.ok && s.level === 'critical'), degraded = sources.filter((s) => !s.ok && s.level !== 'critical');
   res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=120');
-  res.status(200).json({ asOf: Date.now(), status: down.length ? 'down' : degraded.length ? 'degraded' : 'ok', down: down.map((s) => s.id), degraded: degraded.map((s) => s.id), sources });
+  res.status(200).json({ asOf: Date.now(), status: down.length ? 'down' : degraded.length ? 'degraded' : 'ok', lock: locked, down: down.map((s) => s.id), degraded: degraded.map((s) => s.id), sources });
 }

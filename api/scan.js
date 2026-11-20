@@ -15,10 +15,11 @@
 import { analyze } from '../analyze.js';
 import { getQuotes } from './_prices.js';
 
+import { gated } from './_gate.js';
 const r2 = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 100) / 100);
 const r1 = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10) / 10);
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const rawTickers = (req.query && req.query.tickers) || '';
   const tickers = String(rawTickers)
     .split(',')
@@ -127,3 +128,6 @@ export default async function handler(req, res) {
     rows,
   });
 }
+
+// Behind the app lock when one is set (see ../gate.js).
+export default gated(handler);

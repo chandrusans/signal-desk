@@ -7,6 +7,8 @@
 // constituent table. If it's unreachable we fall back to an embedded list of
 // the largest names so the app degrades to "fewer tickers" rather than "broken".
 
+import { gated } from './_gate.js';
+
 const SRC = 'https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv';
 
 // GICS sector -> SPDR sector ETF. Used for sector-relative strength: a stock
@@ -64,7 +66,7 @@ function parseCSV(text) {
   return rows;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   let constituents = null;
   let source = 'fallback';
 
@@ -112,3 +114,6 @@ export default async function handler(req, res) {
     constituents,
   });
 }
+
+// Behind the app lock when one is set (see ../gate.js).
+export default gated(handler);

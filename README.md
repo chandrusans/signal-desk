@@ -301,11 +301,24 @@ journal; the market gate on Today, Swing and Stocks; a Swing paper buy and
 sell; the shared watchlist; the earnings gate; an unreadable macro calendar;
 the replay panel; and two-device sync. Market data comes from made-up fixtures
 (`e2e/fixtures.mjs`), so a run needs no network; sync uses the real vault
-handler over a scratch folder. 26 tests, about ten seconds. CI runs them on
+handler over a scratch folder, and the app lock is driven against a second dev
+server started with a test password (`e2e/lock.spec.mjs`). 30 tests, about ten seconds. CI runs them on
 every push. First run locally: `npx playwright install chromium`.
 
 ### Security model
 
+- **App lock** (`gate.js`, `middleware.js`, `api/_gate.js`, `login.html`): set
+  `APP_PASSWORD` in Vercel and every page, static file and `/api` call answers
+  only to a signed-in browser (HMAC-signed session in an HttpOnly, Secure,
+  host-bound cookie; 30 days, renewed with use) or to the owner's machines
+  (`Authorization: Bearer RUN_KEY`: the alert runner, the nightly build, the
+  health check, and the server's calls to its own endpoints via `ownFetch`,
+  which never sends the key to any other host). Unset, the lock is off and
+  nothing changes. Wrong passwords are counted per hashed address and overall
+  (private Blob `signal-desk/auth-attempts.json`); the fifth pauses sign-in for
+  15 minutes, doubling. Changing `APP_PASSWORD` signs every device out. The
+  middleware is the front door; each `/api` function repeats the check
+  (`gated(handler)`), so a routing mistake cannot expose one on its own.
 - The site is same-origin only: a strict Content-Security-Policy, no third-
   party scripts, no wildcard CORS, strict symbol validation on every endpoint.
 - All third-party text goes through `esc()` in `ui.js`; links through `safeHref()`.

@@ -19,6 +19,8 @@
 //   { asOf, counts: {stocktwits, cnbc, x, reddit, congress, finnhub, total}, items: [...] }
 // Each item: { src, speaker, tickers[], sent, text, ts, link }
 
+import { gated } from './_gate.js';
+
 const UA = 'Mozilla/5.0 (compatible; SignalDesk/1.0)';
 
 // =====================================================================
@@ -255,7 +257,7 @@ async function fetchFinnhub(tickers) {
 // =====================================================================
 // Handler
 // =====================================================================
-export default async function handler(req, res) {
+async function handler(req, res) {
   const raw = (req.query && req.query.tickers) || 'NVDA,PLTR,CRWD,HOOD,ASML,AMD,META,MSFT,GOOGL,TSLA,AMZN,COIN,LLY';
   const tickers = String(raw)
     .split(',')
@@ -309,3 +311,6 @@ export default async function handler(req, res) {
     items: all,
   });
 }
+
+// Behind the app lock when one is set (see ../gate.js).
+export default gated(handler);
