@@ -11,6 +11,7 @@ import { next } from '@vercel/functions/middleware';
 import { decide } from './gate.js';
 
 export const config = {
+  runtime: 'nodejs',
   // The sign-in page's stylesheet and the app icons are skipped entirely: public, and fetched often.
   matcher: ['/((?!apple\\.css$|favicon\\.svg$|icon-[a-z0-9-]+\\.png$|manifest\\.webmanifest$|robots\\.txt$).*)'],
 };
