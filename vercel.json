@@ -2,6 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "trailingSlash": false,
+  "rewrites": [
+    { "source": "/api/universe", "destination": "/api/intel?op=universe" }
+  ],
   "headers": [
     {
       "source": "/((?!api/).*)",

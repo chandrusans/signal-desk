@@ -9,6 +9,7 @@
 //   earnings  NASDAQ actual-vs-consensus results — the beat/miss alert
 //   analyst   NASDAQ consensus + targets — rating-change detection
 //   insider   SEC Form 4 open-market buys/sells — insider alert
+//   universe  the S&P 500 list with sectors — also reachable as /api/universe (a rewrite in vercel.json)
 //
 // Handlers live in _*.js; the underscore stops Vercel routing them separately.
 
@@ -20,9 +21,10 @@ import insider from './_insider.js';
 import preview from './_earnings-preview.js';
 import macrodata from './_macro-data.js';
 import health from './_health.js';
+import universe from './_universe.js';
 
 import { gated } from './_gate.js';
-const OPS = { macro, congress, earnings, analyst, insider, preview, macrodata, health };
+const OPS = { macro, congress, earnings, analyst, insider, preview, macrodata, health, universe };
 
 // congress parses PDFs and insider walks EDGAR under a 10 req/s ceiling.
 export const config = { maxDuration: 60 };

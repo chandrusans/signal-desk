@@ -1,4 +1,6 @@
-// Vercel serverless: /api/universe
+// Handler behind /api/universe (served through the intel router: /api/intel?op=universe; vercel.json
+// keeps the /api/universe address working). It moved behind the router to free a function slot for
+// middleware.js, the app lock.
 //
 // Returns the S&P 500 constituent list with GICS sectors. Cached hard at the
 // edge (24h) because the index changes a handful of times per year.
@@ -7,7 +9,6 @@
 // constituent table. If it's unreachable we fall back to an embedded list of
 // the largest names so the app degrades to "fewer tickers" rather than "broken".
 
-import { gated } from './_gate.js';
 
 const SRC = 'https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv';
 
@@ -66,7 +67,7 @@ function parseCSV(text) {
   return rows;
 }
 
-async function handler(req, res) {
+export default async function handler(req, res) {
   let constituents = null;
   let source = 'fallback';
 
@@ -114,6 +115,3 @@ async function handler(req, res) {
     constituents,
   });
 }
-
-// Behind the app lock when one is set (see ../gate.js).
-export default gated(handler);

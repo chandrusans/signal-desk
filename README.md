@@ -159,7 +159,7 @@ signal-desk/
 ├── backtest.js        Point-in-time backtest + walk-forward validation
 ├── api/
 │   ├── quotes.js      Yahoo Finance proxy (bars, 60-ticker cap)
-│   ├── universe.js    S&P 500 constituents + GICS sectors, 24h edge cache
+│   ├── _universe.js   S&P 500 constituents + GICS sectors, 24h edge cache (via intel.js; /api/universe is a rewrite)
 │   ├── scan.js        Batch server-side scorer — ~400-byte rows per ticker
 │   ├── news.js        Headlines + sentiment
 │   ├── buzz.js        StockTwits + CNBC aggregator

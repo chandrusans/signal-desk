@@ -65,7 +65,9 @@ createServer(async (req, res) => {
   }
 
   if (path.startsWith('/api/')) {
-    const name = path.slice(5).replace(/\/$/, '');
+    let name = path.slice(5).replace(/\/$/, '');
+    // The one rewrite in vercel.json: /api/universe is served by the intel router.
+    if (name === 'universe') { name = 'intel'; url.searchParams.set('op', 'universe'); }
     try {
       const fn = await apiHandler(name);
       const query = Object.fromEntries(url.searchParams);
